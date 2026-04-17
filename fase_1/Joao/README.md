@@ -1,7 +1,7 @@
 # Telco Customer Churn
 
-Minha contribuicao para a Fase 1 do Tech Challenge focou em dois eixos:
-**planejamento do projeto** e **analise exploratoria**.
+Fase 1 do Tech Challenge focado em tres eixos:
+**planejamento do projeto**, **analise exploratoria** e **baselines com metricas de negocio**.
 
 ## O que foi feito
 
@@ -66,6 +66,38 @@ Fluxo da analise:
 - OneHotEncoder para categoricas, StandardScaler para numericas
 - Considerar `class_weight` ou `pos_weight` para tratar desbalanceamento
 
+### 3. Baselines & Metricas (`notebooks/02_baselines.ipynb`)
+
+Define o framework de avaliacao (metricas tecnicas + metrica de negocio) e treina
+dois modelos baseline que estabelecem o piso de performance.
+
+**Metricas tecnicas:**
+
+| Metrica | Por que usar | Ressalva |
+|---------|-------------|----------|
+| AUC-ROC | Threshold-agnostic, avalia ranking | Pode ser otimista com classes desbalanceadas |
+| PR-AUC | Foca na classe positiva (churners) | Melhor que AUC-ROC para desbalanceamento |
+| F1-Score | Resumo em um numero (Precision x Recall) | Depende do threshold (default 0.5) |
+
+**Metrica de negocio -- Custo de Churn Evitado:**
+
+Usa o `monthly_charges` real de cada cliente (nao um valor fixo):
+- FP (oferta desnecessaria): $50 fixo
+- FN (cliente perdido): `monthly_charges * 12 meses` por cliente (range: $219 -- $1,425)
+- Escolhemos `monthly_charges * 12` apos testar tambem o CLTV do dataset original.
+  O MC*12 e mais transparente, esta presente nos dados limpos e usa uma premissa
+  defensavel (1 ano de receita perdida).
+
+**Baselines:**
+
+| Modelo | F1 | Recall | ROC-AUC | PR-AUC | Custo |
+|--------|----|--------|---------|--------|-------|
+| DummyClassifier | 0.00 | 0.00 | 0.50 | 0.27 | $326,579 |
+| LogisticRegression (balanced) | 0.62 | 0.78 | 0.85 | 0.65 | $75,929 |
+
+A LogisticRegression reduz o custo de negocio em **$250,650 (76.8%)** em relacao ao
+Dummy. Todos os experimentos sao registrados no MLflow.
+
 ## Estrutura
 
 ```
@@ -76,9 +108,12 @@ Joao/
     Tech Challenge Fase 01.pdf
   notebooks/
     01_eda.ipynb
+    02_baselines.ipynb
   data/
     raw/
       Telco_customer_churn.xlsx   (gitignored)
+    processed/
+      telco_churn_clean.parquet   (output do 01_eda)
 ```
 
 ## Requisitos
@@ -89,4 +124,7 @@ numpy>=1.24
 matplotlib>=3.9
 seaborn>=0.13
 openpyxl>=3.1
+scikit-learn>=1.3
+mlflow>=2.10
+pyarrow>=14.0
 ```
