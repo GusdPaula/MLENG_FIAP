@@ -1,0 +1,234 @@
+================================================================================
+                    REQUIREMENTS.TXT - RESUMO COMPLETO
+================================================================================
+
+ARQUIVOS CRIADOS:
+
+1. requirements.txt          - Tudo junto (intermediario)
+2. requirements-prod.txt     - Apenas producao (minimo)
+3. requirements-dev.txt      - Desenvolvimento completo
+4. SETUP.md                  - Quick start guide
+5. INSTALACAO.md             - Guia detalhado
+
+================================================================================
+                        QUAL USAR?
+================================================================================
+
+PRODUCAO (Servidor, Deploy, sem desenvolvimento):
+  pip install -r requirements-prod.txt
+  Tamanho: ~500 MB
+  Tempo: 3-5 minutos
+  Inclui: pandas, numpy, scikit-learn, torch, mlflow, fastapi
+
+DESENVOLVIMENTO (Notebook, Coding, Experiments):
+  pip install -r requirements-dev.txt
+  Tamanho: ~2 GB
+  Tempo: 10-15 minutos
+  Inclui: TUDO (dev + prod + ML tools)
+
+USANDO PYPROJECT.TOML (Modern Python):
+  pip install .                    (producao)
+  pip install -e ".[dev,ml]"       (desenvolvimento)
+
+USANDO MAKE:
+  make install-prod                (producao)
+  make install-full                (dev completo)
+  make help                        (ver todos)
+
+================================================================================
+                    DEPENDENCIAS POR CATEGORIA
+================================================================================
+
+CORE DATA SCIENCE:
+  pandas>=2.0.0
+  numpy>=1.24.0
+  scipy>=1.11.0
+  scikit-learn>=1.3.0
+
+DEEP LEARNING:
+  torch>=2.0.0
+  torchvision>=0.15.0
+
+MLOPS:
+  mlflow>=2.10.0
+
+WEB API:
+  fastapi>=0.104.0
+  uvicorn>=0.24.0
+  pydantic>=2.0.0
+
+VISUALIZATION:
+  matplotlib>=3.8.0
+  seaborn>=0.13.0
+
+NOTEBOOKS:
+  jupyter>=1.0.0
+  ipython>=8.16.0
+
+DEVELOPMENT & TESTING:
+  pytest>=7.4.0
+  pytest-cov>=4.1.0
+  black>=23.10.0
+  ruff>=0.1.0
+  mypy>=1.6.0
+  isort>=5.12.0
+
+ML ADVANCED:
+  fairlearn>=0.10.0
+  optuna>=3.14.0
+  shap>=0.43.0
+
+TREE MODELS:
+  xgboost>=2.0.0
+  lightgbm>=4.0.0
+
+OTHER:
+  openpyxl>=3.1.0
+  python-dotenv>=1.0.0
+  tqdm>=4.66.0
+  requests>=2.31.0
+
+================================================================================
+                        TAMANHO & TEMPO
+================================================================================
+
+requirements-prod.txt:
+  Tamanho: ~500 MB
+  Tempo: 3-5 minutos
+  Use: Servidor producao, Cloud deployment
+
+requirements-dev.txt:
+  Tamanho: ~2 GB
+  Tempo: 10-15 minutos
+  Use: Desenvolvimento local, Notebooks
+
+requirements.txt (intermediario):
+  Tamanho: ~1 GB
+  Tempo: 7-10 minutos
+  Use: Balanceado entre ambos
+
+================================================================================
+                       COMO INSTALAR
+================================================================================
+
+LINUX / MAC:
+
+# 1. Criar ambiente
+python -m venv .venv
+
+# 2. Ativar
+source .venv/bin/activate
+
+# 3. Instalar
+pip install -r requirements-dev.txt
+
+# 4. Verificar
+python 02_train_baselines.py
+
+---
+
+WINDOWS (PowerShell/CMD):
+
+# 1. Criar ambiente
+python -m venv .venv
+
+# 2. Ativar
+.\.venv\Scripts\activate
+
+# 3. Instalar
+pip install -r requirements-dev.txt
+
+# 4. Verificar
+python 02_train_baselines.py
+
+---
+
+USANDO MAKE (Recomendado):
+
+make install-full     # Instala tudo
+make run-all         # Roda EDA + Baselines
+make mlflow-ui       # Abre MLflow
+
+================================================================================
+                    VERIFICAR INSTALACAO
+================================================================================
+
+# Listar packages
+pip list | grep -E "pandas|torch|mlflow|scikit"
+
+# Versoes criticas
+python -c "
+import pandas as pd
+import numpy as np
+import torch
+import mlflow
+import sklearn
+print(f'pandas: {pd.__version__}')
+print(f'numpy: {np.__version__}')
+print(f'torch: {torch.__version__}')
+print(f'scikit-learn: {sklearn.__version__}')
+print(f'mlflow: {mlflow.__version__}')
+"
+
+================================================================================
+                      TROUBLESHOOTING
+================================================================================
+
+ERRO: No module named torch
+  pip install --upgrade torch
+  pip install torch --index-url https://download.pytorch.org/whl/cu118
+
+ERRO: Microsoft Visual C++ 14.0 required (Windows)
+  Baixe Visual Studio Build Tools
+  https://visualstudio.microsoft.com/downloads/
+  Selecione Desktop development with C++
+
+ERRO: pip command not found
+  python -m pip install -r requirements-dev.txt
+
+ERRO: Python 3.10+ required
+  python --version
+  python3.10 -m venv .venv
+
+================================================================================
+                      UPGRADE & UPDATE
+================================================================================
+
+# Atualizar um package
+pip install --upgrade pandas
+
+# Atualizar tudo
+pip install --upgrade -r requirements-dev.txt
+
+# Criar requirements novo (freeze)
+pip freeze > requirements-new.txt
+
+# Ver packages desatualizados
+pip list --outdated
+
+================================================================================
+                       NEXT STEPS
+================================================================================
+
+Depois de instalar:
+
+1. Treinar baselines:
+   python 02_train_baselines.py
+   make run-baselines
+
+2. Abrir notebook:
+   jupyter notebook notebooks/02_baseline_models.ipynb
+
+3. Ver experimentos MLflow:
+   mlflow ui
+
+4. Verificar qualidade:
+   make lint
+   make format
+   make test
+
+================================================================================
+
+STATUS: Tudo pronto para comecar!
+
+Para perguntas: Veja SETUP.md e INSTALACAO.md

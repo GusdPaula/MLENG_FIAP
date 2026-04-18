@@ -1,0 +1,175 @@
+================================================================================
+                    QUICK REFERENCE - REQUIREMENTS
+================================================================================
+
+INSTALACAO MAIS RAPIDA (Escolha UMA):
+
+# Opcao 1: Apenas Producao (Recomendado primeiro)
+pip install -r requirements-prod.txt
+# Tamanho: 500 MB | Tempo: 5 min
+
+# Opcao 2: Desenvolvimento Completo
+pip install -r requirements-dev.txt
+# Tamanho: 2 GB | Tempo: 15 min
+
+# Opcao 3: Usando Make (Recomendado)
+make install-full
+# Tudo em 1 comando!
+
+================================================================================
+
+VERIFICAR DEPOIS DE INSTALAR:
+
+python 02_train_baselines.py
+mlflow ui
+jupyter notebook
+
+================================================================================
+
+ARQUIVOS INCLUSOS:
+
+1. requirements.txt          - Balanqueado (dev + prod)
+2. requirements-prod.txt     - SO producao (MINIMO)
+3. requirements-dev.txt      - TUDO (dev + prod + tools)
+4. SETUP.md                  - Guia acessivel
+5. INSTALACAO.md             - Guia completo
+6. REQUIREMENTS_RESUMO.txt   - Este arquivo
+
+Comandos Makefile:
+make help                    - Ver todos
+make install-prod            - Producao
+make install-full            - Desenvolvimento
+make run-all                 - Rodar tudo
+
+================================================================================
+
+O QUE CADA ARQUIVO INSTALA:
+
+requirements-prod.txt (PRODUCAO - 30 linhas):
+  Core: pandas, numpy, scikit-learn
+  ML: torch, xgboost, lightgbm
+  MLOps: mlflow
+  API: fastapi, uvicorn, pydantic
+  Viz: matplotlib, seaborn
+
+requirements-dev.txt (DESENVOLVIMENTO - 38 linhas):
+  TUDO de requirements-prod.txt +
+  Test: pytest, pytest-cov
+  Quality: black, ruff, mypy, isort, pylint
+  Dev: jupyter, jupyterlab, ipython
+  ML Tools: fairlearn, optuna, shap
+  Docs: sphinx, sphinx-rtd-theme
+
+================================================================================
+
+PRIMEIRO SETUP (Do Zero):
+
+1. cd William
+
+2. python -m venv .venv
+
+3. # Windows:
+   .\.venv\Scripts\activate
+   # Linux/Mac:
+   source .venv/bin/activate
+
+4. pip install -r requirements-prod.txt
+
+5. python 02_train_baselines.py
+
+Pronto!
+
+================================================================================
+
+DEPOIS, SE QUISER DESENVOLVIMENTO:
+
+pip install -r requirements-dev.txt
+
+Isto vai adicionar:
+- Jupyter (notebooks)
+- pytest (testes)
+- black (formatacao)
+- ruff (linting)
+- mypy (type checking)
+- fairlearn, optuna, shap
+
+================================================================================
+
+TROUBLESHOOTING:
+
+Erro: "No module named torch"
+  pip install --upgrade torch
+
+Erro: "Permission denied"
+  sudo pip install -r requirements-dev.txt
+  (ou use venv - evite sudo!)
+
+Erro: "Python 3.10+ required"
+  python --version
+  python3.10 -m venv .venv
+
+Erro: "Module not found"
+  pip list | grep <nome>
+  pip install <nome>
+
+================================================================================
+
+COMANDOS UTEIS:
+
+# Ver o que foi instalado
+pip list
+
+# Ver pacotes antigos
+pip list --outdated
+
+# Upgrade tudo
+pip install --upgrade -r requirements-dev.txt
+
+# Ver tamanho
+pip download -r requirements-prod.txt --no-deps
+du -sh
+
+# Desinstalar
+pip uninstall pandas
+
+# Gerar novo requirements
+pip freeze > requirements-new.txt
+
+================================================================================
+
+PROXIMOS PASSOS:
+
+Apos instalar, execute:
+
+1. Treinar baselines:
+   python 02_train_baselines.py
+   (ou make run-baselines)
+
+2. Abrir Jupyter:
+   jupyter notebook notebooks/02_baseline_models.ipynb
+
+3. Ver MLflow:
+   mlflow ui
+   # http://localhost:5000
+
+4. Rodar testes:
+   pytest tests/
+
+5. Verificar codigo:
+   make lint
+   make format
+
+================================================================================
+
+STATUS:
+
+requirements-prod.txt   ✓ PRONTO
+requirements-dev.txt    ✓ PRONTO
+requirements.txt        ✓ PRONTO
+Makefile                ✓ ATUALIZADO
+SETUP.md                ✓ CRIADO
+INSTALACAO.md           ✓ CRIADO
+
+Você está pronto para começar!
+
+================================================================================

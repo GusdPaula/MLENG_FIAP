@@ -1,4 +1,4 @@
-.PHONY: help install install-dev clean test lint format run-eda run-notebook docker-build docker-run
+.PHONY: help install install-dev clean test lint format run-eda run-notebook docker-build docker-run install-prod run-baselines run-all
 
 # Variáveis
 PYTHON := python3
@@ -11,20 +11,24 @@ help:
 	@echo "║  $(PROJECT_NAME) - Make Commands                 ║"
 	@echo "╚════════════════════════════════════════════════════════════╝"
 	@echo ""
-	@echo "Setup:"
-	@echo "  make install          - Instalar dependências"
+	@echo "Setup & Install:"
+	@echo "  make install          - Instalar via pyproject.toml"
 	@echo "  make install-dev      - Instalar com dev dependencies"
-	@echo "  make clean            - Limpar arquivos temporários"
+	@echo "  make install-prod     - Instalar apenas producao (requirements-prod.txt)"
+	@echo "  make install-full     - Instalar tudo completo (requirements-dev.txt)"
+	@echo "  make clean            - Limpar arquivos temporarios"
 	@echo ""
 	@echo "Desenvolvimento:"
-	@echo "  make lint             - Validar código (ruff)"
-	@echo "  make format           - Formatar código (black, isort)"
+	@echo "  make lint             - Validar codigo (ruff)"
+	@echo "  make format           - Formatar codigo (black, isort)"
 	@echo "  make test             - Executar testes com pytest"
-	@echo "  make coverage         - Gerar relatório de cobertura"
+	@echo "  make coverage         - Gerar relatorio de cobertura"
 	@echo ""
-	@echo "Análise:"
+	@echo "Execucao:"
 	@echo "  make run-eda          - Executar script de EDA"
+	@echo "  make run-baselines    - Treinar baselines com MLflow"
 	@echo "  make run-notebook     - Iniciar Jupyter notebook"
+	@echo "  make run-all          - Rodar EDA + Baselines"
 	@echo "  make mlflow-ui        - Abrir MLflow UI (localhost:5000)"
 	@echo ""
 	@echo "Docker:"
@@ -41,6 +45,16 @@ install-dev:
 	@echo "📦 Instalando com dev dependencies..."
 	$(PIP) install -e ".[dev,ml]"
 	@echo "✅ Dev environment pronto!"
+
+install-prod:
+	@echo "📦 Instalando apenas producao..."
+	$(PIP) install -r requirements-prod.txt
+	@echo "✅ Producao ready!"
+
+install-full:
+	@echo "📦 Instalando tudo (dev + prod + ml)..."
+	$(PIP) install -r requirements-dev.txt
+	@echo "✅ Full development environment pronto!"
 
 clean:
 	@echo "🧹 Limpando arquivos temporários..."
@@ -78,6 +92,14 @@ run-eda:
 	@echo "📊 Executando EDA..."
 	$(PYTHON) 01_eda_analysis.py
 	@echo "✅ EDA concluído!"
+
+run-baselines:
+	@echo "🤖 Treinando baselines com MLflow..."
+	$(PYTHON) 02_train_baselines.py
+	@echo "✅ Baselines concluído!"
+
+run-all: run-eda run-baselines
+	@echo "✅ Pipeline completo executado!"
 
 run-notebook:
 	@echo "📓 Iniciando Jupyter..."
