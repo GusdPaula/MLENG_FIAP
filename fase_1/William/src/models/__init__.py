@@ -8,6 +8,8 @@ from .transformers import (
     FeatureSelector,
     NumericalTransformer,
 )
+from .pipeline import TelcoPipeline
+from .inference import PredictionService, ModelRegistry
 
 __all__ = [
     "BaselineExperiment",
@@ -16,4 +18,7 @@ __all__ = [
     "CategoricalEncoder",
     "FeatureSelector",
     "NumericalTransformer",
+    "TelcoPipeline",
+    "PredictionService",
+    "ModelRegistry",
 ]
