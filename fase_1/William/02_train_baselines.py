@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Script de Treinamento de Baselines - Etapa 3
+Script de Treinamento de Baselines
 
 Etapas:
 1. Carregar e preparar dados
