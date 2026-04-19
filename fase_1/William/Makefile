@@ -1,4 +1,4 @@
-.PHONY: help install install-dev lint format type-check test test-cov test-smoke test-unit test-all clean build run run-api run-api-prod docs venv pre-commit
+.PHONY: help install install-dev lint format type-check test test-cov test-smoke test-unit test-all clean build run run-api run-api-prod docs venv venv-activate pre-commit
 
 # Variáveis
 PYTHON := python3
@@ -15,6 +15,7 @@ help:
 	@echo "  make install          - Instalar dependências"
 	@echo "  make install-dev      - Instalar com dev dependencies"
 	@echo "  make venv             - Criar virtual environment"
+	@echo "  make venv-activate    - Ativar virtual environment"	
 	@echo "  make clean            - Limpar arquivos temporários"
 	@echo ""
 	@echo "Code Quality:"
@@ -36,15 +37,14 @@ help:
 	@echo "  make run-api-prod     - Iniciar API (produção)"
 	@echo "  make docs             - Gerar documentação"
 	@echo ""
+	@echo "make run-all	- Rodar EDA + Baselines"
+	@echo "make mlflow-ui	- Abrir MLflow UI (localhost:5000)"
+	@echo ""
+	@echo "Docker:"
+	@echo "make docker-build	- Construir imagem Docker"
+	@echo "make docker-run	- Executar container Docker"
+	@echo ""
 
-# ==== INSTALAÇÃO ====
-install:
-	$(PIP) install -e .
-	@echo "✅ Dependências instaladas"
-
-install-dev:
-	$(PIP) install -e ".[dev]"
-	@echo "✅ Dependências de desenvolvimento instaladas"
 
 # ==== CODE QUALITY ====
 lint:
@@ -88,17 +88,6 @@ test-unit:
 test-all: lint type-check test-cov
 	@echo "✅ Todos os testes passaram!"
 
-# ==== LIMPEZA ====
-clean:
-	@echo "🧹 Limpando..."
-	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	find . -type f -name "*.pyc" -delete
-	find . -type f -name "*.pyo" -delete
-	find . -type f -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
-	rm -rf build/ dist/ .eggs/ *.egg-info/ || true
-	rm -rf .pytest_cache/ .mypy_cache/ .coverage htmlcov/ || true
-	@echo "✅ Limpeza concluída"
-
 # ==== BUILD ====
 build: clean
 	@echo "📦 Buildando pacote..."
@@ -128,23 +117,20 @@ docs:
 # ==== VENV ====
 venv:
 	@echo "🐍 Criando virtual environment..."
-	$(PYTHON) -m venv $(VENV)
+	$(PYTHON) -m venv $(VENV)	
 	@echo "✅ Virtual environment criado"
+	
+venv-activate:
+	source $(VENV)/Scripts/activate
+	@echo "✅ Ativado virtual environment"
+
 
 # ==== GIT ====
 pre-commit: format lint type-check
 	@echo "✅ Pre-commit checks concluídos"
 
-# ==== DEFAULT ====
-.DEFAULT_GOAL := help
-	@echo "  make run-all          - Rodar EDA + Baselines"
-	@echo "  make mlflow-ui        - Abrir MLflow UI (localhost:5000)"
-	@echo ""
-	@echo "Docker:"
-	@echo "  make docker-build     - Construir imagem Docker"
-	@echo "  make docker-run       - Executar container Docker"
-	@echo ""
 
+# ==== INSTALAÇÃO ====
 install:
 	@echo "📦 Instalando dependências..."
 	$(PIP) install -e .
@@ -165,6 +151,7 @@ install-full:
 	$(PIP) install -r requirements-dev.txt
 	@echo "✅ Full development environment pronto!"
 
+# ==== LIMPEZA ====
 clean:
 	@echo "🧹 Limpando arquivos temporários..."
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
@@ -175,22 +162,6 @@ clean:
 	rm -rf .pytest_cache/ .mypy_cache/ .ruff_cache/
 	rm -rf htmlcov/ .coverage
 	@echo "✅ Limpeza concluída!"
-
-lint:
-	@echo "🔍 Validando código com ruff..."
-	ruff check src/ tests/ --show-source
-	@echo "✅ Linting OK!"
-
-format:
-	@echo "✨ Formatando código..."
-	isort src/ tests/
-	black src/ tests/
-	@echo "✅ Formatação concluída!"
-
-test:
-	@echo "🧪 Executando testes..."
-	pytest tests/ -v --tb=short
-	@echo "✅ Testes concluídos!"
 
 coverage:
 	@echo "📊 Gerando cobertura de testes..."
