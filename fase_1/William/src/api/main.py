@@ -18,7 +18,7 @@ from .schemas import (
     ErrorResponse,
     ModelInfoResponse,
 )
-from .feature_transformer import feature_transformer
+from src.data.preprocessing import TelcoDataPreprocessor
 from src.models import PredictionService
 from src.config import get_config, APIConfig
 
@@ -65,7 +65,17 @@ def create_app(model_path: Optional[str] = None) -> FastAPI:
     
     # State da aplicação
     app.state.model_service: Optional[PredictionService] = None
+    app.state.preprocessor: Optional[TelcoDataPreprocessor] = None
     app.state.config = get_config()
+    
+    # Inicializar preprocessor para inferência
+    try:
+        preprocessor = TelcoDataPreprocessor()
+        preprocessor.fit_for_inference('data/processed/telco_churn_processed.csv')
+        app.state.preprocessor = preprocessor
+        logger.info(f"[OK] Preprocessador inicializado para inferência")
+    except Exception as e:
+        logger.error(f"[ERROR] Erro ao inicializar preprocessador: {e}")
     
     # Carregar modelo se fornecido
     if model_path:
@@ -114,7 +124,7 @@ def create_app(model_path: Optional[str] = None) -> FastAPI:
         
         try:
             # Transformar dicionário de features para array ordenado
-            X = feature_transformer.transform(request.features)
+            X = app.state.preprocessor.transform_single(request.features)
             
             logger.info(f"Features transformadas shape: {X.shape}")
             
@@ -178,7 +188,7 @@ def create_app(model_path: Optional[str] = None) -> FastAPI:
         
         try:
             # Transformar lista de dicionários para array ordenado
-            X = feature_transformer.transform_batch(request.samples)
+            X = app.state.preprocessor.transform_batch(request.samples)
             
             if request.return_probabilities:
                 result = app.state.model_service.predict(X, return_proba=True)
@@ -231,7 +241,7 @@ def create_app(model_path: Optional[str] = None) -> FastAPI:
             model_type="Logistic Regression / Random Forest / XGBoost",
             model_version="0.1.0",
             n_features=30,
-            features_used=feature_transformer.feature_order
+            features_used=app.state.preprocessor.feature_names
         )
     
     # ============ ROOT ============
