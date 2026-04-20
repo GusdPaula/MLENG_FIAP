@@ -89,7 +89,42 @@ def env_vars():
         del os.environ['DEBUG']
 
 
-# Configuração global de pytest
+@pytest.fixture
+def real_data_path():
+    """Retorna caminho do dataset real ou pula teste."""
+    data_path = 'data/processed/telco_churn_processed.csv'
+    if not Path(data_path).exists():
+        pytest.skip(f"Dataset não encontrado em {data_path}")
+    return data_path
+
+
+@pytest.fixture
+def sample_features_dict():
+    """Dicionário de exemplo com 19 features nomeadas."""
+    return {
+        "Gender": "Male",
+        "Senior Citizen": "No",
+        "Partner": "No",
+        "Dependents": "No",
+        "Tenure Months": 24,
+        "Phone Service": "Yes",
+        "Multiple Lines": "No",
+        "Internet Service": "DSL",
+        "Online Security": "Yes",
+        "Online Backup": "No",
+        "Device Protection": "No",
+        "Tech Support": "No",
+        "Streaming TV": "No",
+        "Streaming Movies": "No",
+        "Contract": "Two year",
+        "Paperless Billing": "No",
+        "Payment Method": "Bank transfer (automatic)",
+        "Monthly Charges": 89.0,
+        "Total Charges": 2136.0
+    }
+
+
+
 def pytest_configure(config):
     """Configuração inicial do pytest."""
     config.addinivalue_line(

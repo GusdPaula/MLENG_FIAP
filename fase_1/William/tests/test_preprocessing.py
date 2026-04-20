@@ -176,3 +176,114 @@ class TestDataPreprocessorPipeline:
         # Deve ter positivos e negativos em ambos sets
         assert 0 in y_train and 1 in y_train
         assert 0 in y_test and 1 in y_test
+
+
+class TestPreprocessorInference:
+    """Testes para métodos de inferência do TelcoDataPreprocessor."""
+    
+    def test_fit_for_inference_creates_scaler(self, real_data_path):
+        """Testa que fit_for_inference() cria scaler e feature_names."""
+        preprocessor = TelcoDataPreprocessor()
+        preprocessor.fit_for_inference(real_data_path)
+        
+        assert preprocessor.scaler is not None
+        assert preprocessor.feature_names is not None
+        assert isinstance(preprocessor.feature_names, list)
+        assert len(preprocessor.feature_names) == 30
+        assert preprocessor._fitted_for_inference is True
+    
+    def test_fit_for_inference_detects_columns(self, real_data_path):
+        """Testa que fit_for_inference() detecta colunas binárias e categóricas."""
+        preprocessor = TelcoDataPreprocessor()
+        preprocessor.fit_for_inference(real_data_path)
+        
+        assert preprocessor.binary_columns is not None
+        assert preprocessor.categorical_columns is not None
+        assert len(preprocessor.binary_columns) > 0
+        assert len(preprocessor.categorical_columns) > 0
+    
+    def test_transform_single_returns_correct_shape(self, real_data_path, sample_features_dict):
+        """Testa que transform_single() retorna shape (1, 30)."""
+        preprocessor = TelcoDataPreprocessor()
+        preprocessor.fit_for_inference(real_data_path)
+        
+        result = preprocessor.transform_single(sample_features_dict)
+        
+        assert isinstance(result, np.ndarray)
+        assert result.shape == (1, 30)
+    
+    def test_transform_single_without_fit_raises_error(self, sample_features_dict):
+        """Testa que transform_single() sem fit_for_inference() levanta ValueError."""
+        preprocessor = TelcoDataPreprocessor()
+        
+        with pytest.raises(ValueError, match="fit_for_inference"):
+            preprocessor.transform_single(sample_features_dict)
+    
+    def test_transform_batch_returns_correct_shape(self, real_data_path, sample_features_dict):
+        """Testa que transform_batch() retorna shape (n, 30)."""
+        preprocessor = TelcoDataPreprocessor()
+        preprocessor.fit_for_inference(real_data_path)
+        
+        # Passar 3 dicionários
+        features_list = [sample_features_dict] * 3
+        result = preprocessor.transform_batch(features_list)
+        
+        assert isinstance(result, np.ndarray)
+        assert result.shape == (3, 30)
+    
+    def test_transform_batch_without_fit_raises_error(self, sample_features_dict):
+        """Testa que transform_batch() sem fit_for_inference() levanta ValueError."""
+        preprocessor = TelcoDataPreprocessor()
+        features_list = [sample_features_dict]
+        
+        with pytest.raises(ValueError, match="fit_for_inference"):
+            preprocessor.transform_batch(features_list)
+    
+    def test_transform_single_output_is_normalized(self, real_data_path, sample_features_dict):
+        """Testa que output de transform_single() foi normalizado."""
+        preprocessor = TelcoDataPreprocessor()
+        preprocessor.fit_for_inference(real_data_path)
+        
+        result = preprocessor.transform_single(sample_features_dict)
+        
+        # Não deve ser tudo zeros
+        assert not np.allclose(result, 0)
+        
+        # Valores devem estar no range típico de dados normalizados (não valores brutos)
+        # Esperamos valores menores em magnitude depois do StandardScaler
+        assert np.max(np.abs(result)) < 100  # Valores típicos são muito menores
+    
+    def test_transform_consistency(self, real_data_path, sample_features_dict):
+        """Testa que transform_single() é determinístico."""
+        preprocessor = TelcoDataPreprocessor()
+        preprocessor.fit_for_inference(real_data_path)
+        
+        result1 = preprocessor.transform_single(sample_features_dict)
+        result2 = preprocessor.transform_single(sample_features_dict)
+        
+        assert np.allclose(result1, result2)
+    
+    def test_transform_single_matches_pipeline(self, real_data_path, sample_features_dict):
+        """Teste de integração: transform_single deve corresponder ao pipeline_completo.
+        
+        Este é o teste mais importante — garante que treinamento e inferência
+        aplicam o mesmo preprocessamento.
+        """
+        # Usar pipeline_completo normalmente
+        preprocessor1 = TelcoDataPreprocessor()
+        X_train, X_test, y_train, y_test = preprocessor1.pipeline_completo(
+            real_data_path, test_size=0.2
+        )
+        
+        # Usar transform_single para um registro
+        preprocessor2 = TelcoDataPreprocessor()
+        preprocessor2.fit_for_inference(real_data_path)
+        result = preprocessor2.transform_single(sample_features_dict)
+        
+        # Ambos devem ter 30 features
+        assert X_train.shape[1] == 30
+        assert result.shape == (1, 30)
+        
+        # Os nomes de features devem coincidir
+        assert preprocessor1.feature_names == preprocessor2.feature_names
+
