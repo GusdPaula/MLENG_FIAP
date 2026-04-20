@@ -28,6 +28,7 @@ class TelcoDataPreprocessor:
         self.scaler = None
         self.feature_names = None
         self.binary_columns = None
+        self.binary_mappings = {}  # Armazenar mappings de colunas binárias
         self.categorical_columns = None
         self._fitted_for_inference = False
     
@@ -80,13 +81,27 @@ class TelcoDataPreprocessor:
         
         # Mapeamento Yes/No -> 1/0
         for col in binary_cols:
-            unique_vals = df[col].unique()
-            if 'Yes' in unique_vals:
-                df[col] = df[col].map({'Yes': 1, 'No': 0})
-            else:
-                # Alternativa: primeiro valor -> 0, segundo -> 1
-                mapping = {unique_vals[0]: 0, unique_vals[1]: 1}
+            # Usar mapping armazenado se disponível, caso contrário criar novo
+            if col in self.binary_mappings:
+                mapping = self.binary_mappings[col]
                 df[col] = df[col].map(mapping)
+            else:
+                unique_vals = df[col].unique()
+                if len(unique_vals) >= 2:
+                    # Ordenar para garantir consistência
+                    sorted_vals = sorted(unique_vals)
+                    mapping = {sorted_vals[0]: 0, sorted_vals[1]: 1}
+                    df[col] = df[col].map(mapping)
+                else:
+                    # Inferência com apenas 1 valor: mapear conforme aprendido
+                    if col in self.binary_mappings:
+                        mapping = self.binary_mappings[col]
+                        df[col] = df[col].map(mapping)
+                    else:
+                        # Fallback: Yes -> 1, outros -> 0
+                        val = unique_vals[0]
+                        mapping = {val: 1 if val == 'Yes' else 0}
+                        df[col] = df[col].map(mapping)
         
         print(f"[OK] {len(binary_cols)} colunas binárias codificadas")
         return df
@@ -202,18 +217,28 @@ class TelcoDataPreprocessor:
             if X[col].dtype == 'object' and X[col].nunique() > 2
         ]
         
-        # 5. Codificar features
+        # 5. Aprender os mappings das colunas binárias antes de codificar
+        for col in self.binary_columns:
+            unique_vals = X[col].unique()
+            if 'Yes' in unique_vals:
+                self.binary_mappings[col] = {'Yes': 1, 'No': 0}
+            else:
+                # Ordenar para garantir consistência
+                sorted_vals = sorted(unique_vals)
+                self.binary_mappings[col] = {sorted_vals[0]: 0, sorted_vals[1]: 1}
+        
+        # 6. Codificar features
         X = self.encode_binary_features(X)
         X = self.encode_categorical_features(X)
         
-        # 6. Armazenar nomes das features
+        # 7. Armazenar nomes das features
         self.feature_names = X.columns.tolist()
         
-        # 7. Criar e treinar StandardScaler
+        # 8. Criar e treinar StandardScaler
         self.scaler = StandardScaler()
         self.scaler.fit(X)
         
-        # 8. Marcar como preparado para inferência
+        # 9. Marcar como preparado para inferência
         self._fitted_for_inference = True
         
         print(f"[OK] Preprocessador preparado para inferência com {len(self.feature_names)} features")
