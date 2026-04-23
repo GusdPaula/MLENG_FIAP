@@ -4,7 +4,7 @@ from google.cloud import bigquery
 
 
 def test_bq_connection():
-    # Load environment variables from .env file
+    # Load environment variables from .env file s
     dotenv.load_dotenv()
 
     # Get the project ID from environment variables
