@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, gustavo ] # Added gustavo branch here so it triggers on push
   pull_request:
     branches: [ main ]
 
@@ -10,6 +10,11 @@ jobs:
   test:
     name: Run Linting and Tests
     runs-on: ubuntu-latest
+    
+    # This tells GitHub to run all commands inside your subfolder
+    defaults:
+      run:
+        working-directory: fase_1/Gustavo/ibm_churn
 
     steps:
       - name: Checkout Code
@@ -18,14 +23,13 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v3
         with:
-          # Automatically caches dependencies to speed up future runs
           enable-cache: true
 
       - name: Set up Python
         run: uv python install 3.12
 
       - name: Install Project Dependencies
-        # Installs both app and dev dependencies (ruff, pytest, etc.)
+        # uv will now find the pyproject.toml in the working-directory
         run: uv sync --all-extras --dev
 
       - name: Lint and Format Check (Ruff)
@@ -35,20 +39,16 @@ jobs:
 
       - name: Run Pytest
         env:
-          # Map your GitHub Secrets to Environment Variables
           GOOGLE_CLOUD_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
           GCP_KEY_JSON: ${{ secrets.GCP_SA_KEY }}
           BQ_DATASET_ID: ${{ secrets.BQ_DATASET_ID }}
           BQ_TABLE_ID: ${{ secrets.BQ_TABLE_ID }}
         run: |
-          # 1. Create the secrets directory in the virtual runner
+          # These steps now happen inside fase_1/Gustavo/ibm_churn/
           mkdir -p secrets
-          
-          # 2. Recreate the physical JSON file from the secret content
           echo "$GCP_KEY_JSON" > secrets/your-key.json
           
-          # 3. Point the Google Auth library to that file
+          # Use a relative path for credentials
           export GOOGLE_APPLICATION_CREDENTIALS="secrets/your-key.json"
           
-          # 4. Execute tests
           uv run pytest
