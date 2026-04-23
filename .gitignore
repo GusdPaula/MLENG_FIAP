@@ -74,3 +74,5 @@ htmlcov/
 *.model
 
 mlflow*
+
+ibm-churn*

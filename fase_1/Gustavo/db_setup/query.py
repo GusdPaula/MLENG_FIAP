@@ -1,8 +1,9 @@
 from google.cloud import bigquery
-import pandas as pd
 
 
-def query_bigquery_table(project_id='ibm-churn', dataset_id='ibmchurn', table_id='ibm_churn', query=None):
+def query_bigquery_table(
+    project_id="ibm-churn", dataset_id="ibmchurn", table_id="ibm_churn", query=None
+):
     # Inicializa o cliente do BigQuery
     # Se a chave JSON não estiver no ambiente, você pode passar explicitamente:
     # client = bigquery.Client.from_service_account_json('caminho/para/chave.json')
@@ -31,9 +32,8 @@ def query_bigquery_table(project_id='ibm-churn', dataset_id='ibmchurn', table_id
 
 # Execução
 if __name__ == "__main__":
-    df = query_bigquery_table(PROJECT_ID, DATASET_ID, TABLE_ID)
-    
+    df = query_bigquery_table()
+
     if df is not None:
         # Exemplo de visualização
         print(df.head())
-        
