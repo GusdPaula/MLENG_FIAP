@@ -17,7 +17,6 @@ def test_bq_connection():
     query = "SELECT 1 AS test"
     result = client.query(query).to_dataframe()
 
+    msg = "BigQuery connection test failed: No results returned"
     # Check if the query returned the expected result
-    assert (
-        result["test"][0] == 1
-    ), "BigQuery connection test failed: Unexpected query result"
+    assert result["test"][0] == 1, msg
