@@ -18,6 +18,7 @@ class BigQueryDataLoader:
         self.project_id = settings.google_cloud_project
         self.dataset_id = settings.bq_dataset_id
         self.table_id = settings.bq_table_id
+        self.df = pd.DataFrame()  # Initialize an empty DataFrame
 
         self.client = bigquery.Client(project=self.project_id)
 

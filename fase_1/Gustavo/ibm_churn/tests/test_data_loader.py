@@ -21,7 +21,7 @@ def test_data_loader_columns():
     df = data_loader.df
 
     expected_columns = [
-        "CustomerIDx",
+        "CustomerID",
         "Count",
         "Country",
         "State",
