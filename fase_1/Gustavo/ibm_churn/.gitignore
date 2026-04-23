@@ -1,0 +1,58 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+pip-wheel-metadata/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Environment variables
+.env
+.env.*
+
+# MLflow / runs
+mlruns/
+.mlflow/
+
+# Data files
+*.csv
+*.xlsx
+*.xls
+*.parquet
+*.feather
+
+# Model artifacts
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.hdf5
+*.model
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
