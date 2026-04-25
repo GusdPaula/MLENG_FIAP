@@ -283,4 +283,4 @@ def create_app(model_path: Optional[str] = None) -> FastAPI:
 
 
 # Aplicação padrão
-app = create_app("models/best_model.pkl")
+app = create_app(".\\models\\best_model_with_metadata.pkl")
