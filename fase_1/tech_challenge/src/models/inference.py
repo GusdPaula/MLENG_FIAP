@@ -37,7 +37,8 @@ class PredictionService:
         # Carregar pipeline treinado
         if Path(pipeline_path).exists():
             with open(pipeline_path, 'rb') as f:
-                self.pipeline = pickle.load(f)
+                # TODO: REMOVE
+                self.pipeline = pickle.load(f)['model_object']
             print(f"[OK] Pipeline carregado de {pipeline_path}")
         else:
             raise FileNotFoundError(f"Pipeline não encontrado em {pipeline_path}")

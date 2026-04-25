@@ -102,25 +102,25 @@ def real_data_path():
 def sample_features_dict():
     """Dicionário de exemplo com 19 features nomeadas."""
     return {
-        "Gender": "Male",
-        "Senior Citizen": "No",
-        "Partner": "No",
-        "Dependents": "No",
-        "Tenure Months": 24,
-        "Phone Service": "Yes",
-        "Multiple Lines": "No",
-        "Internet Service": "DSL",
-        "Online Security": "Yes",
-        "Online Backup": "No",
-        "Device Protection": "No",
-        "Tech Support": "No",
-        "Streaming TV": "No",
-        "Streaming Movies": "No",
-        "Contract": "Two year",
-        "Paperless Billing": "No",
-        "Payment Method": "Bank transfer (automatic)",
-        "Monthly Charges": 89.0,
-        "Total Charges": 2136.0
+        "gender": "Male",
+        "senior_citizen": "No",
+        "partner": "No",
+        "dependents": "No",
+        "tenure_months": 24,
+        "phone_service": "Yes",
+        "multiple_lines": "No",
+        "internet_service": "DSL",
+        "online_security": "Yes",
+        "online_backup": "No",
+        "device_protection": "No",
+        "tech_support": "No",
+        "streaming_tv": "No",
+        "streaming_movies": "No",
+        "contract": "Two year",
+        "paperless_billing": "No",
+        "payment_method": "Bank transfer (automatic)",
+        "monthly_charges": 89.0,
+        "total_charges": 2136.0
     }
 
 

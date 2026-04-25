@@ -43,11 +43,13 @@ class TelcoDataPreprocessor:
         """Remove colunas com leakage (churn label, reason, score, CLTV) e localização."""
         if drop_columns is None:
             drop_columns = [
-                'CustomerID', 'Count', 'Country', 'State', 'City', 'Zip Code',
-                'Lat Long', 'Latitude', 'Longitude',
-                'Churn Label', 'Churn Reason',
-                'CLTV', 'Churn Score',
+                'customerid', 'count', 'country', 'state', 'city', 'zip_code',
+                'lat_long', 'latitude', 'longitude',
+                'churn_label', 'churn_reason',
+                'cltv', 'churn_score',
             ]
+
+
 
         cols_to_drop = [c for c in drop_columns if c in df.columns]
         df = df.drop(columns=cols_to_drop, errors='ignore')

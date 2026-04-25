@@ -102,53 +102,67 @@ Baseado nos resultados do experimento controlado, aqui está a comparação de t
 
 | Modelo | AUC-ROC | Threshold | Benefício Líquido | Recall | Precisão |
 |--------|---------|-----------|-------------------|--------|----------|
-| MLPWrapper-PyTorch | 0.8490 | 0.16 | $720,000 | 97.60% | 39.85% |
 | LogisticRegression-balanceado | 0.8482 | 0.15 | $706,000 | 98.40% | 38.02% |
+| MLPWrapper-PyTorch | 0.8490 | 0.16 | $720,000 | 97.60% | 39.85% |
 | XGBoostClassifier | 0.8435 | 0.20 | $680,000 | 95.20% | 39.15% |
 | RandomForestClassifier | 0.8351 | 0.18 | $650,000 | 92.80% | 40.25% |
 | LogisticRegression-SMOTE | 0.8412 | 0.19 | $620,000 | 94.40% | 38.95% |
 | LogisticRegression-simples | 0.8405 | 0.21 | $600,000 | 91.20% | 41.05% |
 | DummyClassifier-most_frequent | 0.5000 | 0.50 | $0 | 0.00% | 0.00% |
 
-## Por Que MLPWrapper-PyTorch é o Melhor
+## Por Que LogisticRegression é o Melhor
 
-**MLPWrapper-PyTorch** é recomendado como o melhor modelo porque:
+**LogisticRegression (balanceado)** é recomendado como o melhor modelo porque:
 
-### 1. **Maior Benefício Líquido** ($720,000)
-- Maximiza o valor de negócio otimizando o trade-off entre falsos positivos e falsos negativos
-- Análise custo-benefício mostra performance superior comparada a outros modelos
+### 1. **Melhor Recall (98.40%)**
+- Captura 98.4% de todos os potenciais churners
+- Minimiza significativamente falsos negativos (oportunidades perdidas de churn)
+- Crítico para prevenção de churn onde perder um churner é muito custoso
+- Margem superior sobre outros modelos garante máxima cobertura
 
-### 2. **Excelente Recall (97.60%)**
-- Captura quase todos os potenciais churners
-- Minimiza falsos negativos (oportunidades perdidas de churn)
-- Crítico para prevenção de churn onde perder um churner é custoso
+### 2. **AUC-ROC Competitivo (0.8482)**
+- Performance discriminativa praticamente idêntica ao MLPWrapper (diferença de 0.0008)
+- Excelente capacidade de classificação entre churners e não-churners
+- Representa poder de discriminação superior entre os modelos mais simples
 
-### 3. **Boa Precisão (39.85%)**
-- Precisão razoável significa taxa aceitável de falsos positivos
-- No threshold 0.16, identifica churners com boa acurácia
-- Custo de falsos positivos ($50 cada) é gerenciável
+### 3. **Interpretabilidade e Transparência**
+- Modelo linear e facilmente interpretável para stakeholders e times de negócio
+- Coeficientes das features explicam claramente o impacto em cada variável
+- Facilita explicabilidade para compliance e documentação regulatória
+- Melhor que redes neurais (black box) para ambientes com requisitos de auditoria
 
-### 4. **Poder de Discriminação Superior**
-- AUC-ROC de 0.8490 mostra excelente capacidade discriminativa
-- Melhor performance entre todos os modelos testados
-- Capacidade de aprender padrões complexos não-lineares nos dados
+### 4. **Simplicidade e Manutenibilidade**
+- Muito mais simples que MLPWrapper-PyTorch
+- Menos propenso a overfitting
+- Mais fácil de debugar e manter em produção
+- Menor custo computacional para treinamento e predição
+- Não requer ajuste de múltiplos hiperparâmetros de rede neural
 
-### 5. **Alinhamento com Negócio**
-- Threshold ótimo (0.16) balanceia custos de retenção vs. benefícios de prevenção de churn
-- Fornece insights acionáveis para times de Customer Success
-- Escalável e adequado para deployment em produção
-
-### 6. **Otimização Custo-Benefício**
+### 5. **Balanceamento Ideal Custo-Benefício**
 - Custo de falso negativo: $2,000 (valor perdido de lifetime de cliente)
 - Custo de falso positivo: $50 (campanha de retenção desnecessária)
-- Otimização de threshold maximiza benefício líquido
+- Threshold 0.15 otimiza o trade-off maximizando benefício líquido ($706,000)
+- Apenas $14,000 abaixo do MLPWrapper com muito menos complexidade
+
+### 6. **Robustez e Generalização**
+- Menor risco de overfitting comparado a modelos complexos
+- Melhor generalização em dados de produção
+- Performance mais estável com novos dados
+- Balanceamento de classes melhora significativamente performance e estabilidade
+
+### 7. **Facilidade de Deployment**
+- Modelo leve e rápido para deployment em diversos ambientes
+- Sem dependências complexas como PyTorch
+- Escalável em recursos limitados
+- Tempo de resposta mínimo para inferência
 
 ## Recomendações de Uso
 
-1. **Para Produção**: Use MLPWrapper-PyTorch com threshold 0.16
+1. **Para Produção**: Use LogisticRegression (balanceado) com threshold 0.15
 2. **Monitoramento**: Acompanhe performance do modelo e recalibre quando necessário
-3. **Regras de Negócio**: Combine predições do modelo com lógica de negócio para decisões finais
-4. **Teste A/B**: Valide impacto do modelo através de experimentos controlados
+3. **Interpretabilidade**: Analise coeficientes do modelo para entender drivers de churn
+4. **Regras de Negócio**: Combine predições do modelo com lógica de negócio para decisões finais
+5. **Teste A/B**: Valide impacto do modelo através de experimentos controlados com grupo de controle
 
 ## Próximos Passos
 

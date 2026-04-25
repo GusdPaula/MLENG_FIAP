@@ -201,6 +201,7 @@ output_dir = "data/processed"
 os.makedirs(output_dir, exist_ok=True)
 
 output_path = os.path.join(output_dir, "telco_churn_processed.csv")
+df.columns = [col.strip().replace(" ", "_").lower() for col in df.columns]
 df.to_csv(output_path, index=False)
 print(f"\n💾 Dataset processado salvo em: {output_path}")
 
