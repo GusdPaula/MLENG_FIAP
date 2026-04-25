@@ -18,7 +18,7 @@ from .schemas import (
     ErrorResponse,
     ModelInfoResponse,
 )
-from src.data.preprocessing import TelcoDataPreprocessor
+from src.data.loader import TelcoDataLoader
 from src.models import PredictionService
 from src.config import get_config, APIConfig
 
@@ -65,17 +65,17 @@ def create_app(model_path: Optional[str] = None) -> FastAPI:
 
     # State da aplicação
     app.state.model_service: Optional[PredictionService] = None
-    app.state.preprocessor: Optional[TelcoDataPreprocessor] = None
+    app.state.preprocessor: Optional[TelcoDataLoader] = None
     app.state.config = get_config()
 
-    # Inicializar preprocessor para inferência
+    # Inicializar loader para inferência
     try:
-        preprocessor = TelcoDataPreprocessor()
-        preprocessor.fit_for_inference('data/processed/telco_churn_processed.csv')
-        app.state.preprocessor = preprocessor
-        logger.info(f"[OK] Preprocessador inicializado para inferência")
+        loader = TelcoDataLoader('data/processed/telco_churn_processed.csv')
+        loader.fit_for_inference()
+        app.state.preprocessor = loader
+        logger.info(f"[OK] Loader inicializado para inferência")
     except Exception as e:
-        logger.error(f"[ERROR] Erro ao inicializar preprocessador: {e}")
+        logger.error(f"[ERROR] Erro ao inicializar loader: {e}")
 
     # Carregar modelo se fornecido
     if model_path:

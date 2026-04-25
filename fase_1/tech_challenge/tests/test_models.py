@@ -112,12 +112,12 @@ class TestSmokeTests:
     def test_module_imports(self):
         """Testa que todos os módulos podem ser importados."""
         from src.config import get_config
-        from src.data import TelcoDataPreprocessor
+        from src.data import TelcoDataLoader
         from src.models import TelcoPipeline, PredictionService
         from src.evaluation import TelcoMetrics
 
         assert get_config is not None
-        assert TelcoDataPreprocessor is not None
+        assert TelcoDataLoader is not None
         assert TelcoPipeline is not None
         assert PredictionService is not None
         assert TelcoMetrics is not None
@@ -146,14 +146,14 @@ class TestSmokeTests:
         from src.models.pipeline import TelcoPipeline
 
         model_types = [
-            ('logistic_regression', TelcoPipeline().create_logistic_regression),
-            ('random_forest', TelcoPipeline().create_random_forest),
-            ('xgboost', TelcoPipeline().create_xgboost),
+            ('logistic_regression', 'create_logistic_regression'),
+            ('random_forest', 'create_random_forest'),
+            ('xgboost', 'create_xgboost'),
         ]
 
-        for model_name, create_func in model_types:
+        for model_name, create_method in model_types:
             pipeline = TelcoPipeline(random_state=42)
-            create_func()
+            getattr(pipeline, create_method)()
 
             # Deve treinar sem erro
             try:

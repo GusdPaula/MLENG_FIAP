@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
-from typing import Tuple, List
+from typing import Tuple, List, Dict, Union, Optional
 
 
 class TelcoDataLoader:
@@ -27,6 +27,9 @@ class TelcoDataLoader:
         self.scaler = StandardScaler()
         self.imputer = SimpleImputer(strategy='mean')
         self.le_dict = {}
+        self.feature_names = None
+        self._fitted_for_inference = False
+        self.categorical_values = {}  # Armazenar valores válidos para cada coluna categórica
 
     def carregar(self) -> pd.DataFrame:
         """Carrega o dataset."""
@@ -42,12 +45,12 @@ class TelcoDataLoader:
         """
         # Remover colunas não relevantes
         drop_cols = [
-            'CustomerID', 'Count', 'Country', 'State', 'City', 'Zip Code',
-            'Lat Long', 'Latitude', 'Longitude',  # Localização inútil
-            'Churn Label',  # Usar churn_value em vez disso
-            'Churn Reason',  # Razão subjetiva
-            'CLTV',  # Leakage - correlacionado com churn
-            'Churn Score',  # Leakage - score de churn externo
+            'customerid', 'count', 'country', 'state', 'city', 'zip_code',
+            'lat_long', 'latitude', 'longitude',  # localização inútil
+            'churn_label',  # usar churn_value em vez disso
+            'churn_reason',  # razão subjetiva
+            'cltv',  # leakage - correlacionado com churn
+            'churn_score',  # leakage - score de churn externo
         ]
         self.df.rename(columns={'Churn Value': 'churn_value'}, inplace=True)
         X = self.df.drop(columns=drop_cols + ['churn_value'])
@@ -165,3 +168,126 @@ class TelcoDataLoader:
 
         print("\n" + "="*60)
         return self.X_train, self.X_test, self.y_train, self.y_test
+
+    def fit_for_inference(self, data_path: Optional[str] = None) -> None:
+        """Prepara loader para uso em inferência.
+
+        Carrega dataset e treina os transformadores (encoders, imputer, scaler).
+        Deve ser chamado uma vez na inicialização da API.
+
+        Args:
+            data_path: Caminho para o CSV processado (usa self.data_path se não fornecido)
+        """
+        if data_path:
+            self.data_path = data_path
+
+        # 1. Carregar dados
+        self.carregar()
+
+        # 2. Preparar features (sem target)
+        X, _ = self.preparar_features_target()
+
+        # 2.5. Armazenar valores válidos para cada coluna categórica ANTES de transformar
+        categoricas = X.select_dtypes(include=['object']).columns
+        for col in categoricas:
+            self.categorical_values[col] = set(X[col].unique())
+
+        # 3. Codificar categoricas (fit=True para aprender os encoders)
+        X = self.codificar_categoricas(X, fit=True)
+
+        # 4. Imputar (fit=True para aprender as médias)
+        X = pd.DataFrame(
+            self.imputer.fit_transform(X),
+            columns=X.columns
+        )
+
+        # 5. Normalizar (fit=True para aprender média e desvio)
+        X = self.normalizar_numericas(X, fit=True)
+
+        # 6. Armazenar nomes das features
+        self.feature_names = X.columns.tolist()
+
+        # 7. Marcar como preparado para inferência
+        self._fitted_for_inference = True
+
+        print(f"[OK] Loader preparado para inferência com {len(self.feature_names)} features")
+
+    def transform_single(self, features_dict: Dict[str, Union[str, int, float]]) -> np.ndarray:
+        """Transforma dicionário de features em array normalizado.
+
+        Args:
+            features_dict: Dicionário com features nomeadas
+
+        Returns:
+            Array numpy (1, n_features) normalizado e pronto para predição
+
+        Raises:
+            ValueError: Se fit_for_inference() não foi chamado antes ou se valores inválidos
+        """
+        if not self._fitted_for_inference:
+            raise ValueError("fit_for_inference() deve ser chamado antes de usar transform_single()")
+
+        # Validar valores categóricos antes de processar
+        for col, valid_values in self.categorical_values.items():
+            if col in features_dict:
+                value = features_dict[col]
+                if value not in valid_values:
+                    raise ValueError(
+                        f"Valor inválido para '{col}': '{value}'. "
+                        f"Valores válidos: {sorted(valid_values)}"
+                    )
+
+        # 1. Criar DataFrame de 1 linha
+        df = pd.DataFrame([features_dict])
+
+        # 2. Codificar categoricas
+        df = self.codificar_categoricas(df, fit=False)
+
+        # 3. Imputar
+        df = pd.DataFrame(
+            self.imputer.transform(df),
+            columns=df.columns
+        )
+
+        # 4. Normalizar
+        X_scaled = self.normalizar_numericas(df, fit=False)
+
+        # 5. Garantir que tem as mesmas colunas na ordem correta
+        X_scaled = X_scaled[self.feature_names]
+
+        return X_scaled.values
+
+    def transform_batch(self, features_list: List[Dict[str, Union[str, int, float]]]) -> np.ndarray:
+        """Transforma lista de dicionários em array 2D normalizado.
+
+        Args:
+            features_list: Lista de dicionários com features nomeadas
+
+        Returns:
+            Array numpy (n_samples, n_features) normalizado
+
+        Raises:
+            ValueError: Se fit_for_inference() não foi chamado antes
+        """
+        if not self._fitted_for_inference:
+            raise ValueError("fit_for_inference() deve ser chamado antes de usar transform_batch()")
+
+        # 1. Criar DataFrame a partir da lista
+        df = pd.DataFrame(features_list)
+
+        # 2. Codificar categoricas
+        df = self.codificar_categoricas(df, fit=False)
+
+        # 3. Imputar
+        df = pd.DataFrame(
+            self.imputer.transform(df),
+            columns=df.columns
+        )
+
+        # 4. Normalizar
+        X_scaled = self.normalizar_numericas(df, fit=False)
+
+        # 5. Garantir que tem as mesmas colunas na ordem correta
+        X_scaled = X_scaled[self.feature_names]
+
+        return X_scaled.values

@@ -1,7 +1,7 @@
 """Data module - Carregamento e preprocessamento de dados."""
 
-from .preprocessing import TelcoDataPreprocessor
+from .loader import TelcoDataLoader
 
 __all__ = [
-    "TelcoDataPreprocessor",
+    "TelcoDataLoader",
 ]
