@@ -23,13 +23,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip
-          # 1. Install project dependencies first
-          pip install -r fase_1/tech_challenge/requirements.txt
-          # 2. Install dev tools (ruff, pytest)
-          pip install -r fase_1/tech_challenge/requirements-dev.txt
+          # Install the project in editable mode including dev-dependencies
+          uv sync --project fase_1/tech_challenge
 
       - name: Run ruff (Lint & PEP8)
         # We run from the root but target the specific subfolder

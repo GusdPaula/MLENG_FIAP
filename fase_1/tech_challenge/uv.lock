@@ -5782,6 +5782,7 @@ requires-dist = [
     { name = "fastapi", extras = ["standard"], marker = "extra == 'dev'", specifier = ">=0.112.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "imbalanced-learn", specifier = ">=0.12.0" },
+    { name = "imblearn" },
     { name = "imblearn", specifier = ">=0.0" },
     { name = "ipython", marker = "extra == 'dev'", specifier = ">=8.16.0" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=5.12.0" },
