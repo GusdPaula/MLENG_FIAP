@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  test:
+    name: Run pytest and ruff
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 1. Install uv first
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # 2. Sync dependencies using the pyproject.toml
+      - name: Install Dependencies
+        run: |
+          uv sync --project fase_1/tech_challenge
+
+      # 3. Use 'uv run' to execute tools within the synced environment
+      - name: Run ruff (Lint & PEP8)
+        run: |
+          uv run --project fase_1/tech_challenge ruff check .
+          uv run --project fase_1/tech_challenge ruff format --check .
+
+      - name: Run pytest
+        working-directory: ./fase_1/tech_challenge
+        run: |
+          uv run pytest

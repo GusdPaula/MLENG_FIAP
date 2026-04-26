@@ -1,35 +1,33 @@
 """Modelos baseline para Telco Churn com MLflow tracking."""
 
+import os
+
 import mlflow
+import mlflow.data
 import mlflow.sklearn
 import numpy as np
-import mlflow.data
 import pandas as pd
-from mlflow.data.pandas_dataset import PandasDataset
-import os
-from sklearn.dummy import DummyClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import (
-    confusion_matrix,
-    roc_auc_score,
-    average_precision_score,
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    classification_report
-)
-import pandas as pd
-from typing import Tuple, Dict, Any
-from xgboost import XGBClassifier
-from sklearn.model_selection import RandomizedSearchCV, train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.base import BaseEstimator, ClassifierMixin
-from imblearn.over_sampling import SMOTE
 import torch
 import torch.nn as nn
+from imblearn.over_sampling import SMOTE
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.dummy import DummyClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    accuracy_score,
+    average_precision_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
+from sklearn.model_selection import RandomizedSearchCV, train_test_split
+from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, TensorDataset
+from xgboost import XGBClassifier
 
 
 class MLPWrapper(BaseEstimator, ClassifierMixin):
@@ -38,10 +36,17 @@ class MLPWrapper(BaseEstimator, ClassifierMixin):
     Permite usar MLP junto com sklearn Pipeline.
     """
 
-    def __init__(self, input_size=19, hidden_sizes=None,
-                 dropout_rates=None, epochs=100,
-                 learning_rate=0.001, early_stopping_patience=10,
-                 batch_size=32, random_state=42):
+    def __init__(
+        self,
+        input_size=19,
+        hidden_sizes=None,
+        dropout_rates=None,
+        epochs=100,
+        learning_rate=0.001,
+        early_stopping_patience=10,
+        batch_size=32,
+        random_state=42,
+    ):
         self.input_size = input_size
         self.hidden_sizes = hidden_sizes if hidden_sizes is not None else [128, 64, 32]
         self.dropout_rates = dropout_rates if dropout_rates is not None else [0.3, 0.2, 0.0]
@@ -51,14 +56,14 @@ class MLPWrapper(BaseEstimator, ClassifierMixin):
         self.batch_size = batch_size
         self.random_state = random_state
         self.model = None
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def _build_network(self):
         """Constrói arquitetura MLP."""
         layers = []
         prev_size = self.input_size
 
-        for hidden_size, dropout_rate in zip(self.hidden_sizes, self.dropout_rates):
+        for hidden_size, dropout_rate in zip(self.hidden_sizes, self.dropout_rates, strict=False):
             layers.append(nn.Linear(prev_size, hidden_size))
             layers.append(nn.ReLU())
             if dropout_rate > 0:
@@ -79,9 +84,13 @@ class MLPWrapper(BaseEstimator, ClassifierMixin):
         )
 
         X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
-        y_train_tensor = torch.tensor(y_train.values if hasattr(y_train, 'values') else y_train, dtype=torch.long)
+        y_train_tensor = torch.tensor(
+            y_train.values if hasattr(y_train, "values") else y_train, dtype=torch.long
+        )
         X_val_tensor = torch.tensor(X_val, dtype=torch.float32)
-        y_val_tensor = torch.tensor(y_val.values if hasattr(y_val, 'values') else y_val, dtype=torch.long)
+        y_val_tensor = torch.tensor(
+            y_val.values if hasattr(y_val, "values") else y_val, dtype=torch.long
+        )
 
         train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
         val_dataset = TensorDataset(X_val_tensor, y_val_tensor)
@@ -94,16 +103,15 @@ class MLPWrapper(BaseEstimator, ClassifierMixin):
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
         pos_weight = torch.tensor(
-            np.sum(y_train == 0) / np.sum(y_train == 1),
-            dtype=torch.float32
+            np.sum(y_train == 0) / np.sum(y_train == 1), dtype=torch.float32
         ).to(self.device)
         criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
         # Treinar com Early Stopping
-        best_val_loss = float('inf')
+        best_val_loss = float("inf")
         patience_counter = 0
 
-        for epoch in range(self.epochs):
+        for _epoch in range(self.epochs):
             # Training
             self.model.train()
             train_loss = 0.0
@@ -167,14 +175,14 @@ class MLPWrapper(BaseEstimator, ClassifierMixin):
     def get_params(self, deep=True):
         """Retorna parâmetros (compatível com sklearn)."""
         return {
-            'input_size': self.input_size,
-            'hidden_sizes': self.hidden_sizes,
-            'dropout_rates': self.dropout_rates,
-            'epochs': self.epochs,
-            'learning_rate': self.learning_rate,
-            'early_stopping_patience': self.early_stopping_patience,
-            'batch_size': self.batch_size,
-            'random_state': self.random_state
+            "input_size": self.input_size,
+            "hidden_sizes": self.hidden_sizes,
+            "dropout_rates": self.dropout_rates,
+            "epochs": self.epochs,
+            "learning_rate": self.learning_rate,
+            "early_stopping_patience": self.early_stopping_patience,
+            "batch_size": self.batch_size,
+            "random_state": self.random_state,
         }
 
     def set_params(self, **params):
@@ -205,16 +213,23 @@ class BaselineExperiment:
         # Obter ou criar experimento
         experiment = mlflow.get_experiment_by_name(experiment_name)
         if experiment is None:
-            exp_id = mlflow.create_experiment(experiment_name)
-        else:
-            exp_id = experiment.experiment_id
+            mlflow.create_experiment(experiment_name)
 
         mlflow.set_experiment(experiment_name)
         self.resultados = {}
         self._modelos = {}  # Armazenar modelos treinados
 
-    def treinar_modelo(self, modelo, X_train, X_test, y_train, y_test,
-                      nome_modelo: str, X_train_modificado=None, y_train_modificado=None) -> Tuple:
+    def treinar_modelo(
+        self,
+        modelo,
+        X_train,
+        X_test,
+        y_train,
+        y_test,
+        nome_modelo: str,
+        X_train_modificado=None,
+        y_train_modificado=None,
+    ) -> tuple:
         """
         Método genérico para treinar qualquer modelo.
 
@@ -246,13 +261,16 @@ class BaselineExperiment:
                 mlflow.log_param(param_name, param_value)
 
             # Dataset info
-            mlflow.log_dict({
-                'churn_rate_train': float(y_treino.mean()),
-                'churn_rate_test': float(y_test.mean()),
-                'n_train_samples': X_treino.shape[0],
-                'n_test_samples': X_test.shape[0],
-                'n_features': X_treino.shape[1],
-            }, artifact_file="data_info.json")
+            mlflow.log_dict(
+                {
+                    "churn_rate_train": float(y_treino.mean()),
+                    "churn_rate_test": float(y_test.mean()),
+                    "n_train_samples": X_treino.shape[0],
+                    "n_test_samples": X_test.shape[0],
+                    "n_features": X_treino.shape[1],
+                },
+                artifact_file="data_info.json",
+            )
 
             # Treinar modelo
             modelo.fit(X_treino, y_treino)
@@ -263,30 +281,35 @@ class BaselineExperiment:
 
             # Calcular métricas
             metricas = {
-                'test_auc_roc': roc_auc_score(y_test, y_pred_proba),
-                'test_pr_auc': average_precision_score(y_test, y_pred_proba),
-                'test_accuracy': accuracy_score(y_test, y_pred),
-                'test_precision': precision_score(y_test, y_pred),
-                'test_recall': recall_score(y_test, y_pred),
-                'test_f1_score': f1_score(y_test, y_pred),
+                "test_auc_roc": roc_auc_score(y_test, y_pred_proba),
+                "test_pr_auc": average_precision_score(y_test, y_pred_proba),
+                "test_accuracy": accuracy_score(y_test, y_pred),
+                "test_precision": precision_score(y_test, y_pred),
+                "test_recall": recall_score(y_test, y_pred),
+                "test_f1_score": f1_score(y_test, y_pred),
             }
 
             mlflow.log_metrics(metricas)
 
             # Adding model info to MLflow artifacts
-            mlflow.log_dict({
-                'model_type': type(modelo).__name__,
-                'parameters': parametros,
-                'metrics': metricas
-            }, artifact_file="model_info.json")
+            mlflow.log_dict(
+                {
+                    "model_type": type(modelo).__name__,
+                    "parameters": parametros,
+                    "metrics": metricas,
+                },
+                artifact_file="model_info.json",
+            )
 
-            mlflow.log_dict({
-                'classification_report': classification_report(y_test, y_pred, output_dict=True)
-            }, artifact_file="classification_report.json")
+            mlflow.log_dict(
+                {"classification_report": classification_report(y_test, y_pred, output_dict=True)},
+                artifact_file="classification_report.json",
+            )
 
-            mlflow.log_dict({
-                'confusion_matrix': confusion_matrix(y_test, y_pred).tolist()
-            }, artifact_file="confusion_matrix.json")
+            mlflow.log_dict(
+                {"confusion_matrix": confusion_matrix(y_test, y_pred).tolist()},
+                artifact_file="confusion_matrix.json",
+            )
 
             # 1. Ensure X_train is a DataFrame
             if not isinstance(X_train, pd.DataFrame):
@@ -295,10 +318,10 @@ class BaselineExperiment:
                 train_df = X_train.copy()
 
             # 2. Assign the target safely
-            if hasattr(y_train, 'values'):
-                train_df['churn_value'] = y_train.values
+            if hasattr(y_train, "values"):
+                train_df["churn_value"] = y_train.values
             else:
-                train_df['churn_value'] = y_train
+                train_df["churn_value"] = y_train
 
             # Repeat the same logic for test_df
             if not isinstance(X_test, pd.DataFrame):
@@ -306,9 +329,13 @@ class BaselineExperiment:
             else:
                 test_df = X_test.copy()
 
-            test_df['churn_value'] = y_test.values if hasattr(y_test, 'values') else y_test
-            dataset_train = mlflow.data.from_pandas(train_df, targets="churn_value", name="churn_train")
-            dataset_test = mlflow.data.from_pandas(test_df, targets="churn_value", name="churn_test")
+            test_df["churn_value"] = y_test.values if hasattr(y_test, "values") else y_test
+            dataset_train = mlflow.data.from_pandas(
+                train_df, targets="churn_value", name="churn_train"
+            )
+            dataset_test = mlflow.data.from_pandas(
+                test_df, targets="churn_value", name="churn_test"
+            )
 
             mlflow.log_input(dataset_train, context="training")
             mlflow.log_input(dataset_test, context="testing")
@@ -341,30 +368,29 @@ class BaselineExperiment:
             print(f"  - F1-Score: {metricas['test_f1_score']:.4f}")
 
             # Log de feature importance (se disponível)
-            if hasattr(modelo, 'feature_importances_'):
-                feature_importance = pd.DataFrame({
-                    'feature': range(X_treino.shape[1]),
-                    'importance': modelo.feature_importances_
-                }).sort_values('importance', ascending=False)
+            if hasattr(modelo, "feature_importances_"):
+                feature_importance = pd.DataFrame(
+                    {"feature": range(X_treino.shape[1]), "importance": modelo.feature_importances_}
+                ).sort_values("importance", ascending=False)
 
-                mlflow.log_dict(feature_importance.to_dict(),
-                              artifact_file="feature_importance.json")
+                mlflow.log_dict(
+                    feature_importance.to_dict(), artifact_file="feature_importance.json"
+                )
 
-                print(f"  - Top 5 features (importância):")
-                for idx, row in feature_importance.head(5).iterrows():
+                print("  - Top 5 features (importância):")
+                for _idx, row in feature_importance.head(5).iterrows():
                     print(f"    Feature {row['feature']}: {row['importance']:.4f}")
 
             # Log de coeficientes (se disponível)
-            elif hasattr(modelo, 'coef_'):
-                coeficientes = pd.DataFrame({
-                    'feature': range(X_treino.shape[1]),
-                    'coef': modelo.coef_[0]
-                }).sort_values('coef', ascending=False)
+            elif hasattr(modelo, "coef_"):
+                coeficientes = pd.DataFrame(
+                    {"feature": range(X_treino.shape[1]), "coef": modelo.coef_[0]}
+                ).sort_values("coef", ascending=False)
 
                 mlflow.log_dict(coeficientes.to_dict(), artifact_file="top_features.json")
 
-                print(f"  - Top 5 features (coeficientes):")
-                for idx, row in coeficientes.head(5).iterrows():
+                print("  - Top 5 features (coeficientes):")
+                for _idx, row in coeficientes.head(5).iterrows():
                     print(f"    Feature {row['feature']}: {row['coef']:.4f}")
 
             # Registrar modelo
@@ -376,8 +402,9 @@ class BaselineExperiment:
 
             return modelo, metricas
 
-    def treinar_esteira_completa(self, X_train, X_test, y_train, y_test,
-                                 include_tuning=False, n_iter_tuning=5, cv_tuning=3):
+    def treinar_esteira_completa(
+        self, X_train, X_test, y_train, y_test, include_tuning=False, n_iter_tuning=5, cv_tuning=3
+    ):
         """
         Treina todos os modelos em uma esteira usando método genérico.
 
@@ -390,82 +417,109 @@ class BaselineExperiment:
         Returns:
             DataFrame com comparação de todos os modelos
         """
-        print("\n" + "="*70)
+        print("\n" + "=" * 70)
         print("INICIANDO ESTEIRA DE MODELOS")
-        print("="*70)
+        print("=" * 70)
 
         # 1. DummyClassifier (most_frequent)
         print("\n[1/6] Treinando DummyClassifier (most_frequent)...")
-        dummy_clf = DummyClassifier(strategy='most_frequent', random_state=42)
-        self.treinar_modelo(dummy_clf, X_train, X_test, y_train, y_test,
-                           nome_modelo="DummyClassifier-most_frequent")
+        dummy_clf = DummyClassifier(strategy="most_frequent", random_state=42)
+        self.treinar_modelo(
+            dummy_clf, X_train, X_test, y_train, y_test, nome_modelo="DummyClassifier-most_frequent"
+        )
 
         # 2. LogisticRegression (simples)
         print("\n[2/6] Treinando LogisticRegression (simples)...")
-        logreg_clf = LogisticRegression(max_iter=1000, random_state=42, n_jobs=-1)
-        self.treinar_modelo(logreg_clf, X_train, X_test, y_train, y_test,
-                           nome_modelo="LogisticRegression-simples")
+        logreg_clf = LogisticRegression(max_iter=1000, random_state=42)
+        self.treinar_modelo(
+            logreg_clf, X_train, X_test, y_train, y_test, nome_modelo="LogisticRegression-simples"
+        )
 
         # 3. LogisticRegression (balanced)
         print("\n[3/6] Treinando LogisticRegression (balanced)...")
-        logreg_balanced = LogisticRegression(max_iter=1000, class_weight='balanced',
-                                            random_state=42, n_jobs=-1)
-        self.treinar_modelo(logreg_balanced, X_train, X_test, y_train, y_test,
-                           nome_modelo="LogisticRegression-balanced")
+        logreg_balanced = LogisticRegression(
+            max_iter=1000, class_weight="balanced", random_state=42
+        )
+        self.treinar_modelo(
+            logreg_balanced,
+            X_train,
+            X_test,
+            y_train,
+            y_test,
+            nome_modelo="LogisticRegression-balanced",
+        )
 
         # 4. LogisticRegression (com SMOTE)
         print("\n[4/6] Treinando LogisticRegression com SMOTE...")
         smote = SMOTE(random_state=42)
         X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train)
-        logreg_smote = LogisticRegression(max_iter=1000, random_state=42, n_jobs=-1)
-        self.treinar_modelo(logreg_smote, X_train, X_test, y_train, y_test,
-                           nome_modelo="LogisticRegression-SMOTE",
-                           X_train_modificado=X_train_smote,
-                           y_train_modificado=y_train_smote)
+        logreg_smote = LogisticRegression(max_iter=1000, random_state=42)
+        self.treinar_modelo(
+            logreg_smote,
+            X_train,
+            X_test,
+            y_train,
+            y_test,
+            nome_modelo="LogisticRegression-SMOTE",
+            X_train_modificado=X_train_smote,
+            y_train_modificado=y_train_smote,
+        )
 
         # 5. RandomForest
         print("\n[5/6] Treinando RandomForestClassifier...")
-        rf_clf = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
-        self.treinar_modelo(rf_clf, X_train, X_test, y_train, y_test,
-                           nome_modelo="RandomForestClassifier")
+        rf_clf = RandomForestClassifier(n_estimators=100, random_state=42)
+        self.treinar_modelo(
+            rf_clf, X_train, X_test, y_train, y_test, nome_modelo="RandomForestClassifier"
+        )
 
         # 6. XGBoost
         print("\n[6/6] Treinando XGBoostClassifier...")
-        xgb_clf = XGBClassifier(n_estimators=100, max_depth=5, learning_rate=0.1,
-                               random_state=42, use_label_encoder=False,
-                               eval_metric='logloss', n_jobs=-1)
-        self.treinar_modelo(xgb_clf, X_train, X_test, y_train, y_test,
-                           nome_modelo="XGBoostClassifier")
+        xgb_clf = XGBClassifier(
+            n_estimators=100,
+            max_depth=5,
+            learning_rate=0.1,
+            random_state=42,
+            use_label_encoder=False,
+            eval_metric="logloss",
+        )
+        self.treinar_modelo(
+            xgb_clf, X_train, X_test, y_train, y_test, nome_modelo="XGBoostClassifier"
+        )
 
         # 7. Tuning (opcional)
         if include_tuning:
             print("\n[7a] Treinando RandomForestClassifier com tuning...")
-            self._treinar_com_tuning_rf(X_train, X_test, y_train, y_test,
-                                       n_iter=n_iter_tuning, cv=cv_tuning)
+            self._treinar_com_tuning_rf(
+                X_train, X_test, y_train, y_test, n_iter=n_iter_tuning, cv=cv_tuning
+            )
 
             print("\n[7b] Treinando XGBoostClassifier com tuning...")
-            self._treinar_com_tuning_xgb(X_train, X_test, y_train, y_test,
-                                        n_iter=n_iter_tuning, cv=cv_tuning)
+            self._treinar_com_tuning_xgb(
+                X_train, X_test, y_train, y_test, n_iter=n_iter_tuning, cv=cv_tuning
+            )
 
         return self.comparar_baselines(self.resultados)
 
-    def _treinar_com_tuning_rf(self, X_train, X_test, y_train, y_test,
-                               n_iter=10, cv=3):
+    def _treinar_com_tuning_rf(self, X_train, X_test, y_train, y_test, n_iter=10, cv=3):
         """Treina RandomForest com tuning de hiperparâmetros."""
         with mlflow.start_run(run_name="RandomForestClassifier-Tuned"):
             param_dist = {
-                'n_estimators': [100, 200, 300],
-                'max_depth': [None, 10, 20],
-                'min_samples_split': [2, 5, 10],
-                'min_samples_leaf': [1, 2, 4],
-                'bootstrap': [True, False]
+                "n_estimators": [100, 200, 300],
+                "max_depth": [None, 10, 20],
+                "min_samples_split": [2, 5, 10],
+                "min_samples_leaf": [1, 2, 4],
+                "bootstrap": [True, False],
             }
 
             print("[INFO] Executando RandomizedSearchCV (pode levar alguns minutos)...")
-            rf = RandomForestClassifier(random_state=42, n_jobs=-1)
+            rf = RandomForestClassifier(random_state=42)
             random_search = RandomizedSearchCV(
-                estimator=rf, param_distributions=param_dist,
-                n_iter=n_iter, cv=cv, random_state=42, n_jobs=-1, verbose=1
+                estimator=rf,
+                param_distributions=param_dist,
+                n_iter=n_iter,
+                cv=cv,
+                random_state=42,
+                verbose=1,
             )
             random_search.fit(X_train, y_train)
 
@@ -479,41 +533,43 @@ class BaselineExperiment:
             y_pred_proba = best_model.predict_proba(X_test)[:, 1]
 
             metricas = {
-                'test_auc_roc': roc_auc_score(y_test, y_pred_proba),
-                'test_pr_auc': average_precision_score(y_test, y_pred_proba),
-                'test_accuracy': accuracy_score(y_test, y_pred),
-                'test_precision': precision_score(y_test, y_pred),
-                'test_recall': recall_score(y_test, y_pred),
-                'test_f1_score': f1_score(y_test, y_pred),
+                "test_auc_roc": roc_auc_score(y_test, y_pred_proba),
+                "test_pr_auc": average_precision_score(y_test, y_pred_proba),
+                "test_accuracy": accuracy_score(y_test, y_pred),
+                "test_precision": precision_score(y_test, y_pred),
+                "test_recall": recall_score(y_test, y_pred),
+                "test_f1_score": f1_score(y_test, y_pred),
             }
 
             mlflow.log_metrics(metricas)
             mlflow.sklearn.log_model(best_model, artifact_path="model")
 
-            print(f"\n[OK] RandomForestClassifier-Tuned treinado")
+            print("\n[OK] RandomForestClassifier-Tuned treinado")
             print(f"  - AUC-ROC: {metricas['test_auc_roc']:.4f}")
             print(f"  - Melhores parâmetros: {random_search.best_params_}")
 
-            self.resultados['RandomForestClassifier-Tuned'] = metricas
+            self.resultados["RandomForestClassifier-Tuned"] = metricas
 
-    def _treinar_com_tuning_xgb(self, X_train, X_test, y_train, y_test,
-                                n_iter=10, cv=3):
+    def _treinar_com_tuning_xgb(self, X_train, X_test, y_train, y_test, n_iter=10, cv=3):
         """Treina XGBoost com tuning de hiperparâmetros."""
         with mlflow.start_run(run_name="XGBoostClassifier-Tuned"):
             param_dist = {
-                'n_estimators': [100, 200, 300],
-                'max_depth': [3, 5, 7],
-                'learning_rate': [0.01, 0.1, 0.2],
-                'subsample': [0.8, 1.0],
-                'colsample_bytree': [0.8, 1.0]
+                "n_estimators": [100, 200, 300],
+                "max_depth": [3, 5, 7],
+                "learning_rate": [0.01, 0.1, 0.2],
+                "subsample": [0.8, 1.0],
+                "colsample_bytree": [0.8, 1.0],
             }
 
             print("[INFO] Executando RandomizedSearchCV (pode levar alguns minutos)...")
-            xgb = XGBClassifier(random_state=42, use_label_encoder=False,
-                               eval_metric='logloss', n_jobs=-1)
+            xgb = XGBClassifier(random_state=42, use_label_encoder=False, eval_metric="logloss")
             random_search = RandomizedSearchCV(
-                estimator=xgb, param_distributions=param_dist,
-                n_iter=n_iter, cv=cv, random_state=42, n_jobs=-1, verbose=1
+                estimator=xgb,
+                param_distributions=param_dist,
+                n_iter=n_iter,
+                cv=cv,
+                random_state=42,
+                verbose=1,
             )
             random_search.fit(X_train, y_train)
 
@@ -527,24 +583,24 @@ class BaselineExperiment:
             y_pred_proba = best_model.predict_proba(X_test)[:, 1]
 
             metricas = {
-                'test_auc_roc': roc_auc_score(y_test, y_pred_proba),
-                'test_pr_auc': average_precision_score(y_test, y_pred_proba),
-                'test_accuracy': accuracy_score(y_test, y_pred),
-                'test_precision': precision_score(y_test, y_pred),
-                'test_recall': recall_score(y_test, y_pred),
-                'test_f1_score': f1_score(y_test, y_pred),
+                "test_auc_roc": roc_auc_score(y_test, y_pred_proba),
+                "test_pr_auc": average_precision_score(y_test, y_pred_proba),
+                "test_accuracy": accuracy_score(y_test, y_pred),
+                "test_precision": precision_score(y_test, y_pred),
+                "test_recall": recall_score(y_test, y_pred),
+                "test_f1_score": f1_score(y_test, y_pred),
             }
 
             mlflow.log_metrics(metricas)
             mlflow.sklearn.log_model(best_model, artifact_path="model")
 
-            print(f"\n[OK] XGBoostClassifier-Tuned treinado")
+            print("\n[OK] XGBoostClassifier-Tuned treinado")
             print(f"  - AUC-ROC: {metricas['test_auc_roc']:.4f}")
             print(f"  - Melhores parâmetros: {random_search.best_params_}")
 
             print(metricas)
 
-            self.resultados['XGBoostClassifier-Tuned'] = metricas
+            self.resultados["XGBoostClassifier-Tuned"] = metricas
 
     def comparar_baselines(self, resultados: dict) -> pd.DataFrame:
         """
@@ -556,20 +612,28 @@ class BaselineExperiment:
         Returns:
             DataFrame com comparação
         """
-        print("\n" + "="*70)
+        print("\n" + "=" * 70)
         print("COMPARAÇÃO DE BASELINES")
-        print("="*70 + "\n")
+        print("=" * 70 + "\n")
 
         df_comparacao = pd.DataFrame(resultados).T
-        df_comparacao = df_comparacao.sort_values('test_auc_roc', ascending=False)
+        df_comparacao = df_comparacao.sort_values("test_auc_roc", ascending=False)
 
         print(df_comparacao.to_string())
-        print("\n" + "="*70)
+        print("\n" + "=" * 70)
 
         return df_comparacao
 
-    def treinar_esteira_controlada(self, X_train, X_test, y_train, y_test,
-                                  aplicar_scaling=True, include_mlp=True, include_xgb_tuned=False):
+    def treinar_esteira_controlada(
+        self,
+        X_train,
+        X_test,
+        y_train,
+        y_test,
+        aplicar_scaling=True,
+        include_mlp=True,
+        include_xgb_tuned=False,
+    ):
         """
         Treina modelos baseline em condições controladas (mesmos dados, mesmo scaling).
 
@@ -601,10 +665,10 @@ class BaselineExperiment:
         else:
             scaling_info = "sem scaling"
 
-        print("\n" + "="*70)
+        print("\n" + "=" * 70)
         print("INICIANDO ESTEIRA CONTROLADA DE MODELOS")
         print(f"Scaling: {scaling_info}")
-        print("="*70)
+        print("=" * 70)
 
         # Calcular número total de modelos
         num_modelos = 6  # Base: Dummy, 3x LogReg, RandomForest, XGBoost
@@ -615,73 +679,96 @@ class BaselineExperiment:
 
         # 1. DummyClassifier
         print("\n[1/7] Treinando DummyClassifier (most_frequent)...")
-        dummy_clf = DummyClassifier(strategy='most_frequent', random_state=42)
-        self.treinar_modelo(dummy_clf, X_train, X_test, y_train, y_test,
-                           nome_modelo="DummyClassifier-most_frequent")
+        dummy_clf = DummyClassifier(strategy="most_frequent", random_state=42)
+        self.treinar_modelo(
+            dummy_clf, X_train, X_test, y_train, y_test, nome_modelo="DummyClassifier-most_frequent"
+        )
 
         # 2. LogisticRegression (simples)
         print("\n[2/7] Treinando LogisticRegression (simples)...")
-        logreg_clf = LogisticRegression(max_iter=1000, random_state=42, n_jobs=-1)
-        self.treinar_modelo(logreg_clf, X_train, X_test, y_train, y_test,
-                           nome_modelo="LogisticRegression-simples")
+        logreg_clf = LogisticRegression(max_iter=1000, random_state=42)
+        self.treinar_modelo(
+            logreg_clf, X_train, X_test, y_train, y_test, nome_modelo="LogisticRegression-simples"
+        )
 
         # 3. LogisticRegression (balanced)
         print("\n[3/7] Treinando LogisticRegression (balanced)...")
-        logreg_balanced = LogisticRegression(max_iter=1000, class_weight='balanced',
-                                            random_state=42, n_jobs=-1)
-        self.treinar_modelo(logreg_balanced, X_train, X_test, y_train, y_test,
-                           nome_modelo="LogisticRegression-balanced")
+        logreg_balanced = LogisticRegression(
+            max_iter=1000, class_weight="balanced", random_state=42
+        )
+        self.treinar_modelo(
+            logreg_balanced,
+            X_train,
+            X_test,
+            y_train,
+            y_test,
+            nome_modelo="LogisticRegression-balanced",
+        )
 
         # 4. LogisticRegression (SMOTE)
         print("\n[4/7] Treinando LogisticRegression com SMOTE...")
         smote = SMOTE(random_state=42)
         X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train)
-        logreg_smote = LogisticRegression(max_iter=1000, random_state=42, n_jobs=-1)
-        self.treinar_modelo(logreg_smote, X_train, X_test, y_train, y_test,
-                           nome_modelo="LogisticRegression-SMOTE",
-                           X_train_modificado=X_train_smote,
-                           y_train_modificado=y_train_smote)
+        logreg_smote = LogisticRegression(max_iter=1000, random_state=42)
+        self.treinar_modelo(
+            logreg_smote,
+            X_train,
+            X_test,
+            y_train,
+            y_test,
+            nome_modelo="LogisticRegression-SMOTE",
+            X_train_modificado=X_train_smote,
+            y_train_modificado=y_train_smote,
+        )
 
         # 5. RandomForest
         print("\n[5/7] Treinando RandomForestClassifier...")
-        rf_clf = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
-        self.treinar_modelo(rf_clf, X_train, X_test, y_train, y_test,
-                           nome_modelo="RandomForestClassifier")
+        rf_clf = RandomForestClassifier(n_estimators=100, random_state=42)
+        self.treinar_modelo(
+            rf_clf, X_train, X_test, y_train, y_test, nome_modelo="RandomForestClassifier"
+        )
 
         # 6. XGBoost
         print("\n[6/7] Treinando XGBoostClassifier...")
-        xgb_clf = XGBClassifier(n_estimators=100, max_depth=5, learning_rate=0.1,
-                               random_state=42, use_label_encoder=False,
-                               eval_metric='logloss', n_jobs=-1)
-        self.treinar_modelo(xgb_clf, X_train, X_test, y_train, y_test,
-                           nome_modelo="XGBoostClassifier")
+        xgb_clf = XGBClassifier(
+            n_estimators=100,
+            max_depth=5,
+            learning_rate=0.1,
+            random_state=42,
+            use_label_encoder=False,
+            eval_metric="logloss",
+        )
+        self.treinar_modelo(
+            xgb_clf, X_train, X_test, y_train, y_test, nome_modelo="XGBoostClassifier"
+        )
 
         # 7. MLP (opcional)
         if include_mlp:
             print(f"\n[7/{num_modelos}] Treinando MLPWrapper (PyTorch)...")
             mlp_clf = MLPWrapper(input_size=X_train.shape[1], random_state=42)
-            self.treinar_modelo(mlp_clf, X_train, X_test, y_train, y_test,
-                               nome_modelo="MLPWrapper-PyTorch")
+            self.treinar_modelo(
+                mlp_clf, X_train, X_test, y_train, y_test, nome_modelo="MLPWrapper-PyTorch"
+            )
 
         # 8. XGBoost Tuned (opcional)
         if include_xgb_tuned:
             model_idx = 8 if include_mlp else 7
             print(f"\n[{model_idx}/{num_modelos}] Treinando XGBoostClassifier (tuned)...")
             xgb_tuned = XGBClassifier(
-                n_estimators=150,           # Aumentado
-                max_depth=6,                # Aumentado
-                learning_rate=0.05,         # Reduzido (mais conservador)
-                subsample=0.8,              # Subsampling para regularização
-                colsample_bytree=0.8,       # Feature subsampling
-                min_child_weight=1,         # Min samples in leaf
-                gamma=0.1,                  # L1 regularization
+                n_estimators=150,  # Aumentado
+                max_depth=6,  # Aumentado
+                learning_rate=0.05,  # Reduzido (mais conservador)
+                subsample=0.8,  # Subsampling para regularização
+                colsample_bytree=0.8,  # Feature subsampling
+                min_child_weight=1,  # Min samples in leaf
+                gamma=0.1,  # L1 regularization
                 random_state=42,
                 use_label_encoder=False,
-                eval_metric='logloss',
-                n_jobs=-1
+                eval_metric="logloss",
             )
-            self.treinar_modelo(xgb_tuned, X_train, X_test, y_train, y_test,
-                               nome_modelo="XGBoostClassifier-tuned")
+            self.treinar_modelo(
+                xgb_tuned, X_train, X_test, y_train, y_test, nome_modelo="XGBoostClassifier-tuned"
+            )
 
         # Retornar comparação e scaler
         df_resultados = self.comparar_baselines(self.resultados)

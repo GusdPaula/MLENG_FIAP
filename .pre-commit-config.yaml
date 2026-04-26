@@ -1,6 +1,27 @@
 repos:
--   repo: https://github.com/pre-commit/pre-commit-hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
-    -   id: trailing-whitespace
-    -   id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+
+  # Ruff for Linting and Formatting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.12
+    hooks:
+      - id: ruff
+        args: [ --fix ]
+      - id: ruff-format
+
+  # Local Pytest execution
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        # Use cmd /c for Windows to navigate and run
+        entry: cmd /c "cd fase_1/tech_challenge && uv run pytest"
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [commit]

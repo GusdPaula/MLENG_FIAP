@@ -1,8 +1,7 @@
 """Configurações centralizadas para o projeto Telco Churn."""
 
-from dataclasses import dataclass
-from typing import Optional
 import os
+from dataclasses import dataclass
 
 
 @dataclass
@@ -21,10 +20,19 @@ class DataConfig:
     def __post_init__(self):
         if self.drop_columns is None:
             self.drop_columns = [
-                'CustomerID', 'Count', 'Country', 'State', 'City', 'Zip Code',
-                'Lat Long', 'Latitude', 'Longitude',
-                'Churn Label', 'Churn Reason',
-                'CLTV', 'Churn Score',
+                "CustomerID",
+                "Count",
+                "Country",
+                "State",
+                "City",
+                "Zip Code",
+                "Lat Long",
+                "Latitude",
+                "Longitude",
+                "Churn Label",
+                "Churn Reason",
+                "CLTV",
+                "Churn Score",
             ]
 
 
@@ -100,7 +108,7 @@ DEFAULT_API_CONFIG = APIConfig()
 DEFAULT_LOGGING_CONFIG = LoggingConfig()
 
 
-def get_config(env: Optional[str] = None) -> dict:
+def get_config(env: str | None = None) -> dict:
     """Retorna configurações baseado no ambiente."""
     if env is None:
         env = os.getenv("ENV", "development")

@@ -1,10 +1,12 @@
 """Testes unitários para config module."""
 
-import pytest
 from src.config import (
-    DataConfig, ModelConfig, MetricsConfig, APIConfig,
-    LoggingConfig, get_config,
-    DEFAULT_DATA_CONFIG, DEFAULT_MODEL_CONFIG,
+    APIConfig,
+    DataConfig,
+    LoggingConfig,
+    MetricsConfig,
+    ModelConfig,
+    get_config,
 )
 
 
@@ -17,7 +19,7 @@ class TestDataConfig:
         assert config.test_size == 0.2
         assert config.val_size == 0.2
         assert config.random_state == 42
-        assert 'CustomerID' in config.drop_columns
+        assert "CustomerID" in config.drop_columns
 
     def test_custom_values(self):
         """Testa valores customizados."""
@@ -82,7 +84,7 @@ class TestLoggingConfig:
 
     def test_logging_levels(self):
         """Testa diferentes níveis de logging."""
-        for level in ['DEBUG', 'INFO', 'WARNING', 'ERROR']:
+        for level in ["DEBUG", "INFO", "WARNING", "ERROR"]:
             config = LoggingConfig(level=level)
             assert config.level == level
 
@@ -92,25 +94,25 @@ class TestGetConfig:
 
     def test_development_environment(self):
         """Testa configuração de desenvolvimento."""
-        config = get_config('development')
-        assert config['api'].debug is True
-        assert config['logging'].level == 'DEBUG'
+        config = get_config("development")
+        assert config["api"].debug is True
+        assert config["logging"].level == "DEBUG"
 
     def test_production_environment(self):
         """Testa configuração de produção."""
-        config = get_config('production')
-        assert config['api'].debug is False
-        assert config['api'].workers == 4
+        config = get_config("production")
+        assert config["api"].debug is False
+        assert config["api"].workers == 4
 
     def test_testing_environment(self):
         """Testa configuração de testes."""
-        config = get_config('testing')
-        assert config['model'].epochs == 10
+        config = get_config("testing")
+        assert config["model"].epochs == 10
 
     def test_config_has_required_keys(self):
         """Testa que config tem todas as chaves necessárias."""
         config = get_config()
-        required_keys = ['data', 'model', 'metrics', 'api', 'logging']
+        required_keys = ["data", "model", "metrics", "api", "logging"]
         for key in required_keys:
             assert key in config, f"Chave '{key}' não encontrada em config"
 
@@ -118,5 +120,6 @@ class TestGetConfig:
         """Testa que todos os configs são dataclasses."""
         config = get_config()
         from dataclasses import is_dataclass
+
         for key, value in config.items():
             assert is_dataclass(value), f"{key} não é um dataclass"

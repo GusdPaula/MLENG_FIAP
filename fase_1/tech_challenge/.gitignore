@@ -22,15 +22,10 @@ __pycache__/
 *checkpoint.ipynb
 
 # Data (large files)
-data/raw/*.csv
-data/raw/*.xlsx
-data/raw/*.json
-data/processed/*.csv
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 
 # Models
-models/*.pkl
 models/*.pth
 models/*.joblib
 models/*.h5

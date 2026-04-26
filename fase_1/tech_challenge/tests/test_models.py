@@ -1,9 +1,11 @@
 """Testes para pipeline e modelos."""
 
-import pytest
-import numpy as np
 import tempfile
 from pathlib import Path
+
+import numpy as np
+import pytest
+
 from src.models.pipeline import TelcoPipeline
 
 
@@ -16,24 +18,24 @@ class TestTelcoPipeline:
         pipe = pipeline.create_logistic_regression()
 
         assert pipeline.pipeline is not None
-        assert pipeline.model_name == 'LogisticRegression'
-        assert 'scaler' in pipe.named_steps
-        assert 'classifier' in pipe.named_steps
+        assert pipeline.model_name == "LogisticRegression"
+        assert "scaler" in pipe.named_steps
+        assert "classifier" in pipe.named_steps
 
     def test_create_random_forest(self):
         """Testa criação de pipeline RandomForest."""
         pipeline = TelcoPipeline()
         pipe = pipeline.create_random_forest()
 
-        assert pipeline.model_name == 'RandomForest'
-        assert 'classifier' in pipe.named_steps
+        assert pipeline.model_name == "RandomForest"
+        assert "classifier" in pipe.named_steps
 
     def test_create_xgboost(self):
         """Testa criação de pipeline XGBoost."""
         pipeline = TelcoPipeline()
-        pipe = pipeline.create_xgboost()
+        pipeline.create_xgboost()
 
-        assert pipeline.model_name == 'XGBoost'
+        assert pipeline.model_name == "XGBoost"
 
     def test_train_predict_logistic(self, X_train_sample, y_train_sample, X_test_sample):
         """Testa treinamento e predição com LogisticRegression."""
@@ -53,7 +55,8 @@ class TestTelcoPipeline:
 
         proba = pipeline.predict_proba(X_test_sample)
         assert proba.shape == (X_test_sample.shape[0], 2)
-        assert np.all(proba >= 0) and np.all(proba <= 1)
+        assert np.all(proba >= 0)
+        assert np.all(proba <= 1)
         assert np.allclose(proba.sum(axis=1), 1.0)
 
     def test_save_load_pipeline(self, X_train_sample, y_train_sample, X_test_sample):
@@ -79,29 +82,30 @@ class TestTelcoPipeline:
     def test_from_dict_config(self, X_train_sample, y_train_sample):
         """Testa criação de pipeline a partir de config dict."""
         config = {
-            'model_type': 'logistic_regression',
-            'class_weight': 'balanced',
-            'random_state': 42
+            "model_type": "logistic_regression",
+            "class_weight": "balanced",
+            "random_state": 42,
         }
 
         pipeline = TelcoPipeline.from_dict(config)
         pipeline.train(X_train_sample, y_train_sample)
 
-        assert pipeline.model_name == 'LogisticRegression'
+        assert pipeline.model_name == "LogisticRegression"
 
     def test_invalid_model_type(self):
         """Testa erro com tipo de modelo inválido."""
-        config = {'model_type': 'invalid_model'}
+        config = {"model_type": "invalid_model"}
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="invalid_model"):
             TelcoPipeline.from_dict(config)
 
     def test_pipeline_not_trained_error(self, X_test_sample):
-        """Testa erro ao predizer sem treinar."""
+        """Testa erro ao predizer sem ter um pipeline criado ou treinado."""
         pipeline = TelcoPipeline()
-        pipeline.create_logistic_regression()
+        # Remove the create_logistic_regression() call here
+        # to ensure self.pipeline stays None
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="treinado"):
             pipeline.predict(X_test_sample)
 
 
@@ -113,8 +117,8 @@ class TestSmokeTests:
         """Testa que todos os módulos podem ser importados."""
         from src.config import get_config
         from src.data import TelcoDataLoader
-        from src.models import TelcoPipeline, PredictionService
         from src.evaluation import TelcoMetrics
+        from src.models import PredictionService, TelcoPipeline
 
         assert get_config is not None
         assert TelcoDataLoader is not None
@@ -125,7 +129,8 @@ class TestSmokeTests:
     def test_config_loads_without_error(self):
         """Testa que config carrega sem erro."""
         from src.config import get_config
-        config = get_config('development')
+
+        config = get_config("development")
         assert config is not None
 
     def test_pipeline_workflow(self, X_train_sample, y_train_sample, X_test_sample):
@@ -146,9 +151,9 @@ class TestSmokeTests:
         from src.models.pipeline import TelcoPipeline
 
         model_types = [
-            ('logistic_regression', 'create_logistic_regression'),
-            ('random_forest', 'create_random_forest'),
-            ('xgboost', 'create_xgboost'),
+            ("logistic_regression", "create_logistic_regression"),
+            ("random_forest", "create_random_forest"),
+            ("xgboost", "create_xgboost"),
         ]
 
         for model_name, create_method in model_types:

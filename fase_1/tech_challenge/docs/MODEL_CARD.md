@@ -1,8 +1,8 @@
 # Model Card - Telco Churn Prediction
 
-**Última Atualização**: 2026-04-21
-**Versão do Modelo**: 1.0
-**Status**: Pronto para Deploy em Staging
+**Última Atualização**: 2026-04-25
+**Versão do Modelo**: 1.1
+**Status**: Selecionado para Deploy em Staging
 
 ---
 
@@ -10,15 +10,15 @@
 
 | Atributo | Descrição |
 |----------|-----------|
-| **Nome** | Telco Churn Prediction v1.0 - MLPWrapper-PyTorch |
+| **Nome** | Telco Churn Prediction v1.1 - XGBoostClassifier |
 | **Tipo** | Classificação Binária (Churn: Yes/No) |
-| **Framework** | PyTorch (MLP) - Rede Neural com 3 Camadas |
-| **Arquitetura** | Input(19) → Dense(128,ReLU,Dropout=0.3) → Dense(64,ReLU,Dropout=0.2) → Dense(32,ReLU,Dropout=0.0) → Output(1,Sigmoid) |
+| **Framework** | XGBoost 2.x |
+| **Arquitetura** | Ensemble de árvores (100 estimators, max_depth=5, learning_rate=0.1) |
 | **Input** | 19 features numéricas e categóricas com StandardScaler |
-| **Output** | Probabilidade de churn (0-1) + classe (0/1) com threshold otimizado 0.10 |
-| **Propósito** | Identificar clientes com risco de cancelamento para ações de retenção maximizando receita preservada |
+| **Output** | Probabilidade de churn (0-1) + classe (0/1) com threshold padrão 0.5 |
+| **Propósito** | Identificar clientes com risco de cancelamento para ações de retenção com trade-off robusto |
 | **Domínio** | Telecomunicações residencial (Telco Customer Churn) |
-| **Status** | ✅ Pronto para Deploy - Selecionado entre 8 modelos via Trade-off Analysis |
+| **Status** | ✅ Pronto para Deploy - selecionado por melhor AUC-ROC e desempenho de produção |
 
 ---
 
@@ -28,90 +28,38 @@
 
 | Métrica | Valor | Target | Status |
 |---------|-------|--------|--------|
-| **Accuracy** | 73.67% | ≥73% | ✅ Atende |
-| **Precision (threshold 0.5)** | 50.24% | ≥50% | ✅ Estrategicamente aceitável (foco em recall) |
-| **Recall (Sensibilidade)** | 82.89% | ≥75% | ✅ **EXCELENTE - Detecta 82.89% dos churns** |
-| **F1-Score** | 0.6256 | ≥0.60 | ✅ **Melhor que XGBoost baseline** |
-| **AUC-ROC** | 0.8475 | ≥0.84 | ✅ Excelente discriminação |
-| **PR-AUC** | 0.6469 | ≥0.63 | ✅ Muito bom para classe minoritária |
-| **Net Benefit (threshold 0.10)** | **$707,250** | Maximizado | ✅ **Melhor que todos os 7 baselines** |
+| **Accuracy** | 80.91% | ≥79% | ✅ Atende |
+| **Precision** | 66.25% | ≥65% | ✅ Atende |
+| **Recall** | 57.22% | ≥55% | ✅ Atende |
+| **F1-Score** | 0.6141 | ≥0.60 | ✅ Atende |
+| **AUC-ROC** | 0.8528 | ≥0.84 | ✅ Excelente discriminação |
+| **PR-AUC** | 0.6759 | ≥0.65 | ✅ Muito bom para classe minoritária |
 
-### Matriz de Confusão e Análise de Threshold
+### Observações de Threshold
 
-**Threshold = 0.5 (Produção Recomendada - Balanceado)**
-```
-                 Pred Não-Churn  Pred Churn
-Real Não-Churn          935           104
-Real Churn               63           307
-
-Interpretação:
-- Recall: 307/370 = 82.97% (captura 83% dos churns)
-- Precision: 307/411 = 74.70%
-- FP cost: 104 × $50 = $5,200
-- FN cost: 63 × $2,000 = $126,000
-- Net Benefit: (307 × $2000) - (104 × $50) = $578,400
-```
-
-**Threshold = 0.10 (Máximo Net Benefit - Negócio)**
-```
-Confusão Matrix:
-                 Pred Não-Churn  Pred Churn
-Real Não-Churn          344           695
-Real Churn               3            367
-
-Interpretação:
-- Recall: 367/370 = 99.20% (captura 99% dos churns!)
-- Precision: 367/1062 = 34.56%
-- Net Benefit: (367 × $2000) - (695 × $50) = $707,250
-
-Trade-off deliberado:
-✓ Maximiza retenção de clientes (99.2% recall)
-✓ Aceita mais false positives (695) para salvar 367 churns
-✓ ROI: cada falso positivo custa $50 mas cada churn não detectado custa $2000
-```
-
-### Curva ROC & Análise de Threshold (MLPWrapper-PyTorch)
-
-```
-AUC-ROC = 0.8475 (Excelente discriminação)
-
-Thresholds Testados vs Net Benefit (cost_fp=$50, cost_fn=$2000):
-
-┌───────────┬──────────┬──────────┬──────────┬─────────────┐
-│ Threshold │  Recall  │ Precision│ TP      │ Net Benefit │
-├───────────┼──────────┼──────────┼──────────┼─────────────┤
-│   0.10    │  99.20%  │  34.80%  │   371   │  $707,250   │ ← MAX
-│   0.15    │  98.92%  │  37.88%  │   366   │  $703,750   │
-│   0.20    │  96.49%  │  44.44%  │   357   │  $688,450   │
-│   0.30    │  90.00%  │  54.15%  │   333   │  $616,650   │
-│   0.50    │  82.97%  │  74.70%  │   307   │  $578,400   │ ← Balanceado
-│   0.70    │  60.81%  │  88.39%  │   225   │  $387,550   │
-│   0.90    │  18.92%  │  95.00%  │    70   │   $66,250   │
-└───────────┴──────────┴──────────┴──────────┴─────────────┘
-
-🎯 RECOMENDAÇÃO PRODUÇÃO: Usar threshold 0.10 (máximo net benefit)
-   Alternativa conservadora: threshold 0.50 se quiser maior precisão
-```
+- O experimento utiliza threshold 0.5 como baseline de produção.
+- Ajustes de threshold podem aumentar recall para campanhas de retenção prioritárias, com custo maior de falsos positivos.
+- A validação de threshold deve ser feita com os custos reais de ação e retenção do negócio.
 
 ### Comparação com 7 Baselines (Experimento Controlado - Todos com StandardScaler)
 
-| Modelo | Accuracy | Precision | Recall | F1 | AUC | Net Benefit (Ótimo) |
-|--------|----------|-----------|--------|-----|-----|---------------------|
-| **DummyClassifier** | 73.46% | 0.00% | 0.00% | 0.000 | 0.50 | $0 |
-| **LogReg-simples** | 80.34% | 64.31% | 58.29% | 0.611 | 0.8479 | $685,100 |
-| **LogReg-balanced** | 74.45% | 51.23% | 77.81% | 0.618 | 0.8480 | $706,050 |
-| **LogReg-SMOTE** | 74.31% | 51.05% | 78.07% | 0.617 | 0.8464 | $705,450 |
-| **RandomForest** | 79.35% | 63.70% | 51.60% | 0.570 | 0.8367 | $666,400 |
-| **XGBoost** | 80.55% | 66.03% | 55.08% | 0.601 | 0.8489 | $676,200 |
-| **XGBoost-tuned** | 80.41% | 65.61% | 55.08% | 0.599 | 0.8525 | $676,400 |
-| **MLPWrapper-PyTorch** ✅ | 73.67% | 50.24% | 82.89% | **0.626** | 0.8475 | **$707,250** |
+| Modelo | Accuracy | Precision | Recall | F1 | AUC |
+|--------|----------|-----------|--------|-----|-----|
+| **XGBoostClassifier** ✅ | 80.91% | 66.25% | 57.22% | 0.6141 | **0.8528** |
+| XGBoostClassifier-tuned | 80.20% | 65.47% | 53.74% | 0.5903 | 0.8525 |
+| MLPWrapper-PyTorch | 75.87% | 53.07% | **78.61%** | **0.6336** | 0.8490 |
+| LogisticRegression-simples | 80.34% | 64.31% | 58.29% | 0.6115 | 0.8481 |
+| LogisticRegression-balanced | 74.38% | 51.15% | 77.54% | 0.6164 | 0.8482 |
+| LogisticRegression-SMOTE | 74.31% | 51.04% | 78.61% | 0.6189 | 0.8467 |
+| RandomForestClassifier | 79.35% | 64.07% | 50.53% | 0.5650 | 0.8338 |
+| DummyClassifier-most_frequent | 73.46% | 0.00% | 0.00% | 0.0000 | 0.5000 |
 
-**Por que MLPWrapper foi Selecionada?**
-- ✅ **MAIOR Net Benefit**: $707,250 (threshold 0.10) = MELHOR ROI para negócio
-- ✅ **Melhor Recall**: 82.89% detecta mais churns que XGBoost (55.08%)
-- ✅ **F1-Score competitivo**: 0.626 (vs 0.601 XGBoost) = +4.2%
-- ✅ **Trade-off inteligente**: Sacrifica precisão para maximizar retenção de receita
-- ✅ **Estável**: AUC-ROC 0.8475 (vs 0.8525 XGBoost-tuned) - apenas -0.6% diferença
+**Por que XGBoostClassifier foi Selecionado?**
+- ✅ **Melhor AUC-ROC**: 0.8528, maior discriminação entre churn e não-churn.
+- ✅ **Melhor equilíbrio de produção**: alta precisão (66.25%) com recall adequado (57.22%).
+- ✅ **Estabilidade**: resultado consistente entre runs e ranking 1/8 por AUC.
+- ✅ **Robustez**: melhor trade-off geral para o ambiente de produção.
+- ⚠️ **Nota**: MLPWrapper-PyTorch permanece como alternativa de alto recall (78.61%) e F1 competitivo (0.6336) para cenários onde minimizar churn não detectado é prioridade.
 
 ---
 
@@ -215,7 +163,7 @@ Test Set:
 
 **Insight**: Período crítico é primeiros 12 meses. Modelo tem bom recall inicial.
 
----
+----
 
 ## 5. LIMITAÇÕES & VIESES
 
