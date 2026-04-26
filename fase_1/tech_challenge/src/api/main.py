@@ -1,33 +1,34 @@
 """Aplicação FastAPI para Telco Churn Prediction."""
 
-from fastapi import FastAPI, HTTPException, Depends, Header
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-import time
 import logging
-from typing import Optional
-import numpy as np
+import time
+import traceback
 from datetime import datetime
 
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from src.config import get_config
+from src.data.loader import TelcoDataLoader
+from src.models import PredictionService
+
 from .schemas import (
-    HealthCheckResponse,
-    PredictionRequest,
-    PredictionResponse,
     BatchPredictionRequest,
     BatchPredictionResponse,
     ErrorResponse,
+    HealthCheckResponse,
     ModelInfoResponse,
+    PredictionRequest,
+    PredictionResponse,
 )
-from src.data.loader import TelcoDataLoader
-from src.models import PredictionService
-from src.config import get_config, APIConfig
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def create_app(model_path: Optional[str] = None) -> FastAPI:
+def create_app(model_path: str | None = None) -> FastAPI:
     """
     Factory function para criar a aplicação FastAPI.
 
@@ -64,8 +65,8 @@ def create_app(model_path: Optional[str] = None) -> FastAPI:
         return response
 
     # State da aplicação
-    app.state.model_service: Optional[PredictionService] = None
-    app.state.preprocessor: Optional[TelcoDataLoader] = None
+    app.state.model_service: PredictionService | None = None
+    app.state.preprocessor: TelcoDataLoader | None = None
     app.state.config = get_config()
 
     # Inicializar loader para inferência
@@ -73,7 +74,7 @@ def create_app(model_path: Optional[str] = None) -> FastAPI:
         loader = TelcoDataLoader('data/processed/telco_churn_processed.csv')
         loader.fit_for_inference()
         app.state.preprocessor = loader
-        logger.info(f"[OK] Loader inicializado para inferência")
+        logger.info("[OK] Loader inicializado para inferência")
     except Exception as e:
         logger.error(f"[ERROR] Erro ao inicializar loader: {e}")
 
@@ -156,14 +157,16 @@ def create_app(model_path: Optional[str] = None) -> FastAPI:
             logger.error(f"Erro na validação de features: {e}")
             raise HTTPException(
                 status_code=400,
-                detail=f"Erro ao validar features: {str(e)}"
-            )
+                detail=f"Erro ao validar features: {e!s}"
+            ) from e
+
         except Exception as e:
             logger.error(f"Erro na predição: {e}")
+            logger.error(traceback.format_exc())
             raise HTTPException(
                 status_code=400,
-                detail=f"Erro ao processar predição: {str(e)}"
-            )
+                detail=f"Erro ao processar predição: {e!s}"
+            ) from e
 
     # ============ PREDIÇÕES EM LOTE ============
     @app.post("/predict-batch", response_model=BatchPredictionResponse, tags=["Predictions"])
@@ -211,14 +214,14 @@ def create_app(model_path: Optional[str] = None) -> FastAPI:
             logger.error(f"Erro na validação de features: {e}")
             raise HTTPException(
                 status_code=400,
-                detail=f"Erro ao validar features: {str(e)}"
-            )
+                detail=f"Erro ao validar features: {e!s}"
+            ) from e
         except Exception as e:
             logger.error(f"Erro na predição em lote: {e}")
             raise HTTPException(
                 status_code=400,
-                detail=f"Erro ao processar lote: {str(e)}"
-            )
+                detail=f"Erro ao processar lote: {e!s}"
+            ) from e
 
     # ============ MODELO INFO ============
     @app.get("/model-info", response_model=ModelInfoResponse, tags=["Model"])

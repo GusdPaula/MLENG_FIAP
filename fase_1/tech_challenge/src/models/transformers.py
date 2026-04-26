@@ -1,15 +1,15 @@
 """Transformadores custom para sklearn pipeline."""
 
+
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
-from typing import List, Optional
 
 
 class ColumnDropper(BaseEstimator, TransformerMixin):
     """Remove colunas especificadas."""
 
-    def __init__(self, columns: List[str]):
+    def __init__(self, columns: list[str]):
         """
         Args:
             columns: Lista de colunas para remover
@@ -59,7 +59,7 @@ class TypeConverter(BaseEstimator, TransformerMixin):
 class BinaryEncoder(BaseEstimator, TransformerMixin):
     """Codifica colunas binárias (Yes/No -> 1/0)."""
 
-    def __init__(self, binary_columns: Optional[List[str]] = None):
+    def __init__(self, binary_columns: list[str] | None = None):
         """
         Args:
             binary_columns: Lista de colunas binárias. Se None, detecta automaticamente.
@@ -97,7 +97,7 @@ class BinaryEncoder(BaseEstimator, TransformerMixin):
 class CategoricalEncoder(BaseEstimator, TransformerMixin):
     """One-hot encode colunas categóricas."""
 
-    def __init__(self, categorical_columns: Optional[List[str]] = None):
+    def __init__(self, categorical_columns: list[str] | None = None):
         """
         Args:
             categorical_columns: Lista de colunas categóricas
@@ -131,7 +131,7 @@ class CategoricalEncoder(BaseEstimator, TransformerMixin):
 class FeatureSelector(BaseEstimator, TransformerMixin):
     """Seleciona subset de features."""
 
-    def __init__(self, features: List[str]):
+    def __init__(self, features: list[str]):
         """
         Args:
             features: Lista de features a manter
@@ -150,9 +150,9 @@ class NumericalTransformer(BaseEstimator, TransformerMixin):
     """Pipelines numéricos padrão."""
 
     def __init__(self,
-                 binary_cols: Optional[List[str]] = None,
-                 categorical_cols: Optional[List[str]] = None,
-                 drop_cols: Optional[List[str]] = None):
+                 binary_cols: list[str] | None = None,
+                 categorical_cols: list[str] | None = None,
+                 drop_cols: list[str] | None = None):
         self.binary_cols = binary_cols or []
         self.categorical_cols = categorical_cols or []
         self.drop_cols = drop_cols or []

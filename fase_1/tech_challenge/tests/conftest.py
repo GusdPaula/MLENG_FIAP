@@ -1,11 +1,23 @@
 """Fixtures e configurações para testes."""
 
-import pytest
+import os
+import tempfile
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import tempfile
-import os
+import pytest
+from fastapi.testclient import TestClient
+
+from src.api.main import app
+
+
+@pytest.fixture
+def client():
+    # Don't mock the state.
+    # Just ensure the real model is loaded before yielding the client.
+    with TestClient(app) as c:
+        yield c
 
 
 @pytest.fixture

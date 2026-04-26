@@ -1,10 +1,12 @@
 """Testes unitários para config module."""
 
-import pytest
 from src.config import (
-    DataConfig, ModelConfig, MetricsConfig, APIConfig,
-    LoggingConfig, get_config,
-    DEFAULT_DATA_CONFIG, DEFAULT_MODEL_CONFIG,
+    APIConfig,
+    DataConfig,
+    LoggingConfig,
+    MetricsConfig,
+    ModelConfig,
+    get_config,
 )
 
 

@@ -1,35 +1,33 @@
 """Modelos baseline para Telco Churn com MLflow tracking."""
 
+import os
+
 import mlflow
+import mlflow.data
 import mlflow.sklearn
 import numpy as np
-import mlflow.data
 import pandas as pd
-from mlflow.data.pandas_dataset import PandasDataset
-import os
-from sklearn.dummy import DummyClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import (
-    confusion_matrix,
-    roc_auc_score,
-    average_precision_score,
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    classification_report
-)
-import pandas as pd
-from typing import Tuple, Dict, Any
-from xgboost import XGBClassifier
-from sklearn.model_selection import RandomizedSearchCV, train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.base import BaseEstimator, ClassifierMixin
-from imblearn.over_sampling import SMOTE
 import torch
 import torch.nn as nn
+from imblearn.over_sampling import SMOTE
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.dummy import DummyClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    accuracy_score,
+    average_precision_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
+from sklearn.model_selection import RandomizedSearchCV, train_test_split
+from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, TensorDataset
+from xgboost import XGBClassifier
 
 
 class MLPWrapper(BaseEstimator, ClassifierMixin):
@@ -58,7 +56,7 @@ class MLPWrapper(BaseEstimator, ClassifierMixin):
         layers = []
         prev_size = self.input_size
 
-        for hidden_size, dropout_rate in zip(self.hidden_sizes, self.dropout_rates):
+        for hidden_size, dropout_rate in zip(self.hidden_sizes, self.dropout_rates, strict=False):
             layers.append(nn.Linear(prev_size, hidden_size))
             layers.append(nn.ReLU())
             if dropout_rate > 0:
@@ -103,7 +101,7 @@ class MLPWrapper(BaseEstimator, ClassifierMixin):
         best_val_loss = float('inf')
         patience_counter = 0
 
-        for epoch in range(self.epochs):
+        for _epoch in range(self.epochs):
             # Training
             self.model.train()
             train_loss = 0.0
@@ -205,16 +203,14 @@ class BaselineExperiment:
         # Obter ou criar experimento
         experiment = mlflow.get_experiment_by_name(experiment_name)
         if experiment is None:
-            exp_id = mlflow.create_experiment(experiment_name)
-        else:
-            exp_id = experiment.experiment_id
+            mlflow.create_experiment(experiment_name)
 
         mlflow.set_experiment(experiment_name)
         self.resultados = {}
         self._modelos = {}  # Armazenar modelos treinados
 
     def treinar_modelo(self, modelo, X_train, X_test, y_train, y_test,
-                      nome_modelo: str, X_train_modificado=None, y_train_modificado=None) -> Tuple:
+                      nome_modelo: str, X_train_modificado=None, y_train_modificado=None) -> tuple:
         """
         Método genérico para treinar qualquer modelo.
 
@@ -350,8 +346,8 @@ class BaselineExperiment:
                 mlflow.log_dict(feature_importance.to_dict(),
                               artifact_file="feature_importance.json")
 
-                print(f"  - Top 5 features (importância):")
-                for idx, row in feature_importance.head(5).iterrows():
+                print("  - Top 5 features (importância):")
+                for _idx, row in feature_importance.head(5).iterrows():
                     print(f"    Feature {row['feature']}: {row['importance']:.4f}")
 
             # Log de coeficientes (se disponível)
@@ -363,8 +359,8 @@ class BaselineExperiment:
 
                 mlflow.log_dict(coeficientes.to_dict(), artifact_file="top_features.json")
 
-                print(f"  - Top 5 features (coeficientes):")
-                for idx, row in coeficientes.head(5).iterrows():
+                print("  - Top 5 features (coeficientes):")
+                for _idx, row in coeficientes.head(5).iterrows():
                     print(f"    Feature {row['feature']}: {row['coef']:.4f}")
 
             # Registrar modelo
@@ -402,14 +398,14 @@ class BaselineExperiment:
 
         # 2. LogisticRegression (simples)
         print("\n[2/6] Treinando LogisticRegression (simples)...")
-        logreg_clf = LogisticRegression(max_iter=1000, random_state=42, n_jobs=-1)
+        logreg_clf = LogisticRegression(max_iter=1000, random_state=42)
         self.treinar_modelo(logreg_clf, X_train, X_test, y_train, y_test,
                            nome_modelo="LogisticRegression-simples")
 
         # 3. LogisticRegression (balanced)
         print("\n[3/6] Treinando LogisticRegression (balanced)...")
         logreg_balanced = LogisticRegression(max_iter=1000, class_weight='balanced',
-                                            random_state=42, n_jobs=-1)
+                                            random_state=42)
         self.treinar_modelo(logreg_balanced, X_train, X_test, y_train, y_test,
                            nome_modelo="LogisticRegression-balanced")
 
@@ -417,7 +413,7 @@ class BaselineExperiment:
         print("\n[4/6] Treinando LogisticRegression com SMOTE...")
         smote = SMOTE(random_state=42)
         X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train)
-        logreg_smote = LogisticRegression(max_iter=1000, random_state=42, n_jobs=-1)
+        logreg_smote = LogisticRegression(max_iter=1000, random_state=42)
         self.treinar_modelo(logreg_smote, X_train, X_test, y_train, y_test,
                            nome_modelo="LogisticRegression-SMOTE",
                            X_train_modificado=X_train_smote,
@@ -425,7 +421,7 @@ class BaselineExperiment:
 
         # 5. RandomForest
         print("\n[5/6] Treinando RandomForestClassifier...")
-        rf_clf = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+        rf_clf = RandomForestClassifier(n_estimators=100, random_state=42)
         self.treinar_modelo(rf_clf, X_train, X_test, y_train, y_test,
                            nome_modelo="RandomForestClassifier")
 
@@ -433,7 +429,7 @@ class BaselineExperiment:
         print("\n[6/6] Treinando XGBoostClassifier...")
         xgb_clf = XGBClassifier(n_estimators=100, max_depth=5, learning_rate=0.1,
                                random_state=42, use_label_encoder=False,
-                               eval_metric='logloss', n_jobs=-1)
+                               eval_metric='logloss')
         self.treinar_modelo(xgb_clf, X_train, X_test, y_train, y_test,
                            nome_modelo="XGBoostClassifier")
 
@@ -462,10 +458,10 @@ class BaselineExperiment:
             }
 
             print("[INFO] Executando RandomizedSearchCV (pode levar alguns minutos)...")
-            rf = RandomForestClassifier(random_state=42, n_jobs=-1)
+            rf = RandomForestClassifier(random_state=42)
             random_search = RandomizedSearchCV(
                 estimator=rf, param_distributions=param_dist,
-                n_iter=n_iter, cv=cv, random_state=42, n_jobs=-1, verbose=1
+                n_iter=n_iter, cv=cv, random_state=42, verbose=1
             )
             random_search.fit(X_train, y_train)
 
@@ -490,7 +486,7 @@ class BaselineExperiment:
             mlflow.log_metrics(metricas)
             mlflow.sklearn.log_model(best_model, artifact_path="model")
 
-            print(f"\n[OK] RandomForestClassifier-Tuned treinado")
+            print("\n[OK] RandomForestClassifier-Tuned treinado")
             print(f"  - AUC-ROC: {metricas['test_auc_roc']:.4f}")
             print(f"  - Melhores parâmetros: {random_search.best_params_}")
 
@@ -510,10 +506,10 @@ class BaselineExperiment:
 
             print("[INFO] Executando RandomizedSearchCV (pode levar alguns minutos)...")
             xgb = XGBClassifier(random_state=42, use_label_encoder=False,
-                               eval_metric='logloss', n_jobs=-1)
+                               eval_metric='logloss')
             random_search = RandomizedSearchCV(
                 estimator=xgb, param_distributions=param_dist,
-                n_iter=n_iter, cv=cv, random_state=42, n_jobs=-1, verbose=1
+                n_iter=n_iter, cv=cv, random_state=42, verbose=1
             )
             random_search.fit(X_train, y_train)
 
@@ -538,7 +534,7 @@ class BaselineExperiment:
             mlflow.log_metrics(metricas)
             mlflow.sklearn.log_model(best_model, artifact_path="model")
 
-            print(f"\n[OK] XGBoostClassifier-Tuned treinado")
+            print("\n[OK] XGBoostClassifier-Tuned treinado")
             print(f"  - AUC-ROC: {metricas['test_auc_roc']:.4f}")
             print(f"  - Melhores parâmetros: {random_search.best_params_}")
 
@@ -621,14 +617,14 @@ class BaselineExperiment:
 
         # 2. LogisticRegression (simples)
         print("\n[2/7] Treinando LogisticRegression (simples)...")
-        logreg_clf = LogisticRegression(max_iter=1000, random_state=42, n_jobs=-1)
+        logreg_clf = LogisticRegression(max_iter=1000, random_state=42)
         self.treinar_modelo(logreg_clf, X_train, X_test, y_train, y_test,
                            nome_modelo="LogisticRegression-simples")
 
         # 3. LogisticRegression (balanced)
         print("\n[3/7] Treinando LogisticRegression (balanced)...")
         logreg_balanced = LogisticRegression(max_iter=1000, class_weight='balanced',
-                                            random_state=42, n_jobs=-1)
+                                            random_state=42)
         self.treinar_modelo(logreg_balanced, X_train, X_test, y_train, y_test,
                            nome_modelo="LogisticRegression-balanced")
 
@@ -636,7 +632,7 @@ class BaselineExperiment:
         print("\n[4/7] Treinando LogisticRegression com SMOTE...")
         smote = SMOTE(random_state=42)
         X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train)
-        logreg_smote = LogisticRegression(max_iter=1000, random_state=42, n_jobs=-1)
+        logreg_smote = LogisticRegression(max_iter=1000, random_state=42)
         self.treinar_modelo(logreg_smote, X_train, X_test, y_train, y_test,
                            nome_modelo="LogisticRegression-SMOTE",
                            X_train_modificado=X_train_smote,
@@ -644,7 +640,7 @@ class BaselineExperiment:
 
         # 5. RandomForest
         print("\n[5/7] Treinando RandomForestClassifier...")
-        rf_clf = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+        rf_clf = RandomForestClassifier(n_estimators=100, random_state=42)
         self.treinar_modelo(rf_clf, X_train, X_test, y_train, y_test,
                            nome_modelo="RandomForestClassifier")
 
@@ -652,7 +648,7 @@ class BaselineExperiment:
         print("\n[6/7] Treinando XGBoostClassifier...")
         xgb_clf = XGBClassifier(n_estimators=100, max_depth=5, learning_rate=0.1,
                                random_state=42, use_label_encoder=False,
-                               eval_metric='logloss', n_jobs=-1)
+                               eval_metric='logloss')
         self.treinar_modelo(xgb_clf, X_train, X_test, y_train, y_test,
                            nome_modelo="XGBoostClassifier")
 
@@ -677,8 +673,7 @@ class BaselineExperiment:
                 gamma=0.1,                  # L1 regularization
                 random_state=42,
                 use_label_encoder=False,
-                eval_metric='logloss',
-                n_jobs=-1
+                eval_metric='logloss'
             )
             self.treinar_modelo(xgb_tuned, X_train, X_test, y_train, y_test,
                                nome_modelo="XGBoostClassifier-tuned")

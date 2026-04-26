@@ -9,11 +9,11 @@ Orquesta todo o pipeline de preparação de dados:
   6. Normalização com StandardScaler
 """
 
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from typing import Tuple, Optional, Dict, Union, List
 
 
 class TelcoDataPreprocessor:
@@ -35,11 +35,11 @@ class TelcoDataPreprocessor:
     def load_data(self, data_path: str) -> pd.DataFrame:
         """Carrega dataset CSV."""
         df = pd.read_csv(data_path)
-        print(f"[OK] Dataset carregado: {df.shape[0]} linhas × {df.shape[1]} colunas")
+        print(f"[OK] Dataset carregado: {df.shape[0]} linhas X {df.shape[1]} colunas")
         return df
 
     def drop_leakage_columns(self, df: pd.DataFrame,
-                            drop_columns: Optional[list] = None) -> pd.DataFrame:
+                            drop_columns: list | None = None) -> pd.DataFrame:
         """Remove colunas com leakage (churn label, reason, score, CLTV) e localização."""
         if drop_columns is None:
             drop_columns = [
@@ -57,7 +57,7 @@ class TelcoDataPreprocessor:
         return df
 
     def extract_target(self, df: pd.DataFrame,
-                      target_col: str = 'churn_value') -> Tuple[pd.DataFrame, pd.Series]:
+                      target_col: str = 'churn_value') -> tuple[pd.DataFrame, pd.Series]:
         """Separa target (churn_value) das features (X, y)."""
         df.rename(columns={'Churn Value': 'churn_value'}, inplace=True)
         if target_col not in df.columns:
@@ -130,7 +130,7 @@ class TelcoDataPreprocessor:
         return df
 
     def split_data(self, X: pd.DataFrame, y: pd.Series,
-                  test_size: float = 0.2) -> Tuple[pd.DataFrame, pd.DataFrame,
+                  test_size: float = 0.2) -> tuple[pd.DataFrame, pd.DataFrame,
                                                      pd.Series, pd.Series]:
         """Divide dados em treino/teste com estratificação."""
         X_train, X_test, y_train, y_test = train_test_split(
@@ -142,7 +142,7 @@ class TelcoDataPreprocessor:
         return X_train, X_test, y_train, y_test
 
     def scale_features(self, X_train: pd.DataFrame,
-                      X_test: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+                      X_test: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
         """Normaliza features com StandardScaler."""
         self.scaler = StandardScaler()
 
@@ -152,12 +152,12 @@ class TelcoDataPreprocessor:
         # Armazenar nomes de features
         self.feature_names = X_train.columns.tolist()
 
-        print(f"[OK] Features normalizadas (mean=0, std=1)")
+        print("[OK] Features normalizadas (mean=0, std=1)")
         return X_train_scaled, X_test_scaled
 
     def pipeline_completo(self, data_path: str,
                          test_size: float = 0.2,
-                         drop_columns: Optional[list] = None) -> Tuple:
+                         drop_columns: list | None = None) -> tuple:
         """
         Pipeline completo: load -> drop -> encode -> split -> scale.
 
@@ -186,7 +186,7 @@ class TelcoDataPreprocessor:
         # 6. Normalizar
         X_train_scaled, X_test_scaled = self.scale_features(X_train, X_test)
 
-        print(f"\n✅ Pipeline completo finalizado!")
+        print("\n✅ Pipeline completo finalizado!")
         print(f"   Features: {X_train_scaled.shape[1]}")
         print(f"   Treino: {X_train_scaled.shape[0]} amostras")
         print(f"   Teste: {X_test_scaled.shape[0]} amostras")
@@ -247,7 +247,7 @@ class TelcoDataPreprocessor:
 
         print(f"[OK] Preprocessador preparado para inferência com {len(self.feature_names)} features")
 
-    def transform_single(self, features_dict: Dict[str, Union[str, int, float]]) -> np.ndarray:
+    def transform_single(self, features_dict: dict[str, str | int | float]) -> np.ndarray:
         """Transforma dicionário de features em array 30D normalizado.
 
         Args:
@@ -277,7 +277,7 @@ class TelcoDataPreprocessor:
 
         return X_scaled
 
-    def transform_batch(self, features_list: List[Dict[str, Union[str, int, float]]]) -> np.ndarray:
+    def transform_batch(self, features_list: list[dict[str, str | int | float]]) -> np.ndarray:
         """Transforma lista de dicionários em array 2D normalizado.
 
         Args:

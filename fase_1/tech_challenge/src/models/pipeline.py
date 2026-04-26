@@ -1,14 +1,14 @@
 """Pipeline sklearn reprodutível para Telco Churn."""
 
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from xgboost import XGBClassifier
-import numpy as np
 import pickle
 from pathlib import Path
-from typing import Optional
+
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from xgboost import XGBClassifier
 
 
 class TelcoPipeline:
@@ -28,8 +28,7 @@ class TelcoPipeline:
             ('classifier', LogisticRegression(
                 class_weight=class_weight,
                 max_iter=max_iter,
-                random_state=self.random_state,
-                n_jobs=-1
+                random_state=self.random_state
             ))
         ])
         self.pipeline = pipeline
@@ -38,7 +37,7 @@ class TelcoPipeline:
 
     def create_random_forest(self,
                             n_estimators: int = 100,
-                            max_depth: Optional[int] = 20,
+                            max_depth: int | None = 20,
                             min_samples_split: int = 10) -> Pipeline:
         """Cria pipeline com RandomForestClassifier."""
         pipeline = Pipeline([
@@ -48,7 +47,6 @@ class TelcoPipeline:
                 max_depth=max_depth,
                 min_samples_split=min_samples_split,
                 random_state=self.random_state,
-                n_jobs=-1,
                 class_weight='balanced'
             ))
         ])
@@ -71,7 +69,6 @@ class TelcoPipeline:
                 random_state=self.random_state,
                 use_label_encoder=False,
                 eval_metric='logloss',
-                n_jobs=-1,
                 verbosity=0
             ))
         ])
@@ -91,7 +88,7 @@ class TelcoPipeline:
     def predict(self, X: np.ndarray) -> np.ndarray:
         """Faz predições."""
         if self.pipeline is None:
-            raise ValueError("Pipeline não foi treinado.")
+            raise ValueError("Pipeline nao foi treinado")
         return self.pipeline.predict(X)
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:

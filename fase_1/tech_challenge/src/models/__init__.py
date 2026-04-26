@@ -1,24 +1,24 @@
 """Models module - Modelos, pipelines e transformadores."""
 
 from .baseline import BaselineExperiment
+from .inference import ModelRegistry, PredictionService
+from .pipeline import TelcoPipeline
 from .transformers import (
-    ColumnDropper,
     BinaryEncoder,
     CategoricalEncoder,
+    ColumnDropper,
     FeatureSelector,
     NumericalTransformer,
 )
-from .pipeline import TelcoPipeline
-from .inference import PredictionService, ModelRegistry
 
 __all__ = [
     "BaselineExperiment",
-    "ColumnDropper",
     "BinaryEncoder",
     "CategoricalEncoder",
+    "ColumnDropper",
     "FeatureSelector",
-    "NumericalTransformer",
-    "TelcoPipeline",
-    "PredictionService",
     "ModelRegistry",
+    "NumericalTransformer",
+    "PredictionService",
+    "TelcoPipeline",
 ]

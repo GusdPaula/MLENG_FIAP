@@ -1,8 +1,7 @@
 """Configurações centralizadas para o projeto Telco Churn."""
 
-from dataclasses import dataclass
-from typing import Optional
 import os
+from dataclasses import dataclass
 
 
 @dataclass
@@ -100,7 +99,7 @@ DEFAULT_API_CONFIG = APIConfig()
 DEFAULT_LOGGING_CONFIG = LoggingConfig()
 
 
-def get_config(env: Optional[str] = None) -> dict:
+def get_config(env: str | None = None) -> dict:
     """Retorna configurações baseado no ambiente."""
     if env is None:
         env = os.getenv("ENV", "development")

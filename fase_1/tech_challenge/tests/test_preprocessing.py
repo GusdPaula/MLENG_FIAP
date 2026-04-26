@@ -1,10 +1,13 @@
 """Testes unitários para transformadores e preprocessing."""
 
-import pytest
 import numpy as np
 import pandas as pd
+
 from src.models.transformers import (
-    ColumnDropper, BinaryEncoder, CategoricalEncoder, FeatureSelector
+    BinaryEncoder,
+    CategoricalEncoder,
+    ColumnDropper,
+    FeatureSelector,
 )
 
 
@@ -93,4 +96,3 @@ class TestFeatureSelector:
         selector = FeatureSelector(['a', 'c'])
         result = selector.transform(df)
         assert list(result.columns) == ['a', 'c']
-

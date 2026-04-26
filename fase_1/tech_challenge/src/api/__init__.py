@@ -1,20 +1,20 @@
 """API module - FastAPI application."""
 
-from .main import create_app, app
+from .main import app, create_app
 from .schemas import (
+    BatchPredictionRequest,
+    BatchPredictionResponse,
     HealthCheckResponse,
     PredictionRequest,
     PredictionResponse,
-    BatchPredictionRequest,
-    BatchPredictionResponse,
 )
 
 __all__ = [
-    "create_app",
-    "app",
+    "BatchPredictionRequest",
+    "BatchPredictionResponse",
     "HealthCheckResponse",
     "PredictionRequest",
     "PredictionResponse",
-    "BatchPredictionRequest",
-    "BatchPredictionResponse",
+    "app",
+    "create_app",
 ]

@@ -3,12 +3,12 @@
 Carrega pipeline treinado e fornece métodos para predição de churn
 em modo single ou batch."""
 
-import numpy as np
 import pickle
 from pathlib import Path
-from typing import Dict, Union, Optional
+
+import numpy as np
+
 from .pipeline import TelcoPipeline
-from .transformers import *
 
 
 class PredictionService:
@@ -20,8 +20,8 @@ class PredictionService:
 
     def __init__(self,
                  pipeline_path: str,
-                 scaler_path: Optional[str] = None,
-                 preprocessor_path: Optional[str] = None):
+                 scaler_path: str | None = None,
+                 preprocessor_path: str | None = None):
         """
         Inicializa serviço de predição.
 
@@ -64,7 +64,7 @@ class PredictionService:
             return self.preprocessor.transform(X)
         return X
 
-    def predict(self, X: np.ndarray, return_proba: bool = False) -> Union[np.ndarray, Dict]:
+    def predict(self, X: np.ndarray, return_proba: bool = False) -> np.ndarray | dict:
         """Prediz churn para amostras de entrada.
 
         Args:
@@ -105,7 +105,7 @@ class PredictionService:
 
         return np.concatenate(predictions)
 
-    def predict_single(self, features: Dict) -> Dict:
+    def predict_single(self, features: dict) -> dict:
         """
         Predição para um único exemplo.
 
@@ -142,7 +142,7 @@ class ModelRegistry:
                       model_name: str,
                       version: str,
                       pipeline: TelcoPipeline,
-                      metadata: Dict) -> str:
+                      metadata: dict) -> str:
         """Registra modelo no registry com metadados.
 
         Args:
@@ -179,7 +179,7 @@ class ModelRegistry:
         pipeline_path = model_dir / "pipeline.pkl"
         return PredictionService(str(pipeline_path))
 
-    def list_models(self) -> Dict:
+    def list_models(self) -> dict:
         """Lista todos os modelos registrados."""
         models = {}
         for model_dir in self.registry_dir.iterdir():

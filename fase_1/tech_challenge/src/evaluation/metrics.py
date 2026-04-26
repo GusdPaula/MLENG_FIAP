@@ -2,13 +2,13 @@
 
 import numpy as np
 from sklearn.metrics import (
-    f1_score,
-    roc_auc_score,
     average_precision_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
     precision_score,
     recall_score,
-    confusion_matrix,
-    classification_report
+    roc_auc_score,
 )
 
 
@@ -30,7 +30,7 @@ class TelcoMetrics:
     """
 
     # Parâmetros de negócio (configuráveis)
-    CUSTOMER_LTV = 2080  # Monthly_Charges × Tenure = $65 × 32 meses
+    CUSTOMER_LTV = 2080  # Monthly_Charges X Tenure = $65 X 32 meses
     RETENTION_COST = 50  # Custo de retenção por cliente ($)
     FALSE_POSITIVE_COST = 20  # Custo de campanha ineficaz ($)
 

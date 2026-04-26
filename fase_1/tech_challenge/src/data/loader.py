@@ -1,11 +1,13 @@
 """Carregamento e préprocessamento de dados para Telco Churn."""
 
-import pandas as pd
+
+from typing import Any
+
 import numpy as np
-from sklearn.preprocessing import StandardScaler, LabelEncoder
+import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
-from typing import Tuple, List, Dict, Union, Optional
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 
 class TelcoDataLoader:
@@ -37,7 +39,7 @@ class TelcoDataLoader:
         print(f"[OK] Dataset carregado: {self.df.shape[0]} linhas x {self.df.shape[1]} colunas")
         return self.df
 
-    def preparar_features_target(self) -> Tuple[pd.DataFrame, pd.Series]:
+    def preparar_features_target(self) -> tuple[pd.DataFrame, pd.Series]:
         """
         Separa features e target.
 
@@ -53,7 +55,7 @@ class TelcoDataLoader:
             'churn_score',  # leakage - score de churn externo
         ]
         self.df.rename(columns={'Churn Value': 'churn_value'}, inplace=True)
-        X = self.df.drop(columns=drop_cols + ['churn_value'])
+        X = self.df.drop(columns=[*drop_cols, 'churn_value'])
         y = self.df['churn_value']
 
         print(f"[OK] Features selecionadas: {X.shape[1]}")
@@ -124,13 +126,13 @@ class TelcoDataLoader:
             stratify=y
         )
 
-        print(f"[OK] Split treino/teste (80/20):")
+        print("[OK] Split treino/teste (80/20):")
         print(f"  - Treino: {self.X_train.shape[0]} amostras")
         print(f"  - Teste: {self.X_test.shape[0]} amostras")
         print(f"  - Taxa churn treino: {self.y_train.mean()*100:.2f}%")
         print(f"  - Taxa churn teste: {self.y_test.mean()*100:.2f}%")
 
-    def pipeline_completo(self, test_size=0.2, random_state=42) -> Tuple:
+    def pipeline_completo(self, test_size=0.2, random_state=42) -> tuple:
         """
         Executa pipeline completo: carregar -> processar -> dividir.
 
@@ -169,7 +171,7 @@ class TelcoDataLoader:
         print("\n" + "="*60)
         return self.X_train, self.X_test, self.y_train, self.y_test
 
-    def fit_for_inference(self, data_path: Optional[str] = None) -> None:
+    def fit_for_inference(self, data_path: str | None = None) -> None:
         """Prepara loader para uso em inferência.
 
         Carrega dataset e treina os transformadores (encoders, imputer, scaler).
@@ -212,22 +214,21 @@ class TelcoDataLoader:
 
         print(f"[OK] Loader preparado para inferência com {len(self.feature_names)} features")
 
-    def transform_single(self, features_dict: Dict[str, Union[str, int, float]]) -> np.ndarray:
-        """Transforma dicionário de features em array normalizado.
-
-        Args:
-            features_dict: Dicionário com features nomeadas
-
-        Returns:
-            Array numpy (1, n_features) normalizado e pronto para predição
-
-        Raises:
-            ValueError: Se fit_for_inference() não foi chamado antes ou se valores inválidos
+    def transform_single(self, features_dict: Any) -> np.ndarray:
+        """
+        Transforma o input da API em um array pronto para predição,
+        mantendo os nomes originais (snake_case).
         """
         if not self._fitted_for_inference:
             raise ValueError("fit_for_inference() deve ser chamado antes de usar transform_single()")
 
-        # Validar valores categóricos antes de processar
+        # 1. Converter Pydantic para dicionário real (se necessário)
+        if hasattr(features_dict, "dict"):
+            features_dict = features_dict.dict()
+        elif hasattr(features_dict, "model_dump"):
+            features_dict = features_dict.model_dump()
+
+        # 2. Validar valores categóricos (usando as chaves snake_case originais)
         for col, valid_values in self.categorical_values.items():
             if col in features_dict:
                 value = features_dict[col]
@@ -237,57 +238,63 @@ class TelcoDataLoader:
                         f"Valores válidos: {sorted(valid_values)}"
                     )
 
-        # 1. Criar DataFrame de 1 linha
+        # 3. Criar DataFrame (Pandas usará as chaves do dict como nomes de colunas)
         df = pd.DataFrame([features_dict])
 
-        # 2. Codificar categoricas
+        # 4. Fluxo de processamento
+        # Agora o 'col' dentro do codificar_categoricas deve bater com o snake_case
         df = self.codificar_categoricas(df, fit=False)
 
-        # 3. Imputar
         df = pd.DataFrame(
             self.imputer.transform(df),
             columns=df.columns
         )
 
-        # 4. Normalizar
         X_scaled = self.normalizar_numericas(df, fit=False)
 
-        # 5. Garantir que tem as mesmas colunas na ordem correta
+        # Garante a ordem correta das features conforme o treinamento
         X_scaled = X_scaled[self.feature_names]
 
         return X_scaled.values
 
-    def transform_batch(self, features_list: List[Dict[str, Union[str, int, float]]]) -> np.ndarray:
-        """Transforma lista de dicionários em array 2D normalizado.
-
-        Args:
-            features_list: Lista de dicionários com features nomeadas
-
-        Returns:
-            Array numpy (n_samples, n_features) normalizado
-
-        Raises:
-            ValueError: Se fit_for_inference() não foi chamado antes
+    def transform_batch(self, samples: list[Any]) -> np.ndarray:
+        """
+        Transforms a list of Pydantic objects or dicts into a normalized 2D array.
+        Optimized for batch performance using vectorized operations.
         """
         if not self._fitted_for_inference:
-            raise ValueError("fit_for_inference() deve ser chamado antes de usar transform_batch()")
+            raise ValueError("fit_for_inference() must be called before transform_batch()")
 
-        # 1. Criar DataFrame a partir da lista
-        df = pd.DataFrame(features_list)
+        # 1. Convert Pydantic objects to dicts efficiently
+        # We check the first item to decide the conversion strategy
+        if len(samples) > 0:
+            first_item = samples[0]
+            if hasattr(first_item, "dict"):
+                data = [s.dict() for s in samples]
+            elif hasattr(first_item, "model_dump"):
+                data = [s.model_dump() for s in samples]
+            else:
+                data = samples
+        else:
+            return np.array([]).reshape(0, len(self.feature_names))
 
-        # 2. Codificar categoricas
+        # 2. Create DataFrame (Vectorized operation)
+        df = pd.DataFrame(data)
+
+        # 3. Encode Categoricals (Vectorized)
+        # This will now correctly find the snake_case columns
         df = self.codificar_categoricas(df, fit=False)
 
-        # 3. Imputar
+        # 4. Impute missing values
         df = pd.DataFrame(
             self.imputer.transform(df),
             columns=df.columns
         )
 
-        # 4. Normalizar
+        # 5. Normalize numericals
         X_scaled = self.normalizar_numericas(df, fit=False)
 
-        # 5. Garantir que tem as mesmas colunas na ordem correta
+        # 6. Ensure column alignment and order
         X_scaled = X_scaled[self.feature_names]
 
         return X_scaled.values
