@@ -18,24 +18,30 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 1. Install uv first
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          enable-cache: true
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
+      # 2. Sync dependencies using the pyproject.toml
       - name: Install Dependencies
         run: |
-          # Install the project in editable mode including dev-dependencies
           uv sync --project fase_1/tech_challenge
 
+      # 3. Use 'uv run' to execute tools within the synced environment
       - name: Run ruff (Lint & PEP8)
-        # We run from the root but target the specific subfolder
         run: |
-          python -m ruff check fase_1/tech_challenge
-          python -m ruff format --check fase_1/tech_challenge
+          uv run --project fase_1/tech_challenge ruff check .
+          uv run --project fase_1/tech_challenge ruff format --check .
 
       - name: Run pytest
         run: |
-          # Use PYTHONPATH so the 'src' inside the subfolder is discoverable
-          export PYTHONPATH=$PYTHONPATH:$(pwd)/fase_1/tech_challenge
-          python -m pytest fase_1/tech_challenge/tests
+          # uv run automatically handles the pythonpath if defined in pyproject.toml
+          uv run --project fase_1/tech_challenge pytest
