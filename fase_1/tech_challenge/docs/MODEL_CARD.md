@@ -163,7 +163,7 @@ Test Set:
 
 **Insight**: Período crítico é primeiros 12 meses. Modelo tem bom recall inicial.
 
----
+----
 
 ## 5. LIMITAÇÕES & VIESES
 
