@@ -18,24 +18,24 @@ class TestTelcoPipeline:
         pipe = pipeline.create_logistic_regression()
 
         assert pipeline.pipeline is not None
-        assert pipeline.model_name == 'LogisticRegression'
-        assert 'scaler' in pipe.named_steps
-        assert 'classifier' in pipe.named_steps
+        assert pipeline.model_name == "LogisticRegression"
+        assert "scaler" in pipe.named_steps
+        assert "classifier" in pipe.named_steps
 
     def test_create_random_forest(self):
         """Testa criação de pipeline RandomForest."""
         pipeline = TelcoPipeline()
         pipe = pipeline.create_random_forest()
 
-        assert pipeline.model_name == 'RandomForest'
-        assert 'classifier' in pipe.named_steps
+        assert pipeline.model_name == "RandomForest"
+        assert "classifier" in pipe.named_steps
 
     def test_create_xgboost(self):
         """Testa criação de pipeline XGBoost."""
         pipeline = TelcoPipeline()
         pipeline.create_xgboost()
 
-        assert pipeline.model_name == 'XGBoost'
+        assert pipeline.model_name == "XGBoost"
 
     def test_train_predict_logistic(self, X_train_sample, y_train_sample, X_test_sample):
         """Testa treinamento e predição com LogisticRegression."""
@@ -82,19 +82,19 @@ class TestTelcoPipeline:
     def test_from_dict_config(self, X_train_sample, y_train_sample):
         """Testa criação de pipeline a partir de config dict."""
         config = {
-            'model_type': 'logistic_regression',
-            'class_weight': 'balanced',
-            'random_state': 42
+            "model_type": "logistic_regression",
+            "class_weight": "balanced",
+            "random_state": 42,
         }
 
         pipeline = TelcoPipeline.from_dict(config)
         pipeline.train(X_train_sample, y_train_sample)
 
-        assert pipeline.model_name == 'LogisticRegression'
+        assert pipeline.model_name == "LogisticRegression"
 
     def test_invalid_model_type(self):
         """Testa erro com tipo de modelo inválido."""
-        config = {'model_type': 'invalid_model'}
+        config = {"model_type": "invalid_model"}
 
         with pytest.raises(ValueError, match="invalid_model"):
             TelcoPipeline.from_dict(config)
@@ -109,7 +109,7 @@ class TestTelcoPipeline:
             pipeline.predict(X_test_sample)
 
 
-@pytest.mark.smoke
+@pytest.mark.smoke()
 class TestSmokeTests:
     """Smoke tests - verificações básicas de integração."""
 
@@ -129,7 +129,8 @@ class TestSmokeTests:
     def test_config_loads_without_error(self):
         """Testa que config carrega sem erro."""
         from src.config import get_config
-        config = get_config('development')
+
+        config = get_config("development")
         assert config is not None
 
     def test_pipeline_workflow(self, X_train_sample, y_train_sample, X_test_sample):
@@ -150,9 +151,9 @@ class TestSmokeTests:
         from src.models.pipeline import TelcoPipeline
 
         model_types = [
-            ('logistic_regression', 'create_logistic_regression'),
-            ('random_forest', 'create_random_forest'),
-            ('xgboost', 'create_xgboost'),
+            ("logistic_regression", "create_logistic_regression"),
+            ("random_forest", "create_random_forest"),
+            ("xgboost", "create_xgboost"),
         ]
 
         for model_name, create_method in model_types:

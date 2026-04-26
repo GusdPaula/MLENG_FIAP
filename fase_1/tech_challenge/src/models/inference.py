@@ -18,10 +18,12 @@ class PredictionService:
     e fornece métodos para predição single e batch com suporte a probabilidades.
     """
 
-    def __init__(self,
-                 pipeline_path: str,
-                 scaler_path: str | None = None,
-                 preprocessor_path: str | None = None):
+    def __init__(
+        self,
+        pipeline_path: str,
+        scaler_path: str | None = None,
+        preprocessor_path: str | None = None,
+    ):
         """
         Inicializa serviço de predição.
 
@@ -36,22 +38,22 @@ class PredictionService:
 
         # Carregar pipeline treinado
         if Path(pipeline_path).exists():
-            with open(pipeline_path, 'rb') as f:
+            with open(pipeline_path, "rb") as f:
                 # TODO: REMOVE
-                self.pipeline = pickle.load(f)['model_object']
+                self.pipeline = pickle.load(f)["model_object"]
             print(f"[OK] Pipeline carregado de {pipeline_path}")
         else:
             raise FileNotFoundError(f"Pipeline não encontrado em {pipeline_path}")
 
         # Carregar scaler adicional (se fornecido)
         if scaler_path and Path(scaler_path).exists():
-            with open(scaler_path, 'rb') as f:
+            with open(scaler_path, "rb") as f:
                 self.scaler = pickle.load(f)
             print(f"[OK] Scaler carregado de {scaler_path}")
 
         # Carregar preprocessor adicional (se fornecido)
         if preprocessor_path and Path(preprocessor_path).exists():
-            with open(preprocessor_path, 'rb') as f:
+            with open(preprocessor_path, "rb") as f:
                 self.preprocessor = pickle.load(f)
             print(f"[OK] Preprocessor carregado de {preprocessor_path}")
 
@@ -84,9 +86,9 @@ class PredictionService:
         if return_proba:
             y_proba = self.pipeline.predict_proba(X_processed)
             return {
-                'predictions': y_pred,
-                'probabilities': y_proba[:, 1],  # Probabilidade da classe 1 (churn)
-                'confidence': np.max(y_proba, axis=1)
+                "predictions": y_pred,
+                "probabilities": y_proba[:, 1],  # Probabilidade da classe 1 (churn)
+                "confidence": np.max(y_proba, axis=1),
             }
 
         return y_pred
@@ -99,7 +101,7 @@ class PredictionService:
         predictions = []
 
         for i in range(0, len(X), batch_size):
-            batch = X[i:i+batch_size]
+            batch = X[i : i + batch_size]
             batch_pred = self.predict(batch)
             predictions.append(batch_pred)
 
@@ -121,9 +123,9 @@ class PredictionService:
         pred = self.predict(feature_array, return_proba=True)
 
         return {
-            'churn_prediction': int(pred['predictions'][0]),
-            'churn_probability': float(pred['probabilities'][0]),
-            'confidence': float(pred['confidence'][0])
+            "churn_prediction": int(pred["predictions"][0]),
+            "churn_probability": float(pred["probabilities"][0]),
+            "confidence": float(pred["confidence"][0]),
         }
 
 
@@ -138,11 +140,9 @@ class ModelRegistry:
         self.registry_dir = Path(registry_dir)
         self.registry_dir.mkdir(parents=True, exist_ok=True)
 
-    def register_model(self,
-                      model_name: str,
-                      version: str,
-                      pipeline: TelcoPipeline,
-                      metadata: dict) -> str:
+    def register_model(
+        self, model_name: str, version: str, pipeline: TelcoPipeline, metadata: dict
+    ) -> str:
         """Registra modelo no registry com metadados.
 
         Args:
@@ -163,7 +163,7 @@ class ModelRegistry:
 
         # Salvar metadata
         metadata_path = model_dir / "metadata.pkl"
-        with open(metadata_path, 'wb') as f:
+        with open(metadata_path, "wb") as f:
             pickle.dump(metadata, f)
 
         print(f"✅ Modelo registrado: {model_name}/{version}")

@@ -71,7 +71,7 @@ def create_app(model_path: str | None = None) -> FastAPI:
 
     # Inicializar loader para inferência
     try:
-        loader = TelcoDataLoader('data/processed/telco_churn_processed.csv')
+        loader = TelcoDataLoader("data/processed/telco_churn_processed.csv")
         loader.fit_for_inference()
         app.state.preprocessor = loader
         logger.info("[OK] Loader inicializado para inferência")
@@ -116,10 +116,7 @@ def create_app(model_path: str | None = None) -> FastAPI:
             Predição com probabilidade e confiança
         """
         if app.state.model_service is None:
-            raise HTTPException(
-                status_code=503,
-                detail="Modelo não foi carregado"
-            )
+            raise HTTPException(status_code=503, detail="Modelo não foi carregado")
 
         start_time = time.time()
 
@@ -133,40 +130,33 @@ def create_app(model_path: str | None = None) -> FastAPI:
             if request.return_probability:
                 result = app.state.model_service.predict(X, return_proba=True)
                 pred_result = {
-                    'prediction': int(result['predictions'][0]),
-                    'probability': float(result['probabilities'][0]),
-                    'confidence': float(result['confidence'][0]),
+                    "prediction": int(result["predictions"][0]),
+                    "probability": float(result["probabilities"][0]),
+                    "confidence": float(result["confidence"][0]),
                 }
-                logger.info(f"Predicton: {pred_result['prediction']}, Probability: {pred_result['probability']:.4f}")
+                logger.info(
+                    f"Predicton: {pred_result['prediction']}, Probability: {pred_result['probability']:.4f}"
+                )
             else:
                 pred = app.state.model_service.predict(X)
                 pred_result = {
-                    'prediction': int(pred[0]),
-                    'probability': None,
-                    'confidence': None,
+                    "prediction": int(pred[0]),
+                    "probability": None,
+                    "confidence": None,
                 }
 
             processing_time = (time.time() - start_time) * 1000
 
-            return PredictionResponse(
-                **pred_result,
-                processing_time_ms=processing_time
-            )
+            return PredictionResponse(**pred_result, processing_time_ms=processing_time)
 
         except ValueError as e:
             logger.error(f"Erro na validação de features: {e}")
-            raise HTTPException(
-                status_code=400,
-                detail=f"Erro ao validar features: {e!s}"
-            ) from e
+            raise HTTPException(status_code=400, detail=f"Erro ao validar features: {e!s}") from e
 
         except Exception as e:
             logger.error(f"Erro na predição: {e}")
             logger.error(traceback.format_exc())
-            raise HTTPException(
-                status_code=400,
-                detail=f"Erro ao processar predição: {e!s}"
-            ) from e
+            raise HTTPException(status_code=400, detail=f"Erro ao processar predição: {e!s}") from e
 
     # ============ PREDIÇÕES EM LOTE ============
     @app.post("/predict-batch", response_model=BatchPredictionResponse, tags=["Predictions"])
@@ -182,10 +172,7 @@ def create_app(model_path: str | None = None) -> FastAPI:
             Predições em lote
         """
         if app.state.model_service is None:
-            raise HTTPException(
-                status_code=503,
-                detail="Modelo não foi carregado"
-            )
+            raise HTTPException(status_code=503, detail="Modelo não foi carregado")
 
         start_time = time.time()
 
@@ -195,8 +182,8 @@ def create_app(model_path: str | None = None) -> FastAPI:
 
             if request.return_probabilities:
                 result = app.state.model_service.predict(X, return_proba=True)
-                preds = result['predictions']
-                probas = result['probabilities'].tolist()
+                preds = result["predictions"]
+                probas = result["probabilities"].tolist()
             else:
                 preds = app.state.model_service.predict(X)
                 probas = None
@@ -207,21 +194,15 @@ def create_app(model_path: str | None = None) -> FastAPI:
                 predictions=preds.tolist(),
                 probabilities=probas,
                 batch_size=len(request.samples),
-                processing_time_ms=processing_time
+                processing_time_ms=processing_time,
             )
 
         except ValueError as e:
             logger.error(f"Erro na validação de features: {e}")
-            raise HTTPException(
-                status_code=400,
-                detail=f"Erro ao validar features: {e!s}"
-            ) from e
+            raise HTTPException(status_code=400, detail=f"Erro ao validar features: {e!s}") from e
         except Exception as e:
             logger.error(f"Erro na predição em lote: {e}")
-            raise HTTPException(
-                status_code=400,
-                detail=f"Erro ao processar lote: {e!s}"
-            ) from e
+            raise HTTPException(status_code=400, detail=f"Erro ao processar lote: {e!s}") from e
 
     # ============ MODELO INFO ============
     @app.get("/model-info", response_model=ModelInfoResponse, tags=["Model"])
@@ -234,17 +215,14 @@ def create_app(model_path: str | None = None) -> FastAPI:
             Informações do modelo
         """
         if app.state.model_service is None:
-            raise HTTPException(
-                status_code=503,
-                detail="Modelo não foi carregado"
-            )
+            raise HTTPException(status_code=503, detail="Modelo não foi carregado")
 
         # Retornar informações do modelo com 30 features
         return ModelInfoResponse(
             model_type="Logistic Regression / Random Forest / XGBoost",
             model_version="0.1.0",
             n_features=30,
-            features_used=app.state.preprocessor.feature_names
+            features_used=app.state.preprocessor.feature_names,
         )
 
     # ============ ROOT ============
@@ -264,10 +242,8 @@ def create_app(model_path: str | None = None) -> FastAPI:
         return JSONResponse(
             status_code=400,
             content=ErrorResponse(
-                error=str(exc),
-                status_code=400,
-                timestamp=datetime.now().isoformat()
-            ).dict()
+                error=str(exc), status_code=400, timestamp=datetime.now().isoformat()
+            ).dict(),
         )
 
     @app.exception_handler(Exception)
@@ -278,8 +254,8 @@ def create_app(model_path: str | None = None) -> FastAPI:
             content=ErrorResponse(
                 error="Erro interno do servidor",
                 status_code=500,
-                timestamp=datetime.now().isoformat()
-            ).dict()
+                timestamp=datetime.now().isoformat(),
+            ).dict(),
         )
 
     return app

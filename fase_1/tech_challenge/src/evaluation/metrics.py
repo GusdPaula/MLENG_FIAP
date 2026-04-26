@@ -34,9 +34,6 @@ class TelcoMetrics:
     RETENTION_COST = 50  # Custo de retenção por cliente ($)
     FALSE_POSITIVE_COST = 20  # Custo de campanha ineficaz ($)
 
-
-
-
     @staticmethod
     def calcular_metricas_tecnicas(y_true, y_pred, y_pred_proba):
         """
@@ -52,16 +49,14 @@ class TelcoMetrics:
         """
         return {
             # Probabilísticas
-            'auc_roc': roc_auc_score(y_true, y_pred_proba),
-            'pr_auc': average_precision_score(y_true, y_pred_proba),
-
+            "auc_roc": roc_auc_score(y_true, y_pred_proba),
+            "pr_auc": average_precision_score(y_true, y_pred_proba),
             # Baseadas em threshold
-            'f1_score': f1_score(y_true, y_pred),
-            'precision': precision_score(y_true, y_pred),
-            'recall': recall_score(y_true, y_pred),
-
+            "f1_score": f1_score(y_true, y_pred),
+            "precision": precision_score(y_true, y_pred),
+            "recall": recall_score(y_true, y_pred),
             # Acurácia
-            'accuracy': np.mean(y_true == y_pred),
+            "accuracy": np.mean(y_true == y_pred),
         }
 
     @staticmethod
@@ -91,18 +86,22 @@ class TelcoMetrics:
         net_benefit = churn_avoided - fp_cost - retention_spent
 
         # ROI simplificado
-        roi = (net_benefit / (fp_cost + retention_spent)) * 100 if (fp_cost + retention_spent) > 0 else 0
+        roi = (
+            (net_benefit / (fp_cost + retention_spent)) * 100
+            if (fp_cost + retention_spent) > 0
+            else 0
+        )
 
         return {
-            'tp': int(tp),
-            'fp': int(fp),
-            'fn': int(fn),
-            'tn': int(tn),
-            'churn_avoided_revenue': float(churn_avoided),
-            'false_positive_cost': float(fp_cost),
-            'retention_cost': float(retention_spent),
-            'net_benefit': float(net_benefit),
-            'roi_percent': float(roi),
+            "tp": int(tp),
+            "fp": int(fp),
+            "fn": int(fn),
+            "tn": int(tn),
+            "churn_avoided_revenue": float(churn_avoided),
+            "false_positive_cost": float(fp_cost),
+            "retention_cost": float(retention_spent),
+            "net_benefit": float(net_benefit),
+            "roi_percent": float(roi),
         }
 
     @staticmethod
@@ -116,9 +115,8 @@ class TelcoMetrics:
     @staticmethod
     def relatorio_completo(y_true, y_pred):
         """Gera relatório textual completo."""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("RELATÓRIO DE CLASSIFICAÇÃO - TELCO CHURN")
-        print("="*60 + "\n")
-        print(classification_report(y_true, y_pred,
-                                   target_names=['Não Churn', 'Churn']))
-        print("="*60)
+        print("=" * 60 + "\n")
+        print(classification_report(y_true, y_pred, target_names=["Não Churn", "Churn"]))
+        print("=" * 60)

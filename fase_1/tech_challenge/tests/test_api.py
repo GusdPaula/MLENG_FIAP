@@ -5,6 +5,7 @@ from src.api.main import app
 # Initialize the TestClient with the FastAPI app
 client = TestClient(app)
 
+
 def test_health_check():
     """
     Validates the GET /api/health endpoint.
@@ -17,6 +18,7 @@ def test_health_check():
     assert "version" in data
     assert data["model_loaded"] is True
 
+
 def test_model_info():
     """
     Validates the GET /api/model-info endpoint.
@@ -28,6 +30,7 @@ def test_model_info():
     assert "model_type" in data
     assert "features_used" in data
     assert isinstance(data["features_used"], list)
+
 
 def test_predict_high_risk():
     """
@@ -54,7 +57,7 @@ def test_predict_high_risk():
             "paperless_billing": "Yes",
             "payment_method": "Mailed check",
             "monthly_charges": 53.85,
-            "total_charges": 108.15
+            "total_charges": 108.15,
         }
     }
     response = client.post("/api/predict", json=high_risk_payload)
@@ -65,6 +68,7 @@ def test_predict_high_risk():
     # High risk should ideally return 1, but we check if probability is > 0.5
     assert data["prediction"] == 1
     assert data["probability"] > 0.5
+
 
 def test_predict_batch(client):
     """Valida a predição em lote com múltiplos registros em snake_case."""
@@ -89,7 +93,7 @@ def test_predict_batch(client):
                 "paperless_billing": "Yes",
                 "payment_method": "Electronic check",
                 "monthly_charges": 70.0,
-                "total_charges": 840.0
+                "total_charges": 840.0,
             },
             {
                 "gender": "Male",
@@ -110,10 +114,10 @@ def test_predict_batch(client):
                 "paperless_billing": "No",
                 "payment_method": "Mailed check",
                 "monthly_charges": 60.0,
-                "total_charges": 1440.0
-            }
+                "total_charges": 1440.0,
+            },
         ],
-        "return_probabilities": True
+        "return_probabilities": True,
     }
 
     response = client.post("/api/predict-batch", json=batch_payload)

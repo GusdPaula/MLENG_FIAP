@@ -1,6 +1,28 @@
 repos:
--   repo: https://github.com/pre-commit/pre-commit-hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
-    -   id: trailing-whitespace
-    -   id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+
+  # Ruff for Linting and Formatting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.3.0
+    hooks:
+      - id: ruff
+        args: [ --fix ]
+      - id: ruff-format
+
+  # Local Pytest execution
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        # Change the entry to include the path to your challenge folder
+        entry: bash -c "cd fase_1/tech_challenge && uv run pytest"
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]

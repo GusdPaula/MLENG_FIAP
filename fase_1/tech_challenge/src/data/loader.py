@@ -1,6 +1,5 @@
 """Carregamento e préprocessamento de dados para Telco Churn."""
 
-
 from typing import Any
 
 import numpy as np
@@ -27,7 +26,7 @@ class TelcoDataLoader:
         self.y_train = None
         self.y_test = None
         self.scaler = StandardScaler()
-        self.imputer = SimpleImputer(strategy='mean')
+        self.imputer = SimpleImputer(strategy="mean")
         self.le_dict = {}
         self.feature_names = None
         self._fitted_for_inference = False
@@ -47,20 +46,27 @@ class TelcoDataLoader:
         """
         # Remover colunas não relevantes
         drop_cols = [
-            'customerid', 'count', 'country', 'state', 'city', 'zip_code',
-            'lat_long', 'latitude', 'longitude',  # localização inútil
-            'churn_label',  # usar churn_value em vez disso
-            'churn_reason',  # razão subjetiva
-            'cltv',  # leakage - correlacionado com churn
-            'churn_score',  # leakage - score de churn externo
+            "customerid",
+            "count",
+            "country",
+            "state",
+            "city",
+            "zip_code",
+            "lat_long",
+            "latitude",
+            "longitude",  # localização inútil
+            "churn_label",  # usar churn_value em vez disso
+            "churn_reason",  # razão subjetiva
+            "cltv",  # leakage - correlacionado com churn
+            "churn_score",  # leakage - score de churn externo
         ]
-        self.df.rename(columns={'Churn Value': 'churn_value'}, inplace=True)
-        X = self.df.drop(columns=[*drop_cols, 'churn_value'])
-        y = self.df['churn_value']
+        self.df.rename(columns={"Churn Value": "churn_value"}, inplace=True)
+        X = self.df.drop(columns=[*drop_cols, "churn_value"])
+        y = self.df["churn_value"]
 
         print(f"[OK] Features selecionadas: {X.shape[1]}")
         print(f"  - Distribuicao de Churn: {y.value_counts().to_dict()}")
-        print(f"  - Taxa de Churn: {y.mean()*100:.2f}%")
+        print(f"  - Taxa de Churn: {y.mean() * 100:.2f}%")
 
         return X, y
 
@@ -77,7 +83,7 @@ class TelcoDataLoader:
         """
         X_encoded = X.copy()
 
-        categoricas = X_encoded.select_dtypes(include=['object']).columns
+        categoricas = X_encoded.select_dtypes(include=["object"]).columns
 
         for col in categoricas:
             if fit:
@@ -112,25 +118,23 @@ class TelcoDataLoader:
         print(f"[OK] Variaveis numericas normalizadas: {len(numericas)}")
         return X_scaled
 
-    def split_treino_teste(self, X: pd.DataFrame, y: pd.Series,
-                          test_size=0.2, random_state=42) -> None:
+    def split_treino_teste(
+        self, X: pd.DataFrame, y: pd.Series, test_size=0.2, random_state=42
+    ) -> None:
         """
         Divide dados em treino e teste.
 
         Usa stratified split para manter a proporção de churn.
         """
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            X, y,
-            test_size=test_size,
-            random_state=random_state,
-            stratify=y
+            X, y, test_size=test_size, random_state=random_state, stratify=y
         )
 
         print("[OK] Split treino/teste (80/20):")
         print(f"  - Treino: {self.X_train.shape[0]} amostras")
         print(f"  - Teste: {self.X_test.shape[0]} amostras")
-        print(f"  - Taxa churn treino: {self.y_train.mean()*100:.2f}%")
-        print(f"  - Taxa churn teste: {self.y_test.mean()*100:.2f}%")
+        print(f"  - Taxa churn treino: {self.y_train.mean() * 100:.2f}%")
+        print(f"  - Taxa churn teste: {self.y_test.mean() * 100:.2f}%")
 
     def pipeline_completo(self, test_size=0.2, random_state=42) -> tuple:
         """
@@ -139,9 +143,9 @@ class TelcoDataLoader:
         Returns:
             (X_train, X_test, y_train, y_test)
         """
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("PIPELINE DE PREPARACAO DE DADOS")
-        print("="*60 + "\n")
+        print("=" * 60 + "\n")
         self.carregar()
         X, y = self.preparar_features_target()
 
@@ -153,8 +157,7 @@ class TelcoDataLoader:
         self.X_train = self.codificar_categoricas(self.X_train, fit=True)
         # Imputar
         self.X_train = pd.DataFrame(
-            self.imputer.fit_transform(self.X_train),
-            columns=self.X_train.columns
+            self.imputer.fit_transform(self.X_train), columns=self.X_train.columns
         )
         # Normalizar
         self.X_train = self.normalizar_numericas(self.X_train, fit=True)
@@ -162,13 +165,10 @@ class TelcoDataLoader:
         # 3. TRABALHAR NO TESTE (APENAS Transform)
         # Usamos as réguas aprendidas no treino para aplicar no teste
         self.X_test = self.codificar_categoricas(self.X_test, fit=False)
-        self.X_test = pd.DataFrame(
-            self.imputer.transform(self.X_test),
-            columns=self.X_test.columns
-        )
+        self.X_test = pd.DataFrame(self.imputer.transform(self.X_test), columns=self.X_test.columns)
         self.X_test = self.normalizar_numericas(self.X_test, fit=False)
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         return self.X_train, self.X_test, self.y_train, self.y_test
 
     def fit_for_inference(self, data_path: str | None = None) -> None:
@@ -190,7 +190,7 @@ class TelcoDataLoader:
         X, _ = self.preparar_features_target()
 
         # 2.5. Armazenar valores válidos para cada coluna categórica ANTES de transformar
-        categoricas = X.select_dtypes(include=['object']).columns
+        categoricas = X.select_dtypes(include=["object"]).columns
         for col in categoricas:
             self.categorical_values[col] = set(X[col].unique())
 
@@ -198,10 +198,7 @@ class TelcoDataLoader:
         X = self.codificar_categoricas(X, fit=True)
 
         # 4. Imputar (fit=True para aprender as médias)
-        X = pd.DataFrame(
-            self.imputer.fit_transform(X),
-            columns=X.columns
-        )
+        X = pd.DataFrame(self.imputer.fit_transform(X), columns=X.columns)
 
         # 5. Normalizar (fit=True para aprender média e desvio)
         X = self.normalizar_numericas(X, fit=True)
@@ -220,7 +217,9 @@ class TelcoDataLoader:
         mantendo os nomes originais (snake_case).
         """
         if not self._fitted_for_inference:
-            raise ValueError("fit_for_inference() deve ser chamado antes de usar transform_single()")
+            raise ValueError(
+                "fit_for_inference() deve ser chamado antes de usar transform_single()"
+            )
 
         # 1. Converter Pydantic para dicionário real (se necessário)
         if hasattr(features_dict, "dict"):
@@ -245,10 +244,7 @@ class TelcoDataLoader:
         # Agora o 'col' dentro do codificar_categoricas deve bater com o snake_case
         df = self.codificar_categoricas(df, fit=False)
 
-        df = pd.DataFrame(
-            self.imputer.transform(df),
-            columns=df.columns
-        )
+        df = pd.DataFrame(self.imputer.transform(df), columns=df.columns)
 
         X_scaled = self.normalizar_numericas(df, fit=False)
 
@@ -286,10 +282,7 @@ class TelcoDataLoader:
         df = self.codificar_categoricas(df, fit=False)
 
         # 4. Impute missing values
-        df = pd.DataFrame(
-            self.imputer.transform(df),
-            columns=df.columns
-        )
+        df = pd.DataFrame(self.imputer.transform(df), columns=df.columns)
 
         # 5. Normalize numericals
         X_scaled = self.normalizar_numericas(df, fit=False)

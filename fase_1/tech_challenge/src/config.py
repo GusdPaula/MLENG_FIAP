@@ -20,10 +20,19 @@ class DataConfig:
     def __post_init__(self):
         if self.drop_columns is None:
             self.drop_columns = [
-                'CustomerID', 'Count', 'Country', 'State', 'City', 'Zip Code',
-                'Lat Long', 'Latitude', 'Longitude',
-                'Churn Label', 'Churn Reason',
-                'CLTV', 'Churn Score',
+                "CustomerID",
+                "Count",
+                "Country",
+                "State",
+                "City",
+                "Zip Code",
+                "Lat Long",
+                "Latitude",
+                "Longitude",
+                "Churn Label",
+                "Churn Reason",
+                "CLTV",
+                "Churn Score",
             ]
 
 
