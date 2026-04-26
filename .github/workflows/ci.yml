@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  test:
+    name: Run pytest and ruff
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Ensure this path is correct relative to the root
+          pip install -r fase_1/tech_challenge/requirements-dev.txt
+
+      - name: Run ruff (Lint & PEP8)
+        run: |
+          # Check for logic errors
+          python -m ruff check fase_1/tech_challenge/src fase_1/tech_challenge/tests
+          # Check for PEP8 formatting
+          python -m ruff format --check fase_1/tech_challenge/src fase_1/tech_challenge/tests
+
+      - name: Run pytest
+        run: |
+          # Tell pytest where to look
+          python -m pytest fase_1/tech_challenge/tests
