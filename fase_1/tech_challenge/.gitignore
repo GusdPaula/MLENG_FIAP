@@ -30,7 +30,6 @@ data/processed/*.csv
 !data/processed/.gitkeep
 
 # Models
-models/*.pkl
 models/*.pth
 models/*.joblib
 models/*.h5
