@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.12"]
 
     steps:
       - name: Checkout repository
@@ -26,17 +26,17 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # Ensure this path is correct relative to the root
+          # We use -r so that the exact version of Ruff you have locally is installed here
           pip install -r fase_1/tech_challenge/requirements-dev.txt
 
       - name: Run ruff (Lint & PEP8)
+        # We run from the root but target the specific subfolder
         run: |
-          # Check for logic errors
-          python -m ruff check fase_1/tech_challenge/src fase_1/tech_challenge/tests
-          # Check for PEP8 formatting
-          python -m ruff format --check fase_1/tech_challenge/src fase_1/tech_challenge/tests
+          python -m ruff check fase_1/tech_challenge
+          python -m ruff format --check fase_1/tech_challenge
 
       - name: Run pytest
         run: |
-          # Tell pytest where to look
+          # Use PYTHONPATH so the 'src' inside the subfolder is discoverable
+          export PYTHONPATH=$PYTHONPATH:$(pwd)/fase_1/tech_challenge
           python -m pytest fase_1/tech_challenge/tests

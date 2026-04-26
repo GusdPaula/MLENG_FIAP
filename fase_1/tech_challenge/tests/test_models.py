@@ -109,7 +109,7 @@ class TestTelcoPipeline:
             pipeline.predict(X_test_sample)
 
 
-@pytest.mark.smoke()
+@pytest.mark.smoke
 class TestSmokeTests:
     """Smoke tests - verificações básicas de integração."""
 

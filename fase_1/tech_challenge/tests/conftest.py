@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from src.api.main import app
 
 
-@pytest.fixture()
+@pytest.fixture
 def client():
     # Don't mock the state.
     # Just ensure the real model is loaded before yielding the client.
@@ -20,14 +20,14 @@ def client():
         yield c
 
 
-@pytest.fixture()
+@pytest.fixture
 def tmp_data_dir():
     """Cria diretório temporário para testes de dados."""
     with tempfile.TemporaryDirectory() as tmpdir:
         yield tmpdir
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_csv(tmp_data_dir):
     """Cria arquivo CSV de amostra para testes."""
     df = pd.DataFrame(
@@ -45,7 +45,7 @@ def sample_csv(tmp_data_dir):
     return str(path)
 
 
-@pytest.fixture()
+@pytest.fixture
 def X_train_sample():
     """Features de treino para testes."""
     return np.array(
@@ -58,13 +58,13 @@ def X_train_sample():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def y_train_sample():
     """Labels de treino para testes."""
     return np.array([0, 1, 0, 1])
 
 
-@pytest.fixture()
+@pytest.fixture
 def X_test_sample():
     """Features de teste para testes."""
     return np.array(
@@ -75,13 +75,13 @@ def X_test_sample():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def y_test_sample():
     """Labels de teste para testes."""
     return np.array([0, 1])
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_dataframe():
     """DataFrame de amostra para testes de preprocessing."""
     return pd.DataFrame(
@@ -109,7 +109,7 @@ def _env_vars():
         del os.environ["DEBUG"]
 
 
-@pytest.fixture()
+@pytest.fixture
 def real_data_path():
     """Retorna caminho do dataset real ou pula teste."""
     data_path = "data/processed/telco_churn_processed.csv"
@@ -118,7 +118,7 @@ def real_data_path():
     return data_path
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_features_dict():
     """Dicionário de exemplo com 19 features nomeadas."""
     return {
