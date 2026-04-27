@@ -1,0 +1,86 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: mlflow_db
+    environment:
+      POSTGRES_USER: mlflow_user
+      POSTGRES_PASSWORD: mlflow_password
+      POSTGRES_DB: mlflow_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow_user -d mlflow_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mlflow_network
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+    container_name: mlflow_server
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlartifacts:/mlartifacts
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=postgresql://mlflow_user:mlflow_password@db:5432/mlflow_db
+      - MLFLOW_TRACKING_STORE_URI=postgresql://mlflow_user:mlflow_password@db:5432/mlflow_db
+      - MLFLOW_ALLOWED_HOSTS=localhost,mlflow,127.0.0.1
+    networks:
+      - mlflow_network
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: fastapi_inference
+    depends_on:
+      mlflow:
+        condition: service_started
+    ports:
+      - "8000:8000"
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    command: ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    networks:
+      - mlflow_network
+    restart: on-failure
+
+  training:
+    build:
+      context: .
+      dockerfile: Dockerfile.training
+    container_name: ml_training_service
+    depends_on:
+      mlflow:
+        condition: service_started
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - ./mlartifacts:/app/mlartifacts
+      - ./models:/app/models
+    networks:
+      - mlflow_network
+    # Não executa por padrão - rodar com:
+    # docker-compose run training
+    # ou: docker-compose run training python src/models/model_traning.py
+    command: ["python", "src/models/base_pipeline.py"]
+
+volumes:
+  postgres_data:
+    driver: local
+  mlartifacts:
+    driver: local
+
+networks:
+  mlflow_network:
+    driver: bridge

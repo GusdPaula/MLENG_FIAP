@@ -1,0 +1,64 @@
+# MLflow Server - Multi-stage Docker build
+# Versão: MLflow 3.11.1
+# Otimizado para produção com instalação de dependências em build time
+
+# Stage 1: Builder
+FROM python:3.10-slim as builder
+
+WORKDIR /tmp
+
+# Instalar dependências de build necessárias
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Instalar MLflow e dependências (build time, não runtime)
+# Versão: MLflow 3.11.1 com suporte a PostgreSQL
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir \
+    mlflow==3.11.1 \
+    psycopg2-binary==2.9.9 \
+    gunicorn==21.2.0 \
+    click==8.1.7
+
+# Stage 2: Runtime (minimal image)
+FROM python:3.10-slim
+
+WORKDIR /mlflow
+
+# Copiar apenas as dependências instaladas do builder (não include build tools)
+COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Criar diretórios necessários
+RUN mkdir -p /mlartifacts /mlflow/data
+
+# Informações da imagem
+LABEL maintainer="MLOps Team"
+LABEL version="3.11.1"
+LABEL description="MLflow Server com PostgreSQL backend"
+
+# Health check - verifica se MLflow responde
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
+    CMD python -c "import requests; requests.get('http://localhost:5000/health')" || exit 1
+
+# Expor porta MLflow
+EXPOSE 5000
+
+# Comando de startup (instância única de MLflow)
+# Usa psycopg2 para conectar ao PostgreSQL
+# --host 0.0.0.0: aceita conexões de qualquer interface
+CMD ["mlflow", "server", \
+     "--backend-store-uri", "postgresql://mlflow_user:mlflow_password@db:5432/mlflow_db", \
+     "--default-artifact-root", "/mlartifacts", \
+     "--host", "0.0.0.0", \
+     "--port", "5000", \
+     "--workers", "4"]
+
+# Notas sobre security:
+# MLflow 3.11.1+ tem security middleware que pode bloquear conexões de containers
+# Se erro 403 "Invalid Host header", adicionar ao docker-compose.yml:
+# environment:
+#   - MLFLOW_EXTRA_ARGS=--allowed-hosts="localhost,mlflow,127.0.0.1"
+# Ou usar --proxy-headers para desabilitar validation

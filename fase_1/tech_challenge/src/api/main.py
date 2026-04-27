@@ -1,8 +1,16 @@
-"""Aplicação FastAPI para Telco Churn Prediction."""
+"""Aplicação FastAPI para Telco Churn Prediction.
+
+API com suporte a MLflow Model Registry:
+- Carrega modelos do MLflow em startup
+- Fallback para arquivo local se MLflow indisponível
+- Configure MLFLOW_TRACKING_URI para ativar integração MLflow
+"""
 
 import logging
+import os
 import time
 import traceback
+from contextlib import asynccontextmanager
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException
@@ -33,17 +41,83 @@ def create_app(model_path: str | None = None) -> FastAPI:
     Factory function para criar a aplicação FastAPI.
 
     Args:
-        model_path: Caminho para o modelo treinado
+        model_path: Caminho para o modelo treinado (fallback local)
 
     Returns:
-        Aplicação FastAPI configurada
+        Aplicação FastAPI configurada com suporte a MLflow
     """
+    
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        """Lifecycle manager: startup e shutdown.
+        
+        Startup:
+        - Carrega loader de dados
+        - Carrega modelo (MLflow ou local)
+        
+        Shutdown:
+        - Limpeza de recursos
+        """
+        # ============ STARTUP ============
+        logger.info("="*70)
+        logger.info("Iniciando Telco Churn Prediction API")
+        logger.info("="*70)
+        
+        # Inicializar loader para inferência
+        try:
+            loader = TelcoDataLoader("data/processed/telco_churn_processed.csv")
+            loader.fit_for_inference()
+            app.state.preprocessor = loader
+            logger.info("Loader inicializado para inferência")
+        except Exception as e:
+            logger.error(f"✗ Erro ao inicializar loader: {e}")
+            app.state.preprocessor = None
+
+        # Carregar modelo
+        try:
+            # Tentar carregar do MLflow primeiro
+            tracking_uri = os.getenv("MLFLOW_TRACKING_URI", None)
+            
+            if tracking_uri:
+                logger.info(f"📊 MLflow Tracking URI: {tracking_uri}")
+                # PredictionService.load_model() tenta MLflow com fallback para local
+                app.state.model_service = PredictionService.load_model(
+                    pipeline_path=model_path or "models/best_model_with_metadata.pkl"
+                )
+                logger.info(f"Modelo carregado via {PredictionService._model_source}")
+            else:
+                # Carregar apenas do arquivo local
+                if model_path:
+                    app.state.model_service = PredictionService(
+                        pipeline_path=model_path,
+                        use_mlflow=False
+                    )
+                    logger.info(f"Modelo carregado: {model_path}")
+                else:
+                    raise FileNotFoundError(
+                        "model_path não fornecido e MLFLOW_TRACKING_URI não configurado"
+                    )
+                    
+        except Exception as e:
+            logger.error(f"✗ Erro ao carregar modelo: {e}")
+            logger.error(f"  Fallback: API disponível mas sem predições")
+            app.state.model_service = None
+
+        logger.info("API iniciada com sucesso!")
+        logger.info("="*70)
+        
+        yield
+        
+        # ============ SHUTDOWN ============
+        logger.info("Encerrando API...")
+    
     app = FastAPI(
         title="Telco Churn Prediction API",
         description="API para predição de churn de clientes de telecom",
         version="0.1.0",
         docs_url="/api/docs",
         redoc_url="/api/redoc",
+        lifespan=lifespan,
     )
 
     # CORS middleware
@@ -68,23 +142,6 @@ def create_app(model_path: str | None = None) -> FastAPI:
     app.state.model_service: PredictionService | None = None
     app.state.preprocessor: TelcoDataLoader | None = None
     app.state.config = get_config()
-
-    # Inicializar loader para inferência
-    try:
-        loader = TelcoDataLoader("data/processed/telco_churn_processed.csv")
-        loader.fit_for_inference()
-        app.state.preprocessor = loader
-        logger.info("[OK] Loader inicializado para inferência")
-    except Exception as e:
-        logger.error(f"[ERROR] Erro ao inicializar loader: {e}")
-
-    # Carregar modelo se fornecido
-    if model_path:
-        try:
-            app.state.model_service = PredictionService(model_path)
-            logger.info(f"[OK] Modelo carregado: {model_path}")
-        except Exception as e:
-            logger.error(f"[ERROR] Erro ao carregar modelo: {e}")
 
     # ============ HEALTH CHECK ============
     @app.get("/health", tags=["Health"])
@@ -262,4 +319,10 @@ def create_app(model_path: str | None = None) -> FastAPI:
 
 
 # Aplicação padrão
-app = create_app("models/best_model_with_metadata.pkl")
+# Tentar carregar modelo do arquivo local, caso não exista, criar app degraded
+_default_model_path = "models/best_model_with_metadata.pkl"
+if os.path.exists(_default_model_path):
+    app = create_app(_default_model_path)
+else:
+    # Em desenvolvimento/testes, criar app sem modelo (modo degraded)
+    app = create_app(model_path=None)

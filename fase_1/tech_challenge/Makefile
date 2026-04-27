@@ -1,4 +1,4 @@
-.PHONY: help install install-dev lint format type-check test test-cov test-smoke test-unit test-all clean build run run-api run-api-prod docs venv pre-commit
+.PHONY: help install install-dev lint format type-check test test-cov test-smoke test-unit test-all clean build run run-api run-api-prod docs venv pre-commit docker-compose-up docker-compose-down docker-compose-logs docker-compose-ps
 
 # Variáveis
 PYTHON := python3
@@ -41,8 +41,19 @@ help:
 	@echo "make mlflow-ui	- Abrir MLflow UI (localhost:5000)"
 	@echo ""
 	@echo "Docker:"
-	@echo "make docker-build	- Construir imagem Docker"
-	@echo "make docker-run	- Executar container Docker"
+	@echo "  make docker-build         - Construir imagem Docker"
+	@echo "  make docker-run           - Executar container Docker"
+	@echo "  make docker-compose-up    - Subir serviços (PostgreSQL + MLflow + API)"
+	@echo "  make docker-compose-down  - Desligar serviços"
+	@echo "  make docker-compose-logs  - Ver logs (follow mode)"
+	@echo "  make docker-compose-ps    - Status dos containers"
+	@echo ""
+	@echo "Treinamento em Docker:"
+	@echo "  make docker-train         - Treinar modelo (base_pipeline.py com MLflow)"
+	@echo "  make docker-train-baseline - Executar baseline.py"
+	@echo "  make docker-train-raw     - Executar model_traning.py (sem MLflow)"
+	@echo "  make docker-train-shell   - Abrir shell no container de treino"
+	@echo "  make docker-train-logs    - Ver logs do container de treino"
 	@echo ""
 
 
@@ -190,6 +201,57 @@ docker-build:
 	@echo "✅ Imagem construída!"
 
 docker-run:
+
+# ==== TRAINING CONTAINER ====
+docker-train:
+	@echo "🤖 Treinando modelo com Docker (base_pipeline.py)..."
+	docker-compose run --rm training
+	@echo "✅ Treinamento concluído! Veja em http://localhost:5000"
+
+docker-train-baseline:
+	@echo "🤖 Executando baseline.py no container..."
+	docker-compose run --rm training python src/models/baseline.py
+	@echo "✅ Baseline concluído!"
+
+docker-train-raw:
+	@echo "🤖 Executando model_traning.py (sem MLflow) no container..."
+	docker-compose run --rm training python src/models/model_traning.py
+	@echo "✅ Treinamento raw concluído!"
+
+docker-train-shell:
+	@echo "🐳 Abrindo shell no container de treinamento..."
+	docker-compose run --rm training bash
+	@echo "✅ Shell fechado!"
+
+docker-train-logs:
+	@echo "📋 Logs do container de treinamento..."
+	docker logs ml_training_service -f
+
+# ==== DOCKER COMPOSE ====
+docker-compose-up:
+	@echo "🐳 Subindo serviços (PostgreSQL + MLflow + API)..."
+	docker-compose up -d
+	@echo "✅ Serviços iniciados!"
+	@echo ""
+	@echo "📊 MLflow UI: http://localhost:5000"
+	@echo "🔌 API Health: http://localhost:8000/api/health"
+	@echo "🐘 PostgreSQL: localhost:5432"
+	@echo ""
+	@echo "Use 'make docker-compose-logs' para ver logs"
+
+docker-compose-down:
+	@echo "🐳 Desligando serviços..."
+	docker-compose down
+	@echo "✅ Serviços desligados!"
+
+docker-compose-logs:
+	@echo "📋 Logs dos serviços (Ctrl+C para sair)..."
+	docker-compose logs -f
+
+docker-compose-ps:
+	@echo "📋 Status dos containers..."
+	docker-compose ps
+
 	@echo "🐳 Executando container..."
 	docker run -p 8000:8000 $(DOCKER_IMAGE)
 	@echo "✅ Container rodando em http://localhost:8000"

@@ -1,14 +1,21 @@
 """Serviço de inferência e predição para uso em produção.
 
 Carrega pipeline treinado e fornece métodos para predição de churn
-em modo single ou batch."""
+em modo single ou batch. Suporta MLflow Model Registry com fallback
+para arquivo local (.pkl)."""
 
+import logging
+import os
 import pickle
 from pathlib import Path
 
+import mlflow
+import mlflow.pyfunc
 import numpy as np
 
 from .pipeline import TelcoPipeline
+
+logger = logging.getLogger(__name__)
 
 
 class PredictionService:
@@ -16,32 +23,122 @@ class PredictionService:
 
     Carrega pipeline treinado (sklearn Pipeline com StandardScaler + classificador)
     e fornece métodos para predição single e batch com suporte a probabilidades.
+    
+    Suporta carregamento de:
+    - MLflow Model Registry (recomendado para produção)
+    - Arquivo local (.pkl) como fallback
     """
+
+    _model = None  # Cache de modelo em memória
+    _model_source = None  # "mlflow" ou "local"
 
     def __init__(
         self,
-        pipeline_path: str,
+        pipeline_path: str = None,
         scaler_path: str | None = None,
         preprocessor_path: str | None = None,
+        use_mlflow: bool = True,
     ):
         """
         Inicializa serviço de predição.
 
         Args:
-            pipeline_path: Caminho para o arquivo do pipeline treinado
+            pipeline_path: Caminho para o arquivo do pipeline treinado (fallback local)
             scaler_path: Caminho para o scaler (opcional)
             preprocessor_path: Caminho para o preprocessor (opcional)
+            use_mlflow: Se True, tenta carregar do MLflow primeiro
         """
         self.pipeline = None
         self.scaler = None
         self.preprocessor = None
+        self.use_mlflow = use_mlflow
+        
+        # Tentar carregar do MLflow se configurado
+        if use_mlflow:
+            self._load_from_mlflow()
+        
+        # Se não carregou do MLflow, tentar arquivo local
+        if self.pipeline is None and pipeline_path:
+            self._load_from_local(pipeline_path, scaler_path, preprocessor_path)
+        
+        if self.pipeline is None:
+            raise RuntimeError(
+                "Não foi possível carregar o modelo. "
+                "Configure MLFLOW_TRACKING_URI ou forneça pipeline_path."
+            )
 
+    @classmethod
+    def load_model(
+        cls,
+        pipeline_path: str = None,
+        scaler_path: str | None = None,
+        preprocessor_path: str | None = None,
+    ) -> "PredictionService":
+        """Factory method para criar e cachear serviço de predição.
+        
+        Reutiliza instância em cache se disponível (boa prática para produção).
+        
+        Args:
+            pipeline_path: Caminho para arquivo local (fallback)
+            scaler_path: Caminho para scaler (opcional)
+            preprocessor_path: Caminho para preprocessor (opcional)
+            
+        Returns:
+            PredictionService: Instância do serviço
+        """
+        if cls._model is None:
+            cls._model = cls(
+                pipeline_path=pipeline_path,
+                scaler_path=scaler_path,
+                preprocessor_path=preprocessor_path,
+                use_mlflow=True
+            )
+            logger.info(f"✓ Modelo carregado via {cls._model_source}")
+        return cls._model
+
+    def _load_from_mlflow(self) -> bool:
+        """Tenta carregar modelo do MLflow Model Registry.
+        
+        Returns:
+            bool: True se carregou com sucesso, False caso contrário
+        """
+        try:
+            tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
+            mlflow.set_tracking_uri(tracking_uri)
+            
+            # Tentar carregar modelo "Production" do registry
+            model_uri = "models://TelcoChurnLogisticRegression/Production"
+            logger.info(f"Tentando carregar modelo: {model_uri}")
+            
+            self.pipeline = mlflow.pyfunc.load_model(model_uri)
+            PredictionService._model_source = "MLflow"
+            logger.info(f"✓ Modelo carregado via MLflow: {model_uri}")
+            return True
+            
+        except Exception as e:
+            logger.warning(f"⚠ Não foi possível carregar do MLflow: {e}")
+            return False
+
+    def _load_from_local(
+        self, 
+        pipeline_path: str, 
+        scaler_path: str | None = None, 
+        preprocessor_path: str | None = None
+    ):
+        """Carrega modelo do arquivo local (.pkl).
+        
+        Args:
+            pipeline_path: Caminho para o arquivo do pipeline
+            scaler_path: Caminho para o scaler (opcional)
+            preprocessor_path: Caminho para o preprocessor (opcional)
+        """
         # Carregar pipeline treinado
         if Path(pipeline_path).exists():
             with open(pipeline_path, "rb") as f:
                 # TODO: REMOVE
                 self.pipeline = pickle.load(f)["model_object"]
-            print(f"[OK] Pipeline carregado de {pipeline_path}")
+            PredictionService._model_source = "local"
+            logger.info(f"[OK] Pipeline carregado de {pipeline_path}")
         else:
             raise FileNotFoundError(f"Pipeline não encontrado em {pipeline_path}")
 
@@ -49,7 +146,7 @@ class PredictionService:
         if scaler_path and Path(scaler_path).exists():
             with open(scaler_path, "rb") as f:
                 self.scaler = pickle.load(f)
-            print(f"[OK] Scaler carregado de {scaler_path}")
+            logger.info(f"[OK] Scaler carregado de {scaler_path}")
 
         # Carregar preprocessor adicional (se fornecido)
         if preprocessor_path and Path(preprocessor_path).exists():
