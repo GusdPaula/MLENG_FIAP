@@ -1,0 +1,7 @@
+{
+  "churn_rate_train": 0.475,
+  "churn_rate_test": 0.45,
+  "n_train_samples": 80,
+  "n_test_samples": 20,
+  "n_features": 5
+}

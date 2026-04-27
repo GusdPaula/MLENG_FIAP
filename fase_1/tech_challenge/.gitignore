@@ -29,7 +29,6 @@ __pycache__/
 models/*.pth
 models/*.joblib
 models/*.h5
-mlruns/
 .mlflow/
 !models/.gitkeep
 
