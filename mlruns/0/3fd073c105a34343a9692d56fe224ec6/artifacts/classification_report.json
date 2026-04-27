@@ -1,0 +1,29 @@
+{
+  "classification_report": {
+    "0": {
+      "precision": 0.55,
+      "recall": 1.0,
+      "f1-score": 0.7096774193548387,
+      "support": 11.0
+    },
+    "1": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 9.0
+    },
+    "accuracy": 0.55,
+    "macro avg": {
+      "precision": 0.275,
+      "recall": 0.5,
+      "f1-score": 0.3548387096774194,
+      "support": 20.0
+    },
+    "weighted avg": {
+      "precision": 0.30250000000000005,
+      "recall": 0.55,
+      "f1-score": 0.3903225806451613,
+      "support": 20.0
+    }
+  }
+}
