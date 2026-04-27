@@ -46,23 +46,23 @@ def create_app(model_path: str | None = None) -> FastAPI:
     Returns:
         Aplicação FastAPI configurada com suporte a MLflow
     """
-    
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         """Lifecycle manager: startup e shutdown.
-        
+
         Startup:
         - Carrega loader de dados
         - Carrega modelo (MLflow ou local)
-        
+
         Shutdown:
         - Limpeza de recursos
         """
         # ============ STARTUP ============
-        logger.info("="*70)
+        logger.info("=" * 70)
         logger.info("Iniciando Telco Churn Prediction API")
-        logger.info("="*70)
-        
+        logger.info("=" * 70)
+
         # Inicializar loader para inferência
         try:
             loader = TelcoDataLoader("data/processed/telco_churn_processed.csv")
@@ -77,7 +77,7 @@ def create_app(model_path: str | None = None) -> FastAPI:
         try:
             # Tentar carregar do MLflow primeiro
             tracking_uri = os.getenv("MLFLOW_TRACKING_URI", None)
-            
+
             if tracking_uri:
                 logger.info(f"📊 MLflow Tracking URI: {tracking_uri}")
                 # PredictionService.load_model() tenta MLflow com fallback para local
@@ -89,28 +89,27 @@ def create_app(model_path: str | None = None) -> FastAPI:
                 # Carregar apenas do arquivo local
                 if model_path:
                     app.state.model_service = PredictionService(
-                        pipeline_path=model_path,
-                        use_mlflow=False
+                        pipeline_path=model_path, use_mlflow=False
                     )
                     logger.info(f"Modelo carregado: {model_path}")
                 else:
                     raise FileNotFoundError(
                         "model_path não fornecido e MLFLOW_TRACKING_URI não configurado"
                     )
-                    
+
         except Exception as e:
             logger.error(f"✗ Erro ao carregar modelo: {e}")
             logger.error(f"  Fallback: API disponível mas sem predições")
             app.state.model_service = None
 
         logger.info("API iniciada com sucesso!")
-        logger.info("="*70)
-        
+        logger.info("=" * 70)
+
         yield
-        
+
         # ============ SHUTDOWN ============
         logger.info("Encerrando API...")
-    
+
     app = FastAPI(
         title="Telco Churn Prediction API",
         description="API para predição de churn de clientes de telecom",
