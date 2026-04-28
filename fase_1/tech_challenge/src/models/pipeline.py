@@ -2,13 +2,14 @@
 
 import pickle
 from pathlib import Path
-
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
+from src.utils import set_all_seeds
+set_all_seeds()
 
 
 class TelcoPipeline:

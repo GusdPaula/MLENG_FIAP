@@ -7,6 +7,8 @@ import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
+from src.utils import set_all_seeds
+set_all_seeds()
 
 
 class TelcoDataLoader:

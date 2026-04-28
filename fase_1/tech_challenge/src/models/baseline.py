@@ -1,7 +1,7 @@
 """Modelos baseline para Telco Churn com MLflow tracking."""
 
-import os
 
+import os
 import mlflow
 import mlflow.data
 import mlflow.sklearn
@@ -28,6 +28,10 @@ from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, TensorDataset
 from xgboost import XGBClassifier
+
+# Ensure reproducibility for all libraries
+from src.utils import set_all_seeds
+set_all_seeds()
 
 
 class MLPWrapper(BaseEstimator, ClassifierMixin):

@@ -13,6 +13,8 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from src.utils import set_all_seeds
+set_all_seeds()
 
 
 class TelcoDataPreprocessor:

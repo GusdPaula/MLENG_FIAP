@@ -11,11 +11,10 @@ O Pipeline completo é logado no MLflow para fácil reprodução e deploy.
 import os
 import sys
 import logging
-
+from src.utils import set_all_seeds
+set_all_seeds()
 from sklearn.model_selection import train_test_split
-
 sys.path.insert(0, os.path.dirname(os.path.abspath("")))
-
 import mlflow
 import pandas as pd
 from sklearn.compose import ColumnTransformer
