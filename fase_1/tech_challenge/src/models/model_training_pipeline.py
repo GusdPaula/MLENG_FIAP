@@ -12,6 +12,8 @@ import os
 import sys
 import logging
 
+from sklearn.model_selection import train_test_split
+
 sys.path.insert(0, os.path.dirname(os.path.abspath("")))
 
 import mlflow
@@ -22,8 +24,6 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
 
-from src.data.loader import TelcoDataLoader
-
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,11 +32,12 @@ logger = logging.getLogger(__name__)
 class PipelineBuilder:
     """Construtor do Pipeline completo de ML com pré-processamento integrado."""
 
-    def __init__(self, random_state: int = 42):
+    def __init__(self, random_state: int = 42, data_path: str = "../data/processed/telco_churn_processed.csv"):
         self.random_state = random_state
         self.categorical_columns = None
         self.numerical_columns = None
         self.pipeline = None
+        self.data_path = data_path        
 
     def identify_feature_types(self, X: pd.DataFrame) -> tuple[list, list]:
         """
@@ -164,7 +165,66 @@ class PipelineBuilder:
     def get_pipeline(self) -> Pipeline:
         """Retorna o Pipeline treinado."""
         return self.pipeline
+    
+    def preparar_features_target(self) -> tuple[pd.DataFrame, pd.Series]:
+            """
+            Separa features e target.
 
+            Target: churn_value (0 = Não Churn, 1 = Churn)
+            """
+
+            self.df[self.df.select_dtypes(include=['Int64']).columns] = self.df.select_dtypes(include=['Int64']).astype('int64')
+
+            # Remover colunas não relevantes
+            drop_cols = [
+                "customerid",
+                "count",
+                "country",
+                "state",
+                "city",
+                "zip_code",
+                "lat_long",
+                "latitude",
+                "longitude",  # localização inútil
+                "churn_label",  # usar churn_value em vez disso
+                "churn_reason",  # razão subjetiva
+                "cltv",  # leakage - correlacionado com churn
+                "churn_score",  # leakage - score de churn externo
+            ]
+            self.df.rename(columns={"Churn Value": "churn_value"}, inplace=True)
+            X = self.df.drop(columns=[*drop_cols, "churn_value"])
+            y = self.df["churn_value"]            
+
+            logger.info(f"[OK] Features selecionadas: {X.shape[1]}")
+            logger.info(f"  - Distribuicao de Churn: {y.value_counts().to_dict()}")
+            logger.info(f"  - Taxa de Churn: {y.mean() * 100:.2f}%")
+
+            return X, y
+
+    def carregar(self) -> pd.DataFrame:
+            """Carrega o dataset."""
+            self.df = pd.read_csv(self.data_path)
+            logger.info(f"[OK] Dataset carregado: {self.df.shape[0]} linhas x {self.df.shape[1]} colunas")
+            return self.df
+
+    def split_treino_teste(
+            self, X: pd.DataFrame, y: pd.Series, test_size=0.2, random_state=42
+        ) -> None:
+            """
+            Divide dados em treino e teste.
+
+            Usa stratified split para manter a proporção de churn.
+            """
+            self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
+                X, y, test_size=test_size, random_state=random_state, stratify=y
+            )
+
+            logger.info("[OK] Split treino/teste (80/20):")
+            logger.info(f"  - Treino: {self.X_train.shape[0]} amostras")
+            logger.info(f"  - Teste: {self.X_test.shape[0]} amostras")
+            logger.info(f"  - Taxa churn treino: {self.y_train.mean() * 100:.2f}%")
+            logger.info(f"  - Taxa churn teste: {self.y_test.mean() * 100:.2f}%")        
+        
 
 def main():
     """Função principal do script de treinamento."""
@@ -183,25 +243,27 @@ def main():
         mlflow.create_experiment(experiment_name)
         logger.info(f"✓ Experimento criado: {experiment_name}")
     mlflow.set_experiment(experiment_name)
-    logger.info(f"✓ Usando experimento: {experiment_name}")
-
-    data_path = "../data/processed/telco_churn_processed.csv"
-
-    # Usar loader existente para preparar dados (split e divisão)
-    loader = TelcoDataLoader(data_path)
-    loader.carregar()
-    X, y =loader.preparar_features_target()
-    X_train, X_test, y_train, y_test = loader.split_treino_teste(X,y)
+    logger.info(f"✓ Usando experimento: {experiment_name}")    
 
     # ============ CONSTRUIR PIPELINE ============
     logger.info("\n1️⃣  Construindo Pipeline...")
     builder = PipelineBuilder(random_state=42)
-    builder.identify_feature_types(X_train)
+    
+        
+    builder.carregar()
+    logger.info("Tipo de dados carregados:  ")
+    logger.info(builder.df.dtypes)
+
+    X, y = builder.preparar_features_target()
+    builder.split_treino_teste(X, y)
+    builder.identify_feature_types(builder.X_train)
     builder.create_full_pipeline()
 
     # ============ TREINAR PIPELINE ============
     logger.info("\n2️⃣  Treinando Pipeline...")
-    builder.train(X_train, y_train)
+    builder.train(builder.X_train, builder.y_train)
+    logger.info("✓ Pipeline treinado com sucesso")
+
 
     # ============ AVALIAR NO CONJUNTO DE TESTE ============
     logger.info("\n3️⃣  Avaliando Pipeline no conjunto de teste...")
@@ -213,15 +275,15 @@ def main():
         roc_auc_score,
     )
 
-    y_pred = builder.pipeline.predict(X_test)
-    y_pred_proba = builder.pipeline.predict_proba(X_test)[:, 1]
+    y_pred = builder.pipeline.predict(builder.X_test)
+    y_pred_proba = builder.pipeline.predict_proba(builder.X_test)[:, 1]
 
     metrics = {
-        "accuracy": accuracy_score(y_test, y_pred),
-        "precision": precision_score(y_test, y_pred),
-        "recall": recall_score(y_test, y_pred),
-        "f1_score": f1_score(y_test, y_pred),
-        "auc_roc": roc_auc_score(y_test, y_pred_proba),
+        "accuracy": accuracy_score(builder.y_test, y_pred),
+        "precision": precision_score(builder.y_test, y_pred),
+        "recall": recall_score(builder.y_test, y_pred),
+        "f1_score": f1_score(builder.y_test, y_pred),
+        "auc_roc": roc_auc_score(builder.y_test, y_pred_proba),
     }
 
     logger.info("\n📊 Métricas do Pipeline:")
@@ -238,18 +300,9 @@ def main():
     # ✅ Criar um input_example RAW (antes de transformações)
     # Isso garante que o MLflow registra o schema correto para inferência
     # Carregamos os dados brutos antes de qualquer transformação
-    raw_df = pd.read_csv(data_path)
-    # Pegar apenas as colunas que usamos (após preparar_features_target)
-    drop_cols = [
-        "customerid", "count", "country", "state", "city", "zip_code", 
-        "lat_long", "latitude", "longitude", "churn_label", "churn_reason", 
-        "cltv", "churn_score"
-    ]
-    raw_df.rename(columns={"Churn Value": "churn_value"}, inplace=True)
-    raw_features = raw_df.drop(columns=[*drop_cols, "churn_value"], errors="ignore")
-    
+    raw_example = builder.df.head(1)
     # Pegar apenas colunas categóricas + numéricas (sem extras)
-    raw_example = raw_features[builder.categorical_columns + builder.numerical_columns].head(1)
+    raw_example = raw_example[builder.categorical_columns + builder.numerical_columns]
     
     logger.info(f"✓ Input example (RAW): {raw_example.shape}")
     logger.info(f"  Colunas categóricas no exemplo: {builder.categorical_columns[:3]}...")
@@ -275,15 +328,15 @@ def main():
         # Log do Pipeline completo
         mlflow.sklearn.log_model(
             builder.pipeline,
-            artifact_path="model",
+            name="model",
             registered_model_name="TelcoChurnPipeline",
             input_example=raw_example,  # ✅ Usar dados RAW, não transformados
             metadata={
                 "categorical_columns": builder.categorical_columns,
                 "numerical_columns": builder.numerical_columns,
-                "feature_count": X_train.shape[1],
-                "training_samples": X_train.shape[0],
-                "test_samples": X_test.shape[0],
+                "feature_count": builder.X_train.shape[1],
+                "training_samples": builder.X_train.shape[0],
+                "test_samples": builder.X_test.shape[0],
             },
         )
 

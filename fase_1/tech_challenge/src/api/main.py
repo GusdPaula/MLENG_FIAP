@@ -1,8 +1,8 @@
-"""Aplicação FastAPI para Telco Churn Prediction.
+"""Aplicação FastAPI para Telco Churn Prediction - REFATORADA.
 
 API com suporte a MLflow Model Registry:
-- Carrega modelos do MLflow em startup
-- Fallback para arquivo local se MLflow indisponível
+- Carrega Pipeline completo do MLflow (preprocessamento + modelo)
+- Recebe dados brutos em formato JSON
 - Configure MLFLOW_TRACKING_URI para ativar integração MLflow
 """
 
@@ -13,13 +13,14 @@ import traceback
 from contextlib import asynccontextmanager
 from datetime import datetime
 
+import mlflow
+import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from src.config import get_config
-from src.data.loader import TelcoDataLoader
-from src.models import PredictionService
+from tests.test_preprocessing import preprocessor
 
 from .schemas import (
     BatchPredictionRequest,
@@ -34,6 +35,60 @@ from .schemas import (
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+class MLflowPipelineLoader:
+    """Carregador simples de Pipeline do MLflow com fallback para arquivo local."""
+
+    def __init__(self):
+        self.pipeline = None
+        self.categorical_columns = None
+        self.numerical_columns = None
+
+    def load_from_mlflow(self, model_name: str = "TelcoChurnPipeline", stage: str = "Production"):
+        """
+        Carrega Pipeline do MLflow Model Registry.
+
+        Args:
+            model_name: Nome do modelo registrado no MLflow
+            stage: Stage do modelo (Production, Staging, etc)
+
+        Returns:
+            True se carregou com sucesso, False caso contrário
+        """
+        try:
+            tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
+            mlflow.set_tracking_uri(tracking_uri)
+
+            model_uri = f"models:/{model_name}@{stage}"
+            logger.info(f"📊 Tentando carregar pipeline: {model_uri}")
+
+            self.pipeline = mlflow.sklearn.load_model(model_uri)
+            logger.info(f"✓ Pipeline carregado via MLflow: {model_uri}")          
+            
+            return True
+
+        except Exception as e:
+            logger.warning(f"⚠ Não foi possível carregar do MLflow: {e}")
+            return False
+
+    def is_loaded(self) -> bool:
+        logger.info("Verificando se pipeline foi carregado...")
+        """Verifica se o pipeline foi carregado com sucesso."""
+        return self.pipeline is not None
+
+    def get_feature_names(self) -> list[str]:
+        """Retorna nomes das features esperadas pelo pipeline."""
+        logger.info("Obtendo nomes das features do pipeline...")
+        # Extrai nomes das features do preprocessor
+        if hasattr(self.pipeline, "named_steps"):
+            preprocessor = self.pipeline.named_steps.get("preprocessor")
+            if preprocessor and hasattr(preprocessor, "get_feature_names_out"):
+                try:
+                    return preprocessor.get_feature_names_out().tolist()
+                except Exception:
+                    pass
+        return []
 
 
 def create_app(model_path: str | None = None) -> FastAPI:
@@ -52,8 +107,7 @@ def create_app(model_path: str | None = None) -> FastAPI:
         """Lifecycle manager: startup e shutdown.
 
         Startup:
-        - Carrega loader de dados
-        - Carrega modelo (MLflow ou local)
+        - Carrega Pipeline completo do MLflow (preprocessador + modelo)
 
         Shutdown:
         - Limpeza de recursos
@@ -63,44 +117,34 @@ def create_app(model_path: str | None = None) -> FastAPI:
         logger.info("Iniciando Telco Churn Prediction API")
         logger.info("=" * 70)
 
-        # Inicializar loader para inferência
+        # Carregar Pipeline completo (preprocessador + modelo integrados)
         try:
-            loader = TelcoDataLoader("data/processed/telco_churn_processed.csv")
-            loader.fit_for_inference()
-            app.state.preprocessor = loader
-            logger.info("Loader inicializado para inferência")
-        except Exception as e:
-            logger.error(f"✗ Erro ao inicializar loader: {e}")
-            app.state.preprocessor = None
+            loader = MLflowPipelineLoader()
 
-        # Carregar modelo
-        try:
             # Tentar carregar do MLflow primeiro
-            tracking_uri = os.getenv("MLFLOW_TRACKING_URI", None)
+            mlflow_loaded = loader.load_from_mlflow(
+                model_name="TelcoChurnPipeline", stage="Production"
+            )
 
-            if tracking_uri:
-                logger.info(f"📊 MLflow Tracking URI: {tracking_uri}")
-                # PredictionService.load_model() tenta MLflow com fallback para local
-                app.state.model_service = PredictionService.load_model(
-                    pipeline_path=model_path or "models/best_model_with_metadata.pkl"
-                )
-                logger.info(f"Modelo carregado via {PredictionService._model_source}")
+            if loader.is_loaded():
+                app.state.pipeline = loader.pipeline
+                app.state.feature_names = loader.get_feature_names()
+                print(f"✓ Pipeline carregado com sucesso do MLflow! Features: {app.state.feature_names}"   )
+                logger.info("✓ Pipeline carregado com sucesso")
+                preprocessor = app.state.pipeline.named_steps['preprocessor']
+                for name, transformer, columns in preprocessor.transformers_:
+                    logger.info(f"🔍 O transformer '{name}' está esperando estas colunas: {columns}")
             else:
-                # Carregar apenas do arquivo local
-                if model_path:
-                    app.state.model_service = PredictionService(
-                        pipeline_path=model_path, use_mlflow=False
-                    )
-                    logger.info(f"Modelo carregado: {model_path}")
-                else:
-                    raise FileNotFoundError(
-                        "model_path não fornecido e MLFLOW_TRACKING_URI não configurado"
-                    )
+                raise RuntimeError(
+                    "Não foi possível carregar o Pipeline. "
+                    "Configure MLFLOW_TRACKING_URI ou forneça model_path."
+                )
 
         except Exception as e:
-            logger.error(f"✗ Erro ao carregar modelo: {e}")
-            logger.error("  Fallback: API disponível mas sem predições")
-            app.state.model_service = None
+            logger.error(f"✗ Erro ao carregar Pipeline: {e}")
+            logger.error("  API iniciada em modo DEGRADADO (sem predições)")
+            app.state.pipeline = None
+            app.state.feature_names = []
 
         logger.info("API iniciada com sucesso!")
         logger.info("=" * 70)
@@ -138,8 +182,8 @@ def create_app(model_path: str | None = None) -> FastAPI:
         return response
 
     # State da aplicação
-    app.state.model_service: PredictionService | None = None
-    app.state.preprocessor: TelcoDataLoader | None = None
+    app.state.pipeline = None  # Pipeline sklearn (preprocessador + modelo)
+    app.state.feature_names = []  # Nomes das features esperadas
     app.state.config = get_config()
 
     # ============ HEALTH CHECK ============
@@ -153,9 +197,9 @@ def create_app(model_path: str | None = None) -> FastAPI:
             Status da aplicação
         """
         return HealthCheckResponse(
-            status="healthy" if app.state.model_service else "degraded",
+            status="healthy" if app.state.pipeline else "degraded",
             version="0.1.0",
-            model_loaded=app.state.model_service is not None,
+            model_loaded=app.state.pipeline is not None,
         )
 
     # ============ PREDIÇÕES ============
@@ -165,38 +209,52 @@ def create_app(model_path: str | None = None) -> FastAPI:
         """
         Fazer predição de churn para um cliente.
 
+        O Pipeline sklearn já contém o preprocessamento,
+        então apenas convertemos o JSON para DataFrame e passamos ao pipeline.
+
         Args:
-            request: Features nomeadas do cliente
+            request: Features nomeadas do cliente (em formato texto/bruto)
 
         Returns:
             Predição com probabilidade e confiança
         """
-        if app.state.model_service is None:
-            raise HTTPException(status_code=503, detail="Modelo não foi carregado")
+        if app.state.pipeline is None:
+            raise HTTPException(status_code=503, detail="Pipeline não foi carregado")
 
         start_time = time.time()
+        logger.info("Recebendo requisição de predição...")
 
         try:
-            # Transformar dicionário de features para array ordenado
-            X = app.state.preprocessor.transform_single(request.features)
+            # 1. Converter objeto Pydantic para dict
+            features_dict = request.features.model_dump() if hasattr(request.features, "model_dump") else request.features.dict()
+            
+            logger.info(f"Features recebidas (raw): {features_dict}")
 
-            logger.info(f"Features transformadas shape: {X.shape}")
+            # 2. Converter dict para DataFrame de 1 linha
+            # O pipeline sklearn já espera as features na ordem correta
+            X = pd.DataFrame([features_dict])
 
-            # Realizar predição com/sem probabilidade
+            logger.info(X.head())
+
+            logger.info(f"Features convertidas para DataFrame: {X.shape} - Colunas: {X.columns.tolist()}")
+
+            # 3. Passar para o pipeline (que já faz o preprocessamento)
+            y_pred = app.state.pipeline.predict(X)
+            logger.info(f"Predição bruta do pipeline: {y_pred}")
+
             if request.return_probability:
-                result = app.state.model_service.predict(X, return_proba=True)
+                y_proba = app.state.pipeline.predict_proba(X)
                 pred_result = {
-                    "prediction": int(result["predictions"][0]),
-                    "probability": float(result["probabilities"][0]),
-                    "confidence": float(result["confidence"][0]),
+                    "prediction": int(y_pred[0]),
+                    "probability": float(y_proba[0, 1]),  # Probabilidade da classe 1 (churn)
+                    "confidence": float(y_proba.max()),
                 }
                 logger.info(
-                    f"Predicton: {pred_result['prediction']}, Probability: {pred_result['probability']:.4f}"
+                    f"Predição: {pred_result['prediction']}, Probabilidade: {pred_result['probability']:.4f}, Confiança: {pred_result['confidence']:.4f}"
                 )
             else:
-                pred = app.state.model_service.predict(X)
                 pred_result = {
-                    "prediction": int(pred[0]),
+                    "prediction": int(y_pred[0]),
                     "probability": None,
                     "confidence": None,
                 }
@@ -212,7 +270,7 @@ def create_app(model_path: str | None = None) -> FastAPI:
         except Exception as e:
             logger.error(f"Erro na predição: {e}")
             logger.error(traceback.format_exc())
-            raise HTTPException(status_code=400, detail=f"Erro ao processar predição: {e!s}") from e
+            raise HTTPException(status_code=500, detail=f"Erro ao processar predição: {e!s}") from e
 
     # ============ PREDIÇÕES EM LOTE ============
     @app.post("/predict-batch", response_model=BatchPredictionResponse, tags=["Predictions"])
@@ -221,33 +279,44 @@ def create_app(model_path: str | None = None) -> FastAPI:
         """
         Fazer predições em lote.
 
+        O Pipeline sklearn já contém o preprocessamento integrado.
+
         Args:
             request: Lista de dicionários com features nomeadas
 
         Returns:
-            Predições em lote
+            Predições em lote com probabilidades opcionais
         """
-        if app.state.model_service is None:
-            raise HTTPException(status_code=503, detail="Modelo não foi carregado")
+        if app.state.pipeline is None:
+            raise HTTPException(status_code=503, detail="Pipeline não foi carregado")
 
         start_time = time.time()
 
         try:
-            # Transformar lista de dicionários para array ordenado
-            X = app.state.preprocessor.transform_batch(request.samples)
+            # 1. Converter lista de objetos Pydantic para lista de dicts
+            samples_list = [
+                s.model_dump() if hasattr(s, "model_dump") else s.dict()
+                for s in request.samples
+            ]
+
+            # 2. Converter para DataFrame
+            X = pd.DataFrame(samples_list)
+
+            logger.info(f"Batch recebido: {X.shape} - Colunas: {X.columns.tolist()}")
+
+            # 3. Passar para o pipeline (que já faz o preprocessamento)
+            y_pred = app.state.pipeline.predict(X)
 
             if request.return_probabilities:
-                result = app.state.model_service.predict(X, return_proba=True)
-                preds = result["predictions"]
-                probas = result["probabilities"].tolist()
+                y_proba = app.state.pipeline.predict_proba(X)
+                probas = y_proba[:, 1].tolist()  # Probabilidade da classe 1 (churn)
             else:
-                preds = app.state.model_service.predict(X)
                 probas = None
 
             processing_time = (time.time() - start_time) * 1000
 
             return BatchPredictionResponse(
-                predictions=preds.tolist(),
+                predictions=y_pred.tolist(),
                 probabilities=probas,
                 batch_size=len(request.samples),
                 processing_time_ms=processing_time,
@@ -256,29 +325,40 @@ def create_app(model_path: str | None = None) -> FastAPI:
         except ValueError as e:
             logger.error(f"Erro na validação de features: {e}")
             raise HTTPException(status_code=400, detail=f"Erro ao validar features: {e!s}") from e
+
         except Exception as e:
             logger.error(f"Erro na predição em lote: {e}")
-            raise HTTPException(status_code=400, detail=f"Erro ao processar lote: {e!s}") from e
+            logger.error(traceback.format_exc())
+            raise HTTPException(status_code=500, detail=f"Erro ao processar lote: {e!s}") from e
 
     # ============ MODELO INFO ============
     @app.get("/model-info", response_model=ModelInfoResponse, tags=["Model"])
     @app.get("/api/model-info", response_model=ModelInfoResponse, tags=["Model"])
     async def get_model_info() -> ModelInfoResponse:
         """
-        Informações do modelo carregado.
+        Informações do Pipeline carregado.
 
         Returns:
-            Informações do modelo
+            Informações do Pipeline
         """
-        if app.state.model_service is None:
-            raise HTTPException(status_code=503, detail="Modelo não foi carregado")
+        if app.state.pipeline is None:
+            raise HTTPException(status_code=503, detail="Pipeline não foi carregado")
 
-        # Retornar informações do modelo com 30 features
+        # Tentar extrair nomes das features do pipeline
+        feature_names = app.state.feature_names
+        if not feature_names and hasattr(app.state.pipeline, "named_steps"):
+            preprocessor = app.state.pipeline.named_steps.get("preprocessor")
+            if preprocessor and hasattr(preprocessor, "get_feature_names_out"):
+                try:
+                    feature_names = preprocessor.get_feature_names_out().tolist()
+                except Exception:
+                    feature_names = []
+
         return ModelInfoResponse(
-            model_type="Logistic Regression / Random Forest / XGBoost",
-            model_version="0.1.0",
-            n_features=30,
-            features_used=app.state.preprocessor.feature_names,
+            model_type="LogisticRegression (com ColumnTransformer)",
+            model_version="1.0.0",
+            n_features=len(feature_names) if feature_names else 0,
+            features_used=feature_names,
         )
 
     # ============ ROOT ============
