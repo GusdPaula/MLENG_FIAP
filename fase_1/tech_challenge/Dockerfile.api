@@ -19,20 +19,18 @@ COPY pyproject.toml ./
 
 # Instalar dependências com pip (simples, robusto)
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -e . && \
     pip install --no-cache-dir \
         fastapi \
         uvicorn \
         pydantic \
-        mlflow \
+        mlflow==3.11.1 \
         scikit-learn \
         pandas \
         numpy \
         httpx
 
 # Copiar código-fonte
-COPY src ./src
-COPY data ./data
+COPY src/api ./src/api
 
 # Expor porta
 EXPOSE 8000
@@ -46,4 +44,4 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:8000/api/health || exit 1
 
 # Comando: iniciar Uvicorn (sem reload em produção)
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/bin/sh", "-c", "sleep 30 && exec uvicorn src.api.main:app --host 0.0.0.0 --port 8000"]

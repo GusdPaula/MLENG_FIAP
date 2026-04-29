@@ -19,9 +19,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from src.config import get_config
-from tests.test_preprocessing import preprocessor
-
 from .schemas import (
     BatchPredictionRequest,
     BatchPredictionResponse,
@@ -57,7 +54,8 @@ class MLflowPipelineLoader:
             True se carregou com sucesso, False caso contrário
         """
         try:
-            tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
+            tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
+            logger.info(f"📊 Configurando MLflow Tracking URI: {tracking_uri}")
             mlflow.set_tracking_uri(tracking_uri)
 
             model_uri = f"models:/{model_name}@{stage}"
@@ -129,7 +127,7 @@ def create_app(model_path: str | None = None) -> FastAPI:
             if loader.is_loaded():
                 app.state.pipeline = loader.pipeline
                 app.state.feature_names = loader.get_feature_names()
-                print(f"✓ Pipeline carregado com sucesso do MLflow! Features: {app.state.feature_names}"   )
+                logger.info(f"✓ Pipeline carregado com sucesso do MLflow! Features: {app.state.feature_names}")
                 logger.info("✓ Pipeline carregado com sucesso")
                 preprocessor = app.state.pipeline.named_steps['preprocessor']
                 for name, transformer, columns in preprocessor.transformers_:
@@ -184,7 +182,6 @@ def create_app(model_path: str | None = None) -> FastAPI:
     # State da aplicação
     app.state.pipeline = None  # Pipeline sklearn (preprocessador + modelo)
     app.state.feature_names = []  # Nomes das features esperadas
-    app.state.config = get_config()
 
     # ============ HEALTH CHECK ============
     @app.get("/health", tags=["Health"])

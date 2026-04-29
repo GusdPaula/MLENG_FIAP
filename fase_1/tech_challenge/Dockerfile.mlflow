@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir \
     mlflow==3.11.1 \
     psycopg2-binary==2.9.9 \
-    gunicorn==21.2.0 \
+    uvicorn==0.46.0 \
     click==8.1.7
 
 # Stage 2: Runtime (minimal image)
@@ -54,11 +54,6 @@ CMD ["mlflow", "server", \
      "--default-artifact-root", "/mlartifacts", \
      "--host", "0.0.0.0", \
      "--port", "5000", \
-     "--workers", "4"]
-
-# Notas sobre security:
-# MLflow 3.11.1+ tem security middleware que pode bloquear conexões de containers
-# Se erro 403 "Invalid Host header", adicionar ao docker-compose.yml:
-# environment:
-#   - MLFLOW_EXTRA_ARGS=--allowed-hosts="localhost,mlflow,127.0.0.1"
-# Ou usar --proxy-headers para desabilitar validation
+     "--allowed-hosts", "*", \
+     "--cors-allowed-origins", "*", \
+     "--uvicorn-opts", "--proxy-headers --forwarded-allow-ips='*'"]

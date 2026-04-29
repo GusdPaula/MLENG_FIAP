@@ -30,10 +30,20 @@ services:
       - "5000:5000"
     volumes:
       - ./mlartifacts:/mlartifacts
+    healthcheck:
+      # O script abaixo tenta abrir a URL do MLflow. Se falhar, retorna erro (1).
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 30s        # Tempo entre cada verificação
+      timeout: 10s         # Tempo máximo de espera por resposta
+      retries: 3           # Quantas vezes tentar antes de marcar como "unhealthy"
+      start_period: 15s    # Tempo de carência para o servidor iniciar
     environment:
       - MLFLOW_BACKEND_STORE_URI=postgresql://mlflow_user:mlflow_password@db:5432/mlflow_db
       - MLFLOW_TRACKING_STORE_URI=postgresql://mlflow_user:mlflow_password@db:5432/mlflow_db
       - MLFLOW_ALLOWED_HOSTS=localhost,mlflow,127.0.0.1
+      - MLFLOW_EXTRA_ARGS=--allowed-hosts="localhost,mlflow,127.0.0.1"
+      - MLFLOW_ALLOWED_HOSTS=* # Permite conexões de qualquer host na rede Docker
+      - MLFLOW_CORS_ALLOWED_ORIGINS=* # Se você for acessar via browser de outro IP
     networks:
       - mlflow_network
     restart: unless-stopped
@@ -45,11 +55,13 @@ services:
     container_name: fastapi_inference
     depends_on:
       mlflow:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "8000:8000"
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - ./mlartifacts:/mlartifacts
     command: ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
     networks:
       - mlflow_network
@@ -62,7 +74,7 @@ services:
     container_name: ml_training_service
     depends_on:
       mlflow:
-        condition: service_started
+        condition: service_healthy
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
     volumes:
@@ -73,7 +85,7 @@ services:
     # Não executa por padrão - rodar com:
     # docker-compose run training
     # ou: docker-compose run training python src/models/model_traning.py
-    command: ["python", "src/models/base_pipeline.py"]
+    command: ["python", "src/models/model_training_pipeline.py"]
 
 volumes:
   postgres_data:

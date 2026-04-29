@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 class PipelineBuilder:
     """Construtor do Pipeline completo de ML com pré-processamento integrado."""
 
-    def __init__(self, random_state: int = 42, data_path: str = "../data/processed/telco_churn_processed.csv"):
+    def __init__(self, random_state: int = 42, data_path: str = "data/processed/telco_churn_processed.csv"):
         self.random_state = random_state
         self.categorical_columns = None
         self.numerical_columns = None
