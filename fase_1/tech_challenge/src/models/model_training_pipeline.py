@@ -16,6 +16,7 @@ from sklearn.model_selection import train_test_split
 
 sys.path.insert(0, os.path.dirname(os.path.abspath("")))
 
+
 import mlflow
 import pandas as pd
 from sklearn.compose import ColumnTransformer
@@ -23,6 +24,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
+# Import custom transformers
+from src.models.transformers import ColumnDropper, BinaryEncoder, NumericalTransformer, FeatureSelector
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -76,26 +79,24 @@ class PipelineBuilder:
         if self.categorical_columns is None or self.numerical_columns is None:
             raise ValueError("Chame identify_feature_types() primeiro")
 
-        # Pipeline para colunas categóricas
-        # OneHotEncoder cria colunas binárias para cada categoria
+        # Pipeline para colunas categóricas com BinaryEncoder customizado
         categorical_transformer = Pipeline(
             steps=[
                 ("imputer", SimpleImputer(strategy="most_frequent")),
-                (
-                    "encoder",
-                    OneHotEncoder(
-                        sparse_output=False,  # Retorna array denso (não sparse)
-                        drop="if_binary",  # Remove 1 coluna em features binárias
-                        handle_unknown="ignore",  # ✅ Ignora valores novos em inferência
-                    ),
-                ),
+                ("binary_encoder", BinaryEncoder()),
+                ("encoder", OneHotEncoder(
+                    sparse_output=False,
+                    drop="if_binary",
+                    handle_unknown="ignore",
+                )),
             ]
         )
 
-        # Pipeline para colunas numéricas
+        # Pipeline para colunas numéricas com NumericalTransformer customizado
         numerical_transformer = Pipeline(
             steps=[
-                ("imputer", SimpleImputer(strategy="mean")),  # ✅ Trata NaN
+                ("num_transform", NumericalTransformer()),
+                ("imputer", SimpleImputer(strategy="mean")),
                 ("scaler", StandardScaler()),
             ]
         )
@@ -106,8 +107,8 @@ class PipelineBuilder:
                 ("categorical", categorical_transformer, self.categorical_columns),
                 ("numerical", numerical_transformer, self.numerical_columns),
             ],
-            remainder="drop",  # Descarta colunas não selecionadas
-            verbose_feature_names_out=True,  # Nomes descritivos das features
+            remainder="drop",
+            verbose_feature_names_out=True,
         )
 
         logger.info("✓ ColumnTransformer criado")
@@ -122,19 +123,18 @@ class PipelineBuilder:
         """
         preprocessor = self.create_preprocessor()
 
-        # Pipeline completo: Preprocessor + LogisticRegression
+        # Pipeline completo: ColumnDropper -> Preprocessor -> FeatureSelector -> Classifier
         full_pipeline = Pipeline(
             steps=[
+                ("dropper", ColumnDropper(columns=["customerid", "churn_score", "cltv", "churn_label", "churn_reason"])),
                 ("preprocessor", preprocessor),
-                (
-                    "classifier",
-                    LogisticRegression(
-                        max_iter=1000,
-                        class_weight="balanced",
-                        random_state=self.random_state,
-                        solver="lbfgs",
-                    ),
-                ),
+                ("feature_selector", FeatureSelector(features=None)),  # Ajuste features se necessário
+                ("classifier", LogisticRegression(
+                    max_iter=1000,
+                    class_weight="balanced",
+                    random_state=self.random_state,
+                    solver="lbfgs",
+                )),
             ]
         )
 
