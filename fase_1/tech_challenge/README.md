@@ -10,16 +10,16 @@ Construir uma solucao fim a fim para identificar clientes com maior risco de can
 
 | Entregavel | Local | Descricao |
 | --- | --- | --- |
-| ML Canvas | `docs/ml_canvas.md` | Contexto de negocio, stakeholders, proposta de valor e metricas. |
-| EDA | `notebooks/01_eda_and_ml_canvas.ipynb`, `docs/RELATORIO_EDA.md` | Analise exploratoria, qualidade dos dados e principais insights de churn. |
-| Dataset processado | `data/processed/telco_churn_processed.csv` | Base limpa para treino dos modelos. |
-| Experimento controlado | `notebooks/02_experimento_controlado.ipynb` | Comparacao entre baselines, Logistic Regression, Random Forest, XGBoost e MLP. |
-| Modelo treinado | `src/models/`, `mlruns/`, `mlartifacts/` | Pipeline, metricas e artefatos registrados no MLflow. |
-| Model Card | `docs/MODEL_CARD.md` | Descricao tecnica do modelo, metricas, limitacoes e vieses. |
-| API de inferencia | `src/api/` | FastAPI com predicao individual, predicao em lote, health check e model info. |
-| Testes | `tests/` | Testes automatizados da API, dados, metricas e treinamento. |
-| Docker | `docker-compose.yml`, `Dockerfile.*` | Orquestracao da API, treinamento, MLflow e PostgreSQL. |
-| Documentacao operacional | `docs/ARQUITETURA_DEPLOY.md`, `docs/PLANO_MONITORAMENTO.md`, `docs/TERRAFORM_AWS_PLAN.md` | Deploy, monitoramento e plano de infraestrutura. |
+| ML Canvas | [docs/ml_canvas.md](docs/ml_canvas.md) | Contexto de negocio, stakeholders, proposta de valor e metricas. |
+| EDA | [notebooks/01_eda_and_ml_canvas.ipynb](notebooks/01_eda_and_ml_canvas.ipynb), [docs/RELATORIO_EDA.md](docs/RELATORIO_EDA.md) | Analise exploratoria, qualidade dos dados e principais insights de churn. |
+| Dataset processado | [data/processed/telco_churn_processed.csv](data/processed/telco_churn_processed.csv) | Base limpa para treino dos modelos. |
+| Experimento controlado | [notebooks/02_experimento_controlado.ipynb](notebooks/02_experimento_controlado.ipynb) | Comparacao entre baselines, Logistic Regression, Random Forest, XGBoost e MLP. |
+| Modelo treinado | [src/models/](src/models/), [mlruns/](mlruns/), [mlartifacts/](mlartifacts/) | Pipeline, metricas e artefatos registrados no MLflow. |
+| Model Card | [docs/MODEL_CARD.md](docs/MODEL_CARD.md) | Descricao tecnica do modelo, metricas, limitacoes e vieses. |
+| API de inferencia | [src/api/](src/api/) | FastAPI com predicao individual, predicao em lote, health check e model info. |
+| Testes | [tests/](tests/) | Testes automatizados da API, dados, metricas e treinamento. |
+| Docker | [docker-compose.yml](docker-compose.yml), [Dockerfile.api](Dockerfile.api), [Dockerfile.training](Dockerfile.training), [Dockerfile.mlflow](Dockerfile.mlflow) | Orquestracao da API, treinamento, MLflow e PostgreSQL. |
+| Documentacao operacional | [docs/ARQUITETURA_DEPLOY.md](docs/ARQUITETURA_DEPLOY.md), [docs/PLANO_MONITORAMENTO.md](docs/PLANO_MONITORAMENTO.md), [docs/TERRAFORM_AWS_PLAN.md](docs/TERRAFORM_AWS_PLAN.md) | Deploy, monitoramento e plano de infraestrutura. |
 | Video STAR | A definir | Placeholder para o link do video de apresentacao no formato STAR. |
 | Deploy em AWS | A definir | Placeholder para a URL do deploy em nuvem quando o ambiente estiver publicado. |
 
@@ -110,19 +110,17 @@ pytest -q
 
 Servicos locais:
 
-```text
-API: http://localhost:8000/api/docs
-Health check: http://localhost:8000/api/health
-MLflow: http://localhost:5000
-PostgreSQL: localhost:5432
-```
+- [API Swagger](http://localhost:8000/api/docs)
+- [Health check](http://localhost:8000/api/health)
+- [MLflow](http://localhost:5000)
+- PostgreSQL: `localhost:5432`
 
 ## Entrega Final
 
 | Item | Status | Link |
 | --- | --- | --- |
-| Video STAR | Pendente | `TODO: adicionar link do video STAR` |
-| Deploy em AWS | Pendente | `TODO: adicionar URL publica da API na AWS` |
+| Video STAR | Pendente | TODO: adicionar link do video STAR |
+| Deploy em AWS | Pendente | TODO: adicionar URL publica da API na AWS |
 
 Atalhos uteis:
 
@@ -135,10 +133,10 @@ make mlflow-ui
 
 ## Documentacao Complementar
 
-- `docs/RELATORIO_EDA.md`: relatorio da exploracao de dados.
-- `docs/MODEL_CARD.md`: detalhes do modelo selecionado.
-- `docs/DICIONARIO_DADOS.md`: descricao das variaveis.
-- `docs/ARQUITETURA_DEPLOY.md`: arquitetura proposta de deploy.
-- `docs/PLANO_MONITORAMENTO.md`: monitoramento e alertas.
-- `docs/TERRAFORM_AWS_PLAN.md`: plano de infraestrutura AWS.
-- `DOCKER_GUIA_EXECUCAO.md`: guia para execucao com Docker.
+- [docs/RELATORIO_EDA.md](docs/RELATORIO_EDA.md): relatorio da exploracao de dados.
+- [docs/MODEL_CARD.md](docs/MODEL_CARD.md): detalhes do modelo selecionado.
+- [docs/DICIONARIO_DADOS.md](docs/DICIONARIO_DADOS.md): descricao das variaveis.
+- [docs/ARQUITETURA_DEPLOY.md](docs/ARQUITETURA_DEPLOY.md): arquitetura proposta de deploy.
+- [docs/PLANO_MONITORAMENTO.md](docs/PLANO_MONITORAMENTO.md): monitoramento e alertas.
+- [docs/TERRAFORM_AWS_PLAN.md](docs/TERRAFORM_AWS_PLAN.md): plano de infraestrutura AWS.
+- [DOCKER_GUIA_EXECUCAO.md](DOCKER_GUIA_EXECUCAO.md): guia para execucao com Docker.
