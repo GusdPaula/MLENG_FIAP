@@ -6,7 +6,7 @@ Define modelos de dados para:
   - Predição em lote (batch)
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class CustomerFeatures(BaseModel):
@@ -71,7 +71,8 @@ class BatchPredictionRequest(BaseModel):
     samples: list[CustomerFeatures] = Field(..., description="Lista de objetos de features")
     return_probabilities: bool = Field(default=True, description="Retornar probabilidades?")
 
-    @validator("samples")
+    @field_validator("samples")
+    @classmethod  # V2 field_validators must be class methods
     def samples_not_empty(cls, v):
         if not v or len(v) == 0:
             raise ValueError("A lista de samples não pode estar vazia")

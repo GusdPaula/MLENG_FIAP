@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath("")))
 
 import mlflow
 import pandas as pd
+from mlflow import MlflowClient  # Add this
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
@@ -329,7 +330,7 @@ def main():
             mlflow.log_metric(metric_name, metric_value)
 
         # Log do Pipeline completo
-        mlflow.sklearn.log_model(
+        model_info = mlflow.sklearn.log_model(
             builder.pipeline,
             name="model",
             registered_model_name="TelcoChurnPipeline",
@@ -346,6 +347,19 @@ def main():
         logger.info("✓ Pipeline logado no MLflow")
         logger.info("  - Modelo registrado: TelcoChurnPipeline")
         logger.info("  - Artifact Path: model")
+
+        # --- NEW BLOCK: SET CHAMPION ALIAS ---
+        client = MlflowClient()
+        model_name = "TelcoChurnPipeline"
+
+        # Extract the version number from the log_model result
+        model_version = model_info.registered_model_version
+
+        client.set_registered_model_alias(
+            name=model_name, alias="champion", version=str(model_version)
+        )
+
+        logger.info(f"✓ Alias 'champion' atribuído à versão {model_version}")
 
     logger.info("\n" + "=" * 70)
     logger.info("✅ TREINAMENTO CONCLUÍDO COM SUCESSO")

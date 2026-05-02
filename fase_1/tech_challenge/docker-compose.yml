@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   db:
     image: postgres:15-alpine
@@ -31,19 +33,14 @@ services:
     volumes:
       - ./mlartifacts:/mlartifacts
     healthcheck:
-      # O script abaixo tenta abrir a URL do MLflow. Se falhar, retorna erro (1).
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
-      interval: 30s        # Tempo entre cada verificação
-      timeout: 10s         # Tempo máximo de espera por resposta
-      retries: 3           # Quantas vezes tentar antes de marcar como "unhealthy"
-      start_period: 15s    # Tempo de carência para o servidor iniciar
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
     environment:
       - MLFLOW_BACKEND_STORE_URI=postgresql://mlflow_user:mlflow_password@db:5432/mlflow_db
-      - MLFLOW_TRACKING_STORE_URI=postgresql://mlflow_user:mlflow_password@db:5432/mlflow_db
-      - MLFLOW_ALLOWED_HOSTS=localhost,mlflow,127.0.0.1
-      - MLFLOW_EXTRA_ARGS=--allowed-hosts="localhost,mlflow,127.0.0.1"
-      - MLFLOW_ALLOWED_HOSTS=* # Permite conexões de qualquer host na rede Docker
-      - MLFLOW_CORS_ALLOWED_ORIGINS=* # Se você for acessar via browser de outro IP
+      - MLFLOW_ARTIFACT_ROOT=file:///mlartifacts
     networks:
       - mlflow_network
     restart: unless-stopped
@@ -58,8 +55,10 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
+    volumes:
+      - ./mlartifacts:/mlartifacts  # Critical for finding artifacts
     environment:
-      - MLFLOW_TRACKING_URI=http://mlflow:5000    
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
     command: ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
     networks:
       - mlflow_network
@@ -73,20 +72,16 @@ services:
     depends_on:
       mlflow:
         condition: service_healthy
+    volumes:
+      - ./mlartifacts:/mlartifacts  # Critical for saving artifacts
     environment:
-      - MLFLOW_TRACKING_URI=http://mlflow:5000   
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
     networks:
       - mlflow_network
-    # Não executa por padrão - rodar com:
-    # docker-compose run training
-    # ou: docker-compose run training python src/models/model_training_pipeline.py
-    
 
 volumes:
   postgres_data:
-    driver: local
   mlartifacts:
-    driver: local
 
 networks:
   mlflow_network:

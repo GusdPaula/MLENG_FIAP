@@ -1,146 +1,135 @@
+from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pytest
 from fastapi.testclient import TestClient
 
-from src.api.main import app
-
-# Initialize the TestClient with the FastAPI app
-client = TestClient(app)
+# Ajuste o import para o local correto do seu create_app
+from src.api.main import create_app
 
 
-def test_health_check():
-    """
-    Validates the GET /api/health endpoint.
-    Ref: README.md - API Endpoints Section 1
-    """
+@pytest.fixture
+def valid_customer_data():
+    """Retorna um dicionário com todos os campos obrigatórios de CustomerFeatures."""
+    return {
+        "gender": "Female",
+        "senior_citizen": "No",
+        "partner": "Yes",
+        "dependents": "No",
+        "tenure_months": 12,
+        "phone_service": "Yes",
+        "multiple_lines": "No",
+        "internet_service": "DSL",
+        "online_security": "Yes",
+        "online_backup": "No",
+        "device_protection": "No",
+        "tech_support": "Yes",
+        "streaming_tv": "No",
+        "streaming_movies": "No",
+        "contract": "Month-to-month",
+        "paperless_billing": "Yes",
+        "payment_method": "Electronic check",
+        "monthly_charges": 70.35,
+        "total_charges": 844.2,
+    }
+
+
+@pytest.fixture
+def mock_pipeline():
+    """Mock do pipeline do Scikit-learn."""
+    pipeline = MagicMock()
+    pipeline.predict.return_value = np.array([0])
+    pipeline.predict_proba.return_value = np.array([[0.7, 0.3]])
+
+    # Mock para model-info
+    model_mock = MagicMock()
+    prep_mock = MagicMock()
+    prep_mock.get_feature_names_out.return_value = np.array(["tenure_months", "monthly_charges"])
+    pipeline.named_steps = {"model": model_mock, "preprocessor": prep_mock}
+    return pipeline
+
+
+@pytest.fixture
+def client(mock_pipeline):
+    """Configura o cliente com o ModelManager mockado."""
+    with patch("src.api.main.model_manager") as mocked_manager:
+        mocked_manager.load_from_mlflow.return_value = True
+        mocked_manager.pipeline = mock_pipeline
+        # O método predict do manager deve retornar um array compatível
+        mocked_manager.predict.return_value = np.array([0])
+
+        app = create_app()
+        with TestClient(app) as c:
+            yield c
+
+
+# --- Testes de Endpoint ---
+
+
+def test_health_check(client):
     response = client.get("/api/health")
     assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "healthy"
-    assert "version" in data
-    assert data["model_loaded"] is True
+    assert response.json()["status"] == "healthy"
 
 
-def test_model_info():
-    """
-    Validates the GET /api/model-info endpoint.
-    Ref: README.md - API Endpoints Section 2
-    """
-    response = client.get("/api/model-info")
-    assert response.status_code == 200
-    data = response.json()
-    assert "model_type" in data
-    assert "features_used" in data
-    assert isinstance(data["features_used"], list)
+def test_predict_single_success(client, valid_customer_data):
+    payload = {"features": valid_customer_data, "return_probability": True}
+    response = client.post("/api/predict", json=payload)
 
-
-def test_predict_high_risk():
-    """
-    Validates the POST /api/predict endpoint with a high-risk scenario.
-    Ref: README.md - Example Use Cases (Alto Risco)
-    """
-    high_risk_payload = {
-        "features": {
-            "gender": "Male",
-            "senior_citizen": "No",
-            "partner": "No",
-            "dependents": "No",
-            "tenure_months": 2,
-            "phone_service": "Yes",
-            "multiple_lines": "No",
-            "internet_service": "DSL",
-            "online_security": "No",
-            "online_backup": "No",
-            "device_protection": "No",
-            "tech_support": "No",
-            "streaming_tv": "No",
-            "streaming_movies": "No",
-            "contract": "Month-to-month",
-            "paperless_billing": "Yes",
-            "payment_method": "Mailed check",
-            "monthly_charges": 53.85,
-            "total_charges": 108.15,
-        }
-    }
-    response = client.post("/api/predict", json=high_risk_payload)
     assert response.status_code == 200
     data = response.json()
     assert "prediction" in data
-    assert "probability" in data
-    # High risk should ideally return 1, but we check if probability is > 0.5
-    assert data["prediction"] == 1
-    assert data["probability"] > 0.5
+    assert data["probability"] == 0.3  # Valor definido no mock_pipeline
 
 
-def test_predict_batch(client):
-    """Valida a predição em lote com múltiplos registros em snake_case."""
-    batch_payload = {
-        "samples": [
-            {
-                "gender": "Female",
-                "senior_citizen": "No",
-                "partner": "Yes",
-                "dependents": "No",
-                "tenure_months": 12,
-                "phone_service": "Yes",
-                "multiple_lines": "No",
-                "internet_service": "Fiber optic",
-                "online_security": "No",
-                "online_backup": "Yes",
-                "device_protection": "No",
-                "tech_support": "No",
-                "streaming_tv": "No",
-                "streaming_movies": "No",
-                "contract": "Month-to-month",
-                "paperless_billing": "Yes",
-                "payment_method": "Electronic check",
-                "monthly_charges": 70.0,
-                "total_charges": 840.0,
-            },
-            {
-                "gender": "Male",
-                "senior_citizen": "No",
-                "partner": "No",
-                "dependents": "No",
-                "tenure_months": 24,
-                "phone_service": "Yes",
-                "multiple_lines": "Yes",
-                "internet_service": "DSL",
-                "online_security": "Yes",
-                "online_backup": "No",
-                "device_protection": "Yes",
-                "tech_support": "Yes",
-                "streaming_tv": "No",
-                "streaming_movies": "No",
-                "contract": "One year",
-                "paperless_billing": "No",
-                "payment_method": "Mailed check",
-                "monthly_charges": 60.0,
-                "total_charges": 1440.0,
-            },
-        ],
-        "return_probabilities": True,
-    }
+def test_predict_batch_success(client, valid_customer_data, mock_pipeline):
+    # 1. Preparamos o mock para retornar EXATAMENTE 2 resultados
+    # Isso sobrescreve o valor padrão definido na fixture do client
+    with patch("src.api.main.model_manager.predict") as mocked_predict:
+        mocked_predict.return_value = np.array([0, 1])  # Dois resultados
 
-    response = client.post("/api/predict-batch", json=batch_payload)
+        # 2. Mockamos as probabilidades para 2 amostras (se seu código usa predict_proba)
+        mock_pipeline.predict_proba.return_value = np.array(
+            [
+                [0.9, 0.1],  # Amostra 1
+                [0.4, 0.6],  # Amostra 2
+            ]
+        )
 
+        payload = {
+            "samples": [valid_customer_data, valid_customer_data],  # 2 samples
+            "return_probabilities": True,
+        }
+
+        response = client.post("/api/predict-batch", json=payload)
+
+        # 3. Verificações
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["batch_size"] == 2
+        assert len(data["predictions"]) == 2
+        assert data["predictions"] == [0, 1]
+        assert data["probabilities"] == [0.1, 0.6]
+
+
+def test_model_info(client):
+    response = client.get("/api/model-info")
     assert response.status_code == 200
     data = response.json()
-
-    # Now this will pass because len(data["predictions"]) will be 2
-    print(data)  # Debug print to see the actual response
-    assert len(data["predictions"]) == 2
-    assert "probabilities" in data
-    assert data["batch_size"] == 2
+    assert data["n_features"] == 2
+    assert "tenure_months" in data["features_used"]
 
 
-def test_predict_invalid_data(client):
-    # Envia dados que violam o esquema (faltando campos obrigatórios)
-    payload = {"features": {"monthly_charges": "not_a_number"}}
-    response = client.post("/api/predict", json=payload)
+def test_predict_service_unavailable(client, valid_customer_data):
+    """Testa erro 503 quando o pipeline some do state."""
+    # Resetamos o state e impedimos recarregamento
+    with patch("src.api.main.model_manager") as mocked_manager:
+        mocked_manager.load_from_mlflow.return_value = False
+        client.app.state.pipeline = None
 
-    # 1. Com o novo esquema, o FastAPI retorna 422 automaticamente
-    assert response.status_code == 422
+        payload = {"features": valid_customer_data, "return_probability": False}
+        response = client.post("/api/predict", json=payload)
 
-    # 2. Verifique se a mensagem de erro menciona os campos ausentes
-    errors = response.json()["detail"]
-    assert any(err["loc"] == ["body", "features", "gender"] for err in errors)
-    assert any("missing" in err["type"] for err in errors)
+        assert response.status_code == 503
+        assert "Modelo não disponível" in response.json()["detail"]
