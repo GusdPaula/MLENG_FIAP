@@ -43,6 +43,7 @@ dependencies = [
     "imblearn",
     "pytest-cov>=7.1.0",
     "pytest-asyncio>=1.3.0",
+    "postman-to-pytest>=1.0.0",
 ]
 
 [project.optional-dependencies]
