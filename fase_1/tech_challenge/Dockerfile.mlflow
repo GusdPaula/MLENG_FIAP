@@ -51,7 +51,7 @@ EXPOSE 5000
 # --host 0.0.0.0: aceita conexões de qualquer interface
 CMD ["mlflow", "server", \
      "--backend-store-uri", "postgresql://mlflow_user:mlflow_password@db:5432/mlflow_db", \
-     "--default-artifact-root", "file:///mlartifacts", \
+     "--default-artifact-root", "mlflow-artifacts:/", \
      "--serve-artifacts", \
      "--host", "0.0.0.0", \
      "--port", "5000", \

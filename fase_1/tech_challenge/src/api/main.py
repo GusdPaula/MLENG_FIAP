@@ -142,8 +142,22 @@ def create_app() -> FastAPI:
     @app.get("/health", response_model=HealthCheckResponse, tags=["Health"])
     @app.get("/api/health", response_model=HealthCheckResponse, tags=["Health"])
     async def health_check():
-        """Verifica a saúde da API e se o modelo está pronto."""
+        """Verifica a saúde da API e se o modelo está pronto."""        
         is_ready = app.state.pipeline is not None
+
+        logger.info(f"Health Check - Modelo carregado: {is_ready}")
+    
+        if not is_ready:
+            logger.info("Modelo não carregado durante health check. Tentando carregar...")
+            # Tentativa de auto-recuperação caso o modelo não esteja carregado
+            if model_manager.load_from_mlflow():
+                app.state.pipeline = model_manager.pipeline
+                is_ready = True
+                logger.info("✅ Modelo carregado com sucesso durante health check.")
+            else:
+                logger.error("❌ Modelo ainda não disponível durante health check.")
+                is_ready = False
+
         return HealthCheckResponse(
             status="healthy" if is_ready else "degraded",
             version="0.1.0",
@@ -155,12 +169,6 @@ def create_app() -> FastAPI:
     @app.post("/api/predict", response_model=PredictionResponse, tags=["Predictions"])
     async def predict(request: PredictionRequest):
         """Predição individual para um cliente."""
-        if app.state.pipeline is None:
-            # Tentativa de auto-recuperação caso o modelo não esteja carregado
-            if model_manager.load_from_mlflow():
-                app.state.pipeline = model_manager.pipeline
-            else:
-                raise HTTPException(status_code=503, detail="Modelo não disponível no momento.")
 
         start_time = time.time()
         try:

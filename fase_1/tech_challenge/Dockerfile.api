@@ -30,6 +30,7 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
         httpx
 
 # Copiar código-fonte
+ARG CACHEBUST=1
 COPY src/api ./src/api
 
 # Expor porta
