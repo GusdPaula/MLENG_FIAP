@@ -1,0 +1,366 @@
+{
+  "info": {
+    "_postman_id": "92c4e932-b42f-4fe8-ba8f-07fc8215443d",
+    "name": "ML Telco",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "7988368"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response body has a 'status' field equal to 'healthy'\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status).to.eql(\"healthy\");",
+              "});",
+              "",
+              "pm.test(\"Response body has a 'version' field that is a string\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.version).to.be.a(\"string\");",
+              "});",
+              "",
+              "pm.test(\"Response body has a 'model_loaded' field equal to true\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.model_loaded).to.eql(true);",
+              "});",
+              "",
+              "pm.test(\"Response time is under 2000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});",
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8000/health",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "predict",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response body has a 'prediction' field that is a number (0 or 1)\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"prediction\");",
+              "    pm.expect(jsonData.prediction).to.be.a(\"number\");",
+              "    pm.expect([0, 1]).to.include(jsonData.prediction);",
+              "});",
+              "",
+              "pm.test(\"Response body has a 'probability' field that is a number between 0 and 1\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"probability\");",
+              "    pm.expect(jsonData.probability).to.be.a(\"number\");",
+              "    pm.expect(jsonData.probability).to.be.at.least(0);",
+              "    pm.expect(jsonData.probability).to.be.at.most(1);",
+              "});",
+              "",
+              "pm.test(\"Response body has a 'confidence' field that is a number between 0 and 1\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"confidence\");",
+              "    pm.expect(jsonData.confidence).to.be.a(\"number\");",
+              "    pm.expect(jsonData.confidence).to.be.at.least(0);",
+              "    pm.expect(jsonData.confidence).to.be.at.most(1);",
+              "});",
+              "",
+              "pm.test(\"Response body has a 'processing_time_ms' field that is a number greater than 0\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"processing_time_ms\");",
+              "    pm.expect(jsonData.processing_time_ms).to.be.a(\"number\");",
+              "    pm.expect(jsonData.processing_time_ms).to.be.above(0);",
+              "});",
+              "",
+              "pm.test(\"Response time is under 5000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+              "});",
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"features\": {\r\n      \"senior_citizen\": \"No\",\r\n      \"partner\": \"No\",\r\n      \"dependents\": \"No\",\r\n      \"gender\": \"Male\",\r\n      \"tenure_months\": 2,\r\n      \"phone_service\": \"Yes\",\r\n      \"multiple_lines\": \"No\",\r\n      \"internet_service\": \"DSL\",\r\n      \"online_security\": \"No\",\r\n      \"online_backup\": \"No\",\r\n      \"device_protection\": \"No\",\r\n      \"tech_support\": \"No\",\r\n      \"streaming_tv\": \"No\",\r\n      \"streaming_movies\": \"No\",\r\n      \"contract\": \"Month-to-month\",\r\n      \"paperless_billing\": \"Yes\",\r\n      \"payment_method\": \"Mailed check\",\r\n      \"monthly_charges\": 53.85,\r\n      \"total_charges\": 108.15\r\n    },\r\n  \"return_probabilities\": true\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8000/predict",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8000",
+          "path": [
+            "predict"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "predict sem o gender",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "",
+              "pm.test(\"Status code is 422\", function () {",
+              "    pm.response.to.have.status(422);",
+              "});",
+              "",
+              "pm.test(\"Response body has a 'detail' field that is an array\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"detail\");",
+              "    pm.expect(jsonData.detail).to.be.an(\"array\");",
+              "});",
+              "",
+              "pm.test(\"'detail' array is not empty\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.detail).to.have.length.above(0);",
+              "});",
+              "",
+              "pm.test(\"At least one error references the 'gender' field\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    var hasGender = jsonData.detail.some(function (item) {",
+              "        return Array.isArray(item.loc) && item.loc.indexOf(\"gender\") !== -1;",
+              "    });",
+              "    pm.expect(hasGender).to.be.true;",
+              "});",
+              "",
+              "pm.test(\"Each error item has 'type', 'loc', and 'msg' fields\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    jsonData.detail.forEach(function (item) {",
+              "        pm.expect(item).to.have.property(\"type\");",
+              "        pm.expect(item).to.have.property(\"loc\");",
+              "        pm.expect(item).to.have.property(\"msg\");",
+              "    });",
+              "});",
+              "",
+              "pm.test(\"Response time is under 3000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(3000);",
+              "});",
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"features\": {      \r\n      \"Senior Citizen\": \"No\",\r\n      \"Partner\": \"No\",\r\n      \"Dependents\": \"No\",\r\n      \"Tenure Months\": 2,\r\n      \"Phone Service\": \"Yes\",\r\n      \"Multiple Lines\": \"No\",\r\n      \"Internet Service\": \"DSL\",\r\n      \"Online Security\": \"No\",\r\n      \"Online Backup\": \"No\",\r\n      \"Device Protection\": \"No\",\r\n      \"Tech Support\": \"No\",\r\n      \"Streaming TV\": \"No\",\r\n      \"Streaming Movies\": \"No\",\r\n      \"Contract\": \"Month-to-month\",\r\n      \"Paperless Billing\": \"Yes\",\r\n      \"Payment Method\": \"Mailed check\",\r\n      \"Monthly Charges\": 53.85,\r\n      \"Total Charges\": 108.15\r\n    },\r\n  \"return_probabilities\": true\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8000/predict",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8000",
+          "path": [
+            "predict"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "model-info",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response body has a 'model_type' field that is a string\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property(\"model_type\");",
+              "    pm.expect(json.model_type).to.be.a(\"string\");",
+              "});",
+              "",
+              "pm.test(\"Response body has a 'model_version' field equal to 'production'\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property(\"model_version\");",
+              "    pm.expect(json.model_version).to.eql(\"production\");",
+              "});",
+              "",
+              "pm.test(\"Response body has a 'n_features' field that is a number greater than 0\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property(\"n_features\");",
+              "    pm.expect(json.n_features).to.be.a(\"number\").and.to.be.above(0);",
+              "});",
+              "",
+              "pm.test(\"Response body has a 'features_used' field that is an array\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property(\"features_used\");",
+              "    pm.expect(json.features_used).to.be.an(\"array\");",
+              "});",
+              "",
+              "pm.test(\"'features_used' array length equals 'n_features'\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.features_used.length).to.eql(json.n_features);",
+              "});",
+              "",
+              "pm.test(\"Response time is under 2000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});",
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/model-info",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8000",
+          "path": [
+            "model-info"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Agendar Atualizacao",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 202\", function () {",
+              "    pm.response.to.have.status(202);",
+              "});",
+              "",
+              "pm.test(\"Response body has a 'status' field equal to 'accepted'\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status).to.eql(\"accepted\");",
+              "});",
+              "",
+              "pm.test(\"Response body has a 'message' field that is a string\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.message).to.be.a(\"string\");",
+              "});",
+              "",
+              "pm.test(\"Response time is under 3000ms\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(3000);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n           \"target_datetime\": \"2026-05-02T11:04:00-03:00\"\n         }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/schedule-update",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8000",
+          "path": [
+            "api",
+            "schedule-update"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
