@@ -1,401 +1,144 @@
-# 📞 Telco Churn Prediction - Sistema de ML End-to-End
+# Tech Challenge - Telco Churn Prediction
 
-**Sistema profissional de alerta precoce para identificar clientes com alto risco de cancelamento em operadoras de telecomunicações.**
+Este projeto implementa uma solucao de Machine Learning Engineering para prever churn de clientes de telecomunicacoes. Ele cobre ciencia de dados, fundamentos de software, API, testes, MLflow e Docker.
 
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
-[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.3+-orange.svg)](https://scikit-learn.org/)
+## Objetivo
 
----
+Construir uma solucao fim a fim para identificar clientes com maior risco de cancelamento e apoiar acoes de retencao.
 
-## 📋 Tabela de Conteúdos
+## Entregaveis
 
-- [Visão Geral](#visão-geral)
-- [Quick Start](#quick-start)
-- [Estrutura do Projeto](#estrutura-do-projeto)
-- [API Endpoints](#api-endpoints)
-- [Feature Reference](#feature-reference)
-- [Exemplos de Uso](#exemplos-de-uso)
-- [Instalação e Setup](#instalação-e-setup)
+| Entregavel | Local | Descricao |
+| --- | --- | --- |
+| ML Canvas | `docs/ml_canvas.md` | Contexto de negocio, stakeholders, proposta de valor e metricas. |
+| EDA | `notebooks/01_eda_and_ml_canvas.ipynb`, `docs/RELATORIO_EDA.md` | Analise exploratoria, qualidade dos dados e principais insights de churn. |
+| Dataset processado | `data/processed/telco_churn_processed.csv` | Base limpa para treino dos modelos. |
+| Experimento controlado | `notebooks/02_experimento_controlado.ipynb` | Comparacao entre baselines, Logistic Regression, Random Forest, XGBoost e MLP. |
+| Modelo treinado | `src/models/`, `mlruns/`, `mlartifacts/` | Pipeline, metricas e artefatos registrados no MLflow. |
+| Model Card | `docs/MODEL_CARD.md` | Descricao tecnica do modelo, metricas, limitacoes e vieses. |
+| API de inferencia | `src/api/` | FastAPI com predicao individual, predicao em lote, health check e model info. |
+| Testes | `tests/` | Testes automatizados da API, dados, metricas e treinamento. |
+| Docker | `docker-compose.yml`, `Dockerfile.*` | Orquestracao da API, treinamento, MLflow e PostgreSQL. |
+| Documentacao operacional | `docs/ARQUITETURA_DEPLOY.md`, `docs/PLANO_MONITORAMENTO.md`, `docs/TERRAFORM_AWS_PLAN.md` | Deploy, monitoramento e plano de infraestrutura. |
+| Video STAR | A definir | Placeholder para o link do video de apresentacao no formato STAR. |
+| Deploy em AWS | A definir | Placeholder para a URL do deploy em nuvem quando o ambiente estiver publicado. |
 
----
+## Arquitetura do Projeto
 
-## 🎯 Visão Geral
-
-### Proposta de Valor
-Implementar um sistema de previsão de churn que identifique clientes com alta propensão ao cancelamento, permitindo ações de retenção personalizadas antes do encerramento do contrato.
-
-### Padrões Críticos Identificados
-
-```
-🔴 ALTO RISCO DE CHURN (40-45%):
-  • Contratos mês-a-mês
-  • Fibra Óptica (com altos custos)
-  • Pagamento por Cheque Eletrônico
-  • Novos clientes (< 6 meses)
-
-🟢 BAIXO RISCO (< 10%):
-  • Contratos 2 anos
-  • Sem Internet
-  • Pagamento automático (cartão/transferência)
-  • Clientes leais (> 5 anos)
+```mermaid
+flowchart LR
+    A["Dados brutos<br/>Telco_customer_churn.xlsx"] --> B["EDA e limpeza<br/>notebooks"]
+    B --> C["Dataset processado<br/>data/processed"]
+    C --> D["Treinamento e experimentos<br/>src/models"]
+    D --> E["MLflow<br/>metricas e artefatos"]
+    E --> F["Modelo versionado"]
+    F --> G["FastAPI<br/>src/api"]
+    G --> H["Predicoes<br/>/api/predict"]
+    G --> I["Predicoes em lote<br/>/api/predict-batch"]
 ```
 
----
+## Arquitetura Docker
 
-## 🚀 Quick Start
+```mermaid
+flowchart TB
+    subgraph Compose["docker-compose"]
+        DB["PostgreSQL<br/>porta 5432"]
+        MLFLOW["MLflow Server<br/>porta 5000"]
+        TRAINING["Training Service"]
+        API["FastAPI Inference<br/>porta 8000"]
+        ARTIFACTS["mlartifacts"]
+    end
 
-### 1. Clone e Setup
+    DB --> MLFLOW
+    MLFLOW --> TRAINING
+    MLFLOW --> API
+    TRAINING --> ARTIFACTS
+    API --> ARTIFACTS
+```
+
+## Fluxo de Predicao
+
+```mermaid
+sequenceDiagram
+    participant User as Usuario
+    participant API as FastAPI
+    participant Manager as ModelManager
+    participant MLflow as MLflow
+    participant Model as Modelo
+
+    User->>API: POST /api/predict
+    API->>Manager: valida payload e monta DataFrame
+    Manager->>MLflow: carrega pipeline se necessario
+    MLflow-->>Manager: retorna artefato
+    Manager->>Model: predict / predict_proba
+    Model-->>API: classe, probabilidade e confianca
+    API-->>User: resposta JSON
+```
+
+## Estrutura
+
+```text
+tech_challenge/
+  data/          dados brutos e processados
+  docs/          documentacao de negocio, modelo, deploy e monitoramento
+  notebooks/     EDA, ML Canvas e experimentos
+  src/api/       API FastAPI
+  src/data/      carga e preparacao de dados
+  src/evaluation/ metricas
+  src/models/    baselines, treinamento e artefatos
+  tests/         testes automatizados
+```
+
+## API
+
+| Metodo | Endpoint | Uso |
+| --- | --- | --- |
+| GET | `/api/health` | Verifica saude da API e carregamento do modelo. |
+| POST | `/api/predict` | Predicao para um cliente. |
+| POST | `/api/predict-batch` | Predicoes em lote. |
+| GET | `/api/model-info` | Informacoes do modelo carregado. |
+| POST | `/api/schedule-update` | Agenda atualizacao do modelo. |
+| GET | `/api/docs` | Swagger UI. |
+
+## Como Executar
+
 ```bash
-# Clone o repositório
-git clone https://github.com/seu-user/telco-churn-prediction.git
-cd telco-churn-prediction
-
-# Criar ambiente virtual
-python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# ou .venv\Scripts\activate  # Windows
-
-# Instalar dependências
-pip install -e ".[dev]"
+docker-compose up -d
+docker-compose run --rm training
+pytest -q
 ```
 
-### 2. Rodar a API
+Servicos locais:
+
+```text
+API: http://localhost:8000/api/docs
+Health check: http://localhost:8000/api/health
+MLflow: http://localhost:5000
+PostgreSQL: localhost:5432
+```
+
+## Entrega Final
+
+| Item | Status | Link |
+| --- | --- | --- |
+| Video STAR | Pendente | `TODO: adicionar link do video STAR` |
+| Deploy em AWS | Pendente | `TODO: adicionar URL publica da API na AWS` |
+
+Atalhos uteis:
+
 ```bash
-uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+make docker-compose-up
+make docker-train
+make test-cov
+make mlflow-ui
 ```
 
-A API estará disponível em: `http://localhost:8000`
+## Documentacao Complementar
 
-### 3. Documentação Interativa
-- **Swagger UI**: `http://localhost:8000/api/docs`
-- **ReDoc**: `http://localhost:8000/api/redoc`
-
----
-
-## 📂 Estrutura do Projeto
-
-```
-telco-churn-prediction/
-│
-├── src/                              # Código fonte
-│   ├── config.py                    # Configurações centralizadas
-│   ├── logging_config.py            # Logger estruturado
-│   │
-│   ├── api/                         # FastAPI Application
-│   │   ├── main.py                  # Endpoints (6 rotas)
-│   │   ├── schemas.py               # Modelos Pydantic
-│   │   └── feature_transformer.py   # Transformação de features
-│   │
-│   ├── data/                        # Data Processing
-│   │   ├── loader.py                # Carregamento de dados
-│   │   └── preprocessing.py         # TelcoDataPreprocessor
-│   │
-│   ├── models/                      # Machine Learning
-│   │   ├── pipeline.py              # TelcoPipeline (sklearn)
-│   │   ├── transformers.py          # Transformadores custom
-│   │   ├── baseline.py              # Experimentos MLflow
-│   │   └── inference.py             # PredictionService
-│   │
-│   └── evaluation/                  # Avaliação
-│       └── metrics.py               # Métricas técnicas + negócio
-│
-├── tests/                           # Testes automatizados
-│   ├── conftest.py                  # Fixtures pytest
-│   ├── test_config.py
-│   ├── test_models.py
-│   └── test_preprocessing.py
-│
-├── data/                            # Dados
-│   ├── raw/
-│   └── processed/
-│
-├── notebooks/                       # Análises exploratórias
-│   └── 01_eda_and_ml_canvas.ipynb
-│
-├── docs/                            # Documentação
-│   ├── DICIONARIO_DADOS.md
-│   ├── RELATORIO_EDA.md
-│   └── ml_canvas.md
-│
-├── pyproject.toml                   # Configuração do projeto
-├── Makefile                         # Comandos úteis
-└── README.md                        # Este arquivo
-```
-
----
-
-## 🔌 API Endpoints
-
-### 1. Health Check
-```http
-GET /api/health
-```
-**Resposta:**
-```json
-{
-  "status": "healthy",
-  "version": "0.1.0",
-  "model_loaded": true
-}
-```
-
-### 2. Obter Informações do Modelo
-```http
-GET /api/model-info
-```
-**Resposta:**
-```json
-{
-  "model_type": "XGBoost",
-  "model_version": "0.1.0",
-  "n_features": 30,
-  "features_used": ["gender", "senior_citizen", ...]
-}
-```
-
-### 3. Predição Individual
-```http
-POST /api/predict
-Content-Type: application/json
-```
-
-**Body:**
-```json
-{
-  "features": {
-    "gender": "Male",
-    "senior_citizen": "No",
-    "partner": "No",
-    "dependents": "No",
-    "tenure_months": 2,
-    "phone_service": "Yes",
-    "multiple_lines": "No",
-    "internet_service": "DSL",
-    "online_security": "No",
-    "online_backup": "No",
-    "device_protection": "No",
-    "tech_support": "No",
-    "streaming_tv": "No",
-    "streaming_movies": "No",
-    "contract": "Month-to-month",
-    "paperless_billing": "Yes",
-    "payment_method": "Mailed check",
-    "monthly_charges": 53.85,
-    "total_charges": 108.15
-  }
-}
-```
-
-**Resposta:**
-```json
-{
-  "prediction": 1,
-  "probability": 0.673,
-  "confidence": 0.673,
-  "processing_time_ms": 5.2
-}
-```
-
-### 4. Predição em Lote
-```http
-POST /api/predict-batch
-Content-Type: application/json
-```
-
-**Body:**
-```json
-{
-  "samples": [
-    { "features": { ... } },
-    { "features": { ... } },
-    { "features": { ... } }
-  ],
-  "return_probabilities": true
-}
-```
-
-**Resposta:**
-```json
-{
-  "predictions": [1, 0, 1],
-  "probabilities": [0.673, 0.005, 0.521],
-  "batch_size": 3,
-  "processing_time_ms": 15.3
-}
-```
-
----
-
-## 📊 Feature Reference
-
-### Features Binárias (Yes/No)
-Aceita: `"Yes"`, `"No"` (case-insensitive)
-
-- senior_citizen
-- partner
-- dependents
-- phone_service
-- paperless_billing
-- online_security
-- online_backup
-- device_protection
-- tech_support
-- streaming_tv
-- streaming_movies
-
-### gender
-Aceita: `"Male"`, `"Female"` (case-insensitive)
-
-### multiple_lines
-Aceita: `"Yes"`, `"No"`, `"No phone service"` (case-insensitive)
-
-### internet_service
-Aceita: `"DSL"`, `"Fiber optic"`, `"No"` (case-insensitive)
-
-### online_security / online_backup / device_protection / tech_support / streaming_tv / streaming_movies
-Aceita: `"Yes"`, `"No"`, `"No internet service"` (case-insensitive)
-
-### contract
-Aceita: `"Month-to-month"`, `"One year"`, `"Two year"` (case-insensitive)
-
-### payment_method
-Aceita: `"Bank transfer (automatic)"`, `"Credit card (automatic)"`, `"Electronic check"`, `"Mailed check"` (case-insensitive)
-
-### Numéricos
-- **tenure_months** (int): 0-72+ (meses de contrato)
-- **monthly_charges** (float): 0.00-150.00+ (dólares)
-- **total_charges** (float): 0.00-10000.00+ (dólares)
-
----
-
-## 💡 Exemplos de Uso
-
-### Cliente de ALTO RISCO (Churn = 1)
-```json
-{
-  "features": {
-    "gender": "Male",
-    "senior_citizen": "No",
-    "partner": "No",
-    "dependents": "No",
-    "tenure_months": 2,
-    "phone_service": "Yes",
-    "multiple_lines": "No",
-    "internet_service": "DSL",
-    "online_security": "No",
-    "online_backup": "No",
-    "device_protection": "No",
-    "tech_support": "No",
-    "streaming_tv": "No",
-    "streaming_movies": "No",
-    "contract": "Month-to-month",
-    "paperless_billing": "Yes",
-    "payment_method": "Mailed check",
-    "monthly_charges": 53.85,
-    "total_charges": 108.15
-  }
-}
-```
-**Resposta esperada:** `prediction: 1`, `probability: 0.67`
-
-### Cliente de BAIXO RISCO (Churn = 0)
-```json
-{
-  "features": {
-    "gender": "Female",
-    "senior_citizen": "No",
-    "partner": "Yes",
-    "dependents": "Yes",
-    "tenure_months": 60,
-    "phone_service": "Yes",
-    "multiple_lines": "Yes",
-    "internet_service": "DSL",
-    "online_security": "Yes",
-    "online_backup": "Yes",
-    "device_protection": "Yes",
-    "tech_support": "Yes",
-    "streaming_tv": "Yes",
-    "streaming_movies": "Yes",
-    "contract": "Two year",
-    "paperless_billing": "No",
-    "payment_method": "Bank transfer (automatic)",
-    "monthly_charges": 89.50,
-    "total_charges": 5370.00
-  }
-}
-```
-**Resposta esperada:** `prediction: 0`, `probability: 0.005`
-
----
-
-## 🛠️ Instalação e Setup
-
-### Pré-requisitos
-- Python ≥ 3.10
-- pip ou conda
-- Git
-
-### Passos de Instalação
-
-1. **Clone o repositório**
-   ```bash
-   git clone <repo-url>
-   cd telco-churn-prediction
-   ```
-
-2. **Crie ambiente virtual**
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # Linux/Mac
-   .venv\Scripts\activate     # Windows
-   ```
-
-3. **Instale dependências**
-   ```bash
-   pip install -e ".[dev]"
-   ```
-
-4. **Configure variáveis de ambiente (opcional)**
-   ```bash
-   cp .env.example .env
-   # Edite .env conforme necessário
-   ```
-
-5. **Prepare os dados**
-   ```bash
-   # Os dados devem estar em: data/processed/telco_churn_processed.csv
-   python 01_eda_analysis.py  # Executa EDA
-   ```
-
-6. **Treine o modelo**
-   ```bash
-   python train_final_model.py
-   ```
-
-7. **Inicie a API**
-   ```bash
-   uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
-   ```
-
----
-
-## 📦 Dependências Principais
-
-Ver `pyproject.toml` ou `requirements.txt` para lista completa:
-
-- **Dados**: pandas, numpy
-- **ML**: scikit-learn, xgboost
-- **API**: fastapi, pydantic, uvicorn
-- **Monitoramento**: mlflow
-- **Dev**: pytest, ruff, black
-
----
-
-## 📞 Suporte
-
-Para questões ou problemas, abra uma issue no repositório.
-
----
-
-**Desenvolvido com ❤️ - Projeto FIAP MLOps**
+- `docs/RELATORIO_EDA.md`: relatorio da exploracao de dados.
+- `docs/MODEL_CARD.md`: detalhes do modelo selecionado.
+- `docs/DICIONARIO_DADOS.md`: descricao das variaveis.
+- `docs/ARQUITETURA_DEPLOY.md`: arquitetura proposta de deploy.
+- `docs/PLANO_MONITORAMENTO.md`: monitoramento e alertas.
+- `docs/TERRAFORM_AWS_PLAN.md`: plano de infraestrutura AWS.
+- `DOCKER_GUIA_EXECUCAO.md`: guia para execucao com Docker.
