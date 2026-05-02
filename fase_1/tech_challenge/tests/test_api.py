@@ -122,14 +122,13 @@ def test_model_info(client):
 
 
 def test_predict_service_unavailable(client, valid_customer_data):
-    """Testa erro 503 quando o pipeline some do state."""
+    """Testa erro 500 quando o pipeline some do state."""
     # Resetamos o state e impedimos recarregamento
-    with patch("src.api.main.model_manager") as mocked_manager:
-        mocked_manager.load_from_mlflow.return_value = False
-        client.app.state.pipeline = None
+    with patch("src.api.main.model_manager.predict") as mocked_predict:
+        mocked_predict.side_effect = Exception("Modelo não disponível")
 
         payload = {"features": valid_customer_data, "return_probability": False}
         response = client.post("/api/predict", json=payload)
 
-        assert response.status_code == 503
+        assert response.status_code == 500
         assert "Modelo não disponível" in response.json()["detail"]

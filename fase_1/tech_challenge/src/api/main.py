@@ -128,6 +128,7 @@ def create_app() -> FastAPI:
     # ============ ENDPOINTS DE GERENCIAMENTO ============
 
     @app.post("/api/schedule-update", tags=["Model Management"])
+    @app.post("/schedule-update", tags=["Model Management"])
     async def schedule_update(request: ScheduleUpdateRequest, background_tasks: BackgroundTasks):
         """Agenda uma atualização de modelo para o futuro."""
         background_tasks.add_task(wait_and_update_model, request.target_datetime, app)
@@ -142,11 +143,11 @@ def create_app() -> FastAPI:
     @app.get("/health", response_model=HealthCheckResponse, tags=["Health"])
     @app.get("/api/health", response_model=HealthCheckResponse, tags=["Health"])
     async def health_check():
-        """Verifica a saúde da API e se o modelo está pronto."""        
+        """Verifica a saúde da API e se o modelo está pronto."""
         is_ready = app.state.pipeline is not None
 
         logger.info(f"Health Check - Modelo carregado: {is_ready}")
-    
+
         if not is_ready:
             logger.info("Modelo não carregado durante health check. Tentando carregar...")
             # Tentativa de auto-recuperação caso o modelo não esteja carregado
@@ -167,6 +168,7 @@ def create_app() -> FastAPI:
     # ============ ENDPOINTS DE PREDIÇÃO ============
 
     @app.post("/api/predict", response_model=PredictionResponse, tags=["Predictions"])
+    @app.post("/predict", response_model=PredictionResponse, tags=["Predictions"])
     async def predict(request: PredictionRequest):
         """Predição individual para um cliente."""
 
@@ -198,6 +200,7 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=500, detail=f"Erro interno: {e!s}") from e
 
     @app.post("/api/predict-batch", response_model=BatchPredictionResponse, tags=["Predictions"])
+    @app.post("/predict-batch", response_model=BatchPredictionResponse, tags=["Predictions"])
     async def predict_batch(request: BatchPredictionRequest):
         """Predição em lote (batch)."""
         if app.state.pipeline is None:
@@ -227,6 +230,7 @@ def create_app() -> FastAPI:
     # ============ ENDPOINT DE INFO ============
 
     @app.get("/api/model-info", response_model=ModelInfoResponse, tags=["Model"])
+    @app.get("/model-info", response_model=ModelInfoResponse, tags=["Model"])
     async def get_model_info():
         """Retorna detalhes sobre as features e versão do modelo."""
         if app.state.pipeline is None:
