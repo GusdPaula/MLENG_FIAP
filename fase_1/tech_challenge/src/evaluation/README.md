@@ -1,8 +1,4 @@
-# evaluation
+﻿# evaluation
 
-Esta pasta contém os componentes de avaliação de modelo.
-
-Arquivo principal:
-- `metrics.py`: funções de cálculo de métricas de desempenho.
-
-A pasta é usada para validar resultados de treino e comparar modelos com métricas consistentes.
+Esta pasta contem funcoes de avaliacao e metricas de desempenho.
+Ela apoia comparacao e validacao dos modelos treinados.

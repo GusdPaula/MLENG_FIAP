@@ -74,9 +74,8 @@ Top 3 modelos por Net Benefit no notebook:
 | API de inferencia | [src/api/](src/api/) | FastAPI com predicao individual, predicao em lote, health check e model info. |
 | Testes | [tests/](tests/) | Testes automatizados da API, dados, metricas e treinamento. |
 | Docker | [docker-compose.yml](docker-compose.yml), [Dockerfile.api](Dockerfile.api), [Dockerfile.training](Dockerfile.training), [Dockerfile.mlflow](Dockerfile.mlflow) | Orquestracao da API, treinamento, MLflow e PostgreSQL. |
-| Documentacao operacional | [docs/ARQUITETURA_DEPLOY.md](docs/ARQUITETURA_DEPLOY.md), [docs/PLANO_MONITORAMENTO.md](docs/PLANO_MONITORAMENTO.md), [docs/TERRAFORM_AWS_PLAN.md](docs/TERRAFORM_AWS_PLAN.md) | Deploy, monitoramento e plano de infraestrutura. |
+| Documentacao operacional | [docs/ARQUITETURA_DEPLOY.md](docs/ARQUITETURA_DEPLOY.md),| Deploy e infraestrutura. |
 | Video STAR | A definir | Placeholder para o link do video de apresentacao no formato STAR. |
-| Deploy em AWS | A definir | Placeholder para a URL do deploy em nuvem quando o ambiente estiver publicado. |
 
 ## Arquitetura do Projeto
 
@@ -181,7 +180,6 @@ Servicos locais:
 | Item | Status | Link |
 | --- | --- | --- |
 | Video STAR | Pendente | TODO: adicionar link do video STAR |
-| Deploy em AWS | Pendente | TODO: adicionar URL publica da API na AWS |
 
 Atalhos uteis:
 
