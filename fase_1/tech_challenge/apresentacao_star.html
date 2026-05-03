@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Telco Churn Prediction — Apresentação</title>
+<style>
+  :root {
+    --bg:      #0d1117;
+    --surface: #161b22;
+    --card:    #1f2937;
+    --accent:  #3b82f6;
+    --accent2: #10b981;
+    --warning: #f59e0b;
+    --text:    #e6edf3;
+    --muted:   #8b949e;
+    --border:  #30363d;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+  }
+
+  /* === Presentation canvas: 1536x864 (16:9 +20%) === */
+  #deck {
+    position: absolute;
+    width: 1536px;
+    height: 864px;
+    transform-origin: top left;
+  }
+
+  .slide {
+    position: absolute;
+    width: 1536px;
+    height: 864px;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 36px 72px;
+    opacity: 0;
+    transition: opacity .35s ease;
+  }
+  .slide.active { display: flex; opacity: 1; }
+
+  /* === Slide titles: pill at h2 size (replaces star-tag + h2) === */
+  .slide-title {
+    display: inline-block;
+    font-size: 38px;
+    font-weight: 600;
+    padding: 10px 32px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    margin-bottom: 26px;
+  }
+  .slide-title.tag-s   { background: rgba(59,130,246,.18);  color: #93c5fd; border: 1px solid rgba(59,130,246,.4); }
+  .slide-title.tag-t   { background: rgba(245,158,11,.18);  color: #fcd34d; border: 1px solid rgba(245,158,11,.4); }
+  .slide-title.tag-a   { background: rgba(16,185,129,.18);  color: #6ee7b7; border: 1px solid rgba(16,185,129,.4); }
+  .slide-title.tag-r   { background: rgba(139,92,246,.18);  color: #c4b5fd; border: 1px solid rgba(139,92,246,.4); }
+  .slide-title.tag-fin { background: rgba(139,92,246,.18);  color: #c4b5fd; border: 1px solid rgba(139,92,246,.4); }
+
+  /* === Typography === */
+  h1 { font-size: 58px; font-weight: 700; line-height: 1.15; text-align: center; }
+  h3 { font-size: 16px; font-weight: 600; margin-bottom: 10px; }
+  p, li { font-size: 14px; line-height: 1.7; color: #cbd5e1; }
+
+  .subtitle  { font-size: 18px; color: var(--muted); margin-top: 12px; text-align: center; }
+  .highlight { color: var(--accent2); font-weight: 700; }
+  .warn      { color: var(--warning); font-weight: 700; }
+  .blue      { color: #93c5fd;        font-weight: 700; }
+  .purple    { color: #c4b5fd;        font-weight: 700; }
+
+  /* === Grids === */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; width: 100%; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; width: 100%; }
+
+  /* === Cards === */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 22px;
+  }
+  .card-accent  { border-left: 4px solid var(--accent); }
+  .card-green   { border-left: 4px solid var(--accent2); }
+  .card-yellow  { border-left: 4px solid var(--warning); }
+  .card-purple  { border-left: 4px solid #8b5cf6; }
+  .card-teal    { border-left: 4px solid #06b6d4; }
+
+  ul { padding-left: 18px; }
+  ul li { margin-bottom: 7px; }
+
+  /* === KPI pills === */
+  .kpi-row { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; }
+  .kpi {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 26px;
+    text-align: center;
+    min-width: 130px;
+  }
+  .kpi .num { font-size: 30px; font-weight: 700; display: block; }
+  .kpi .lbl { font-size: 10px; color: var(--muted); letter-spacing: .5px; text-transform: uppercase; margin-top: 4px; display: block; }
+
+  /* === Metric mini (cover) === */
+  .metric-mini { text-align: center; }
+  .metric-mini .val { font-size: 21px; font-weight: 700; display: block; }
+  .metric-mini .lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+
+  /* === Image frame === */
+  .img-frame {
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+  }
+  .img-frame img { width: 100%; height: auto; display: block; border-radius: 6px; }
+
+  /* === Step list === */
+  .step { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 13px; }
+  .step-num {
+    min-width: 30px; height: 30px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .step-num.green  { background: var(--accent2); }
+  .step-num.yellow { background: var(--warning); color: #000; }
+  .step-num.purple { background: #8b5cf6; }
+  .step-num.teal   { background: #06b6d4; }
+
+  /* === Cover extras === */
+  .logo-row { display: flex; gap: 10px; margin-bottom: 24px; }
+  .chip {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 14px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .divider { width: 60px; height: 3px; background: var(--accent); border-radius: 2px; margin: 16px auto; }
+
+  /* === Progress bar === */
+  #progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width .35s ease;
+    z-index: 100;
+  }
+
+  /* === Navigation === */
+  #nav {
+    position: fixed;
+    bottom: 22px;
+    right: 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    z-index: 100;
+    background: rgba(22,27,34,.88);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 32px;
+    padding: 10px 20px;
+  }
+  #nav button {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    cursor: pointer;
+    width: 38px; height: 38px;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .2s;
+  }
+  #nav button:hover { background: var(--accent); border-color: var(--accent); }
+  #nav button:disabled { opacity: .3; cursor: default; }
+  #nav button:disabled:hover { background: var(--card); border-color: var(--border); }
+  #slide-counter { font-size: 13px; color: var(--muted); min-width: 52px; text-align: center; }
+  #slide-badge { position: fixed; top: 18px; right: 24px; font-size: 12px; color: var(--muted); z-index: 100; }
+  #kb-hint     { position: fixed; bottom: 76px; right: 24px; font-size: 11px; color: var(--border); }
+
+  /* === Big quote === */
+  .big-quote {
+    font-size: 20px;
+    font-style: italic;
+    line-height: 1.85;
+    max-width: 980px;
+    color: #cbd5e1;
+    border-left: 3px solid var(--accent2);
+    padding-left: 28px;
+  }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+<div id="slide-badge"></div>
+<div id="kb-hint">&larr; &rarr; para navegar</div>
+
+<div id="deck">
+
+<!-- ============================================================
+     SLIDE 1 — CAPA
+============================================================ -->
+<div class="slide active" id="s1">
+  <div class="logo-row">
+    <span class="chip">FIAP &middot; ML Engineering &middot; Fase 1</span>
+    <span class="chip">Tech Challenge &middot; 2026</span>
+  </div>
+  <h1>Telco Churn<br><span class="highlight">Prediction</span></h1>
+  <div class="divider"></div>
+  <p class="subtitle">Solução fim a fim de Machine Learning Engineering<br>para previsão de cancelamento de clientes</p>
+
+  <!-- Model metrics: sem threshold vs threshold otimizado -->
+  <div class="grid-2" style="max-width:920px;margin-top:24px;gap:20px">
+    <div class="card card-accent">
+      <h3 class="blue" style="text-align:center;margin-bottom:16px;font-size:13px;letter-spacing:1px;text-transform:uppercase">Threshold Padrão &middot; 0,5</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="metric-mini"><span class="val blue">0,8482</span><span class="lbl">ROC-AUC</span></div>
+        <div class="metric-mini"><span class="val blue">0,6164</span><span class="lbl">F1-score</span></div>
+        <div class="metric-mini"><span class="val blue">77,54%</span><span class="lbl">Recall</span></div>
+        <div class="metric-mini"><span class="val blue">51,15%</span><span class="lbl">Precision</span></div>
+      </div>
+    </div>
+    <div class="card card-green">
+      <h3 class="highlight" style="text-align:center;margin-bottom:16px;font-size:13px;letter-spacing:1px;text-transform:uppercase">Threshold Otimizado &middot; 0,15</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="metric-mini"><span class="val highlight">98,40%</span><span class="lbl">Recall</span></div>
+        <div class="metric-mini"><span class="val highlight">38,02%</span><span class="lbl">Precision</span></div>
+        <div class="metric-mini" style="grid-column:span 2">
+          <span class="val highlight" style="font-size:28px">$706.000</span>
+          <span class="lbl">Net Benefit</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-row" style="margin-top:18px">
+    <div class="kpi"><span class="num warn">7.043</span><span class="lbl">Clientes Analisados</span></div>
+  </div>
+  <p style="margin-top:12px;font-size:13px;color:var(--muted)">
+    Modelo: <span class="highlight">LogisticRegression-balanced</span>
+  </p>
+</div>
+
+<!-- ============================================================
+     SLIDE 2 — PROBLEMA DE NEGOCIO
+============================================================ -->
+<div class="slide" id="s2">
+  <span class="slide-title tag-s">Problema de Negócio</span>
+  <div class="grid-2" style="max-width:1380px">
+    <div style="display:flex;flex-direction:column;gap:15px">
+      <div class="card card-yellow">
+        <h3 class="warn">Churn em Telecom</h3>
+        <p>Operadora perde clientes por cancelamento, impactando <strong>receita recorrente</strong> e aumentando o <strong>custo de aquisição</strong> de novos clientes.</p>
+      </div>
+      <div class="card card-accent">
+        <h3 class="blue">O Desafio</h3>
+        <p>Com <span class="highlight">7.043 clientes</span> e <span class="highlight">21 variáveis</span> de comportamento disponíveis, a empresa não conseguia <strong>identificar proativamente</strong> quem tinha risco de sair.</p>
+      </div>
+      <div class="card card-purple">
+        <h3 class="purple">Stakeholders</h3>
+        <ul>
+          <li><strong>Marketing/CRM</strong> &mdash; campanhas de retenção segmentadas</li>
+          <li><strong>Customer Success</strong> &mdash; priorização de contato</li>
+          <li><strong>Financeiro</strong> &mdash; medir ROI e impacto em receita</li>
+        </ul>
+      </div>
+    </div>
+    <!-- JS Donut Chart (substitui imagem) -->
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 12px">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px;letter-spacing:1.5px;text-transform:uppercase">Distribuição de Churn na Base</p>
+      <canvas id="churn-chart" width="540" height="340"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SLIDE 3 — A RESPONSABILIDADE
+============================================================ -->
+<div class="slide" id="s3">
+  <span class="slide-title tag-t">A Responsabilidade</span>
+  <div style="max-width:1200px;width:100%">
+    <p style="text-align:center;margin-bottom:20px;font-size:16px">
+      Construir uma <span class="highlight">solução fim a fim de ML Engineering</span> &mdash; não apenas treinar um modelo, mas entregar algo <strong>operacional</strong>.
+    </p>
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="card card-accent">
+        <h3 class="blue">&#128269; Qualidade de Dados</h3>
+        <p>Entender inconsistências, valores faltantes e a distribuição desbalanceada de churn na base.</p>
+      </div>
+      <div class="card card-yellow">
+        <h3 class="warn">&#128176; Modelagem Econômica</h3>
+        <p>Não era sobre maximizar AUC, mas sobre <strong>maximizar o Net Benefit financeiro</strong> sob premissas de custo real.</p>
+      </div>
+      <div class="card card-green">
+        <h3 class="highlight">&#9881; Engenharia de Produção</h3>
+        <p>Transformar experimentos em API robusta, com MLflow, testes automatizados e Docker.</p>
+      </div>
+      <div class="card card-purple">
+        <h3 class="purple">&#128196; Comunicação Técnica</h3>
+        <p>Documentar decisões, métricas e limitações para múltiplos públicos (ML Canvas, Model Card, EDA).</p>
+      </div>
+    </div>
+    <!-- Meta com métricas palpáveis -->
+    <div class="card" style="border:1px solid var(--accent2);padding:16px">
+      <h3 class="highlight" style="text-align:center;margin-bottom:14px">&#127919; Meta: Impacto de Negócio Mensurável</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;text-align:center">
+        <div>
+          <div style="font-size:20px;font-weight:700;color:#f59e0b">$748.000</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:5px">Receita em risco<br>374 churners &times; $2.000/cliente</div>
+        </div>
+        <div>
+          <div style="font-size:20px;font-weight:700;color:#6ee7b7">$706.000</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:5px">Net Benefit com modelo ativo<br>ROI de ~23&times; vs. custo de campanha</div>
+        </div>
+        <div>
+          <div style="font-size:20px;font-weight:700;color:#93c5fd">$30.000</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:5px">Custo máximo de campanha<br>600 ações &times; $50 por ação</div>
+        </div>
+      </div>
+      <p style="text-align:center;margin-top:12px;font-size:11px;color:var(--muted)">
+        Capturar <strong>98,4%</strong> dos churners &middot; Reduzir perda de 26,5% &rarr; menos de 0,5% não identificado &middot; API &lt; 200 ms
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SLIDE 4 — EXECUCAO: DADOS & MODELAGEM
+============================================================ -->
+<div class="slide" id="s4">
+  <span class="slide-title tag-a">Execução: Dados &amp; Modelagem</span>
+  <div style="max-width:1240px;width:100%">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="card card-accent" style="flex:1;padding:15px 20px">
+        <h3 class="blue">EDA e Limpeza de Dados</h3>
+        <p>Análise exploratória no Jupyter: distribuições, correlações e comportamento de churn. Base com <span class="warn">26,5% de churn</span> &mdash; dataset desbalanceado (razão 1:2,77). Pipeline de limpeza: valores faltantes, encoding de categóricas, feature engineering de tenure e tipo de contrato.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num green">2</div>
+      <div class="card card-green" style="flex:1;padding:15px 20px">
+        <h3 class="highlight">Modelagem Orientada por Negócio</h3>
+        <p>Premissas definidas com o time: <span class="warn">cost_fp = $50</span> (campanha desnecessária) &middot; <span class="warn">cost_fn = $2.000</span> (cliente perdido).</p>
+        <p style="margin-top:7px">8 modelos treinados em paralelo: <em>Baseline, Logistic Regression (3 variantes), Random Forest, XGBoost (tuned), MLP PyTorch</em>. Para cada um, curva de <strong>Net Benefit &times; Threshold</strong>.</p>
+        <p style="margin-top:7px">&#127942; Vencedor: <span class="highlight">LogisticRegression-balanced</span> &mdash; <strong>$706.000</strong> de Net Benefit no threshold <strong>0,15</strong></p>
+        <p style="margin-top:6px;font-size:11px;color:var(--muted)">* Estimativa baseada na média de permanência de 32,4 meses (~3 anos) dos clientes atuais &mdash; custo de churn de $2.000 por cliente perdido.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SLIDE 5 — EXECUCAO: INFRAESTRUTURA & API
+============================================================ -->
+<div class="slide" id="s5">
+  <span class="slide-title tag-a">Execução: Infraestrutura &amp; API</span>
+  <div style="max-width:1240px;width:100%">
+    <div class="step">
+      <div class="step-num yellow">3</div>
+      <div class="card card-yellow" style="flex:1;padding:15px 20px">
+        <h3 class="warn">MLflow + Docker Compose</h3>
+        <p>Rastreamento completo dos 8 modelos (hiperparâmetros, métricas, artefatos) com backend em PostgreSQL. Arquitetura com 4 serviços containerizados: <strong>FastAPI</strong> &middot; <strong>MLflow UI</strong> &middot; <strong>PostgreSQL</strong> &middot; <strong>Training job</strong></p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num purple">4</div>
+      <div class="card card-purple" style="flex:1;padding:15px 20px">
+        <h3 class="purple">API de Produção FastAPI</h3>
+        <p>3 endpoints: <code style="color:#c4b5fd">POST /api/predict</code> &middot; <code style="color:#c4b5fd">POST /api/predict-batch</code> &middot; <code style="color:#c4b5fd">GET /api/model-info</code>. Validação Pydantic, tratamento de erros estruturado e health checks automáticos.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num teal">5</div>
+      <div class="card card-teal" style="flex:1;padding:15px 20px">
+        <h3 style="color:#67e8f9;margin-bottom:10px">Testes &amp; Documentação</h3>
+        <p>Testes pytest (dados, modelo, API, edge cases) + smoke tests Postman. Documentação: <strong>Model Card &middot; ML Canvas &middot; Relatório EDA &middot; Guias operacionais de deploy</strong>.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SLIDE 6 — ANALISE DE TRADE-OFF
+============================================================ -->
+<div class="slide" id="s6">
+  <span class="slide-title tag-r">Análise de Trade-off: Todos os Modelos</span>
+  <div class="img-frame" style="width:100%;max-width:1380px;max-height:72vh">
+    <img src="analise%20trade%20off%20de%20todos%20os%20modelos.png"
+         alt="Análise completa de trade-offs de todos os modelos"
+         style="max-height:66vh;width:auto;max-width:100%" />
+  </div>
+  <p style="margin-top:12px;font-size:13px;color:var(--muted);text-align:center">
+    LogisticRegression-balanced &mdash; maior Net Benefit ($706.000) no threshold 0,15 &middot; Estimativa com média de retenção de 32,4 meses (~3 anos)
+  </p>
+</div>
+
+<!-- ============================================================
+     SLIDE 7 — IMPACTO GERADO
+============================================================ -->
+<div class="slide" id="s7">
+  <span class="slide-title tag-r">Impacto Gerado</span>
+  <div class="kpi-row" style="margin-bottom:22px">
+    <div class="kpi"><span class="num highlight">$706.000</span><span class="lbl">Net Benefit estimado</span></div>
+    <div class="kpi"><span class="num blue">98,40%</span><span class="lbl">Recall (threshold 0,15)</span></div>
+    <div class="kpi"><span class="num highlight">368/374</span><span class="lbl">Churners capturados</span></div>
+    <div class="kpi"><span class="num" style="color:#c4b5fd">&lt; 200ms</span><span class="lbl">Latência da API</span></div>
+  </div>
+  <div class="grid-3" style="max-width:1380px">
+    <div class="card card-accent">
+      <h3 class="blue">Resultado Financeiro</h3>
+      <ul>
+        <li>ROI ~23&times; vs. custo de campanha (<span class="warn">$50/ação</span>)</li>
+        <li>Apenas <span class="highlight">6 churners não identificados</span></li>
+        <li>Ranking claro para priorizar campanhas</li>
+        <li>Estimativa baseada em 32,4 meses de retenção média</li>
+      </ul>
+    </div>
+    <div class="card card-green">
+      <h3 class="highlight">Resultado Técnico</h3>
+      <ul>
+        <li>100% reprodutibilidade de experimentos</li>
+        <li>8 modelos documentados no MLflow</li>
+        <li>Cobertura de testes &gt; 80%</li>
+        <li>4 serviços containerizados</li>
+      </ul>
+    </div>
+    <div class="card card-yellow">
+      <h3 class="warn">Aprendizado-chave</h3>
+      <p style="margin-bottom:9px">Otimizar <strong>AUC &ne; otimizar negócio</strong>.</p>
+      <p>O modelo com melhor Net Benefit <em>não</em> era o líder em F1-score &mdash; a decisão correta exigiu pensar pelo custo real do erro.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SLIDE 8 — CONCLUSAO
+============================================================ -->
+<div class="slide" id="s8">
+  <span class="slide-title tag-fin">Resumo em Uma Frase</span>
+  <div class="divider"></div>
+  <div class="big-quote" style="margin:26px auto">
+    "Entregamos uma <span class="highlight">solução completa de ML Engineering</span> que transformou 7.043 registros de clientes em um <span class="highlight">modelo de decisão financeiramente otimizado</span>, empacotado em uma <span class="blue">API pronta para produção</span>, gerando impacto estimado de <span class="highlight">$706.000 em retenção de receita</span>."
+  </div>
+  <div class="divider"></div>
+  <div class="kpi-row" style="margin-top:28px">
+    <div class="kpi"><span class="num" style="font-size:22px">&#127919;</span><span class="lbl">Negócio orientado por dados</span></div>
+    <div class="kpi"><span class="num" style="font-size:22px">&#9881;</span><span class="lbl">Engenharia de produção</span></div>
+    <div class="kpi"><span class="num" style="font-size:22px">&#128202;</span><span class="lbl">Governança de modelos</span></div>
+    <div class="kpi"><span class="num" style="font-size:22px">&#128051;</span><span class="lbl">Infraestrutura containerizada</span></div>
+  </div>
+  <p style="margin-top:28px;color:var(--muted);font-size:13px">FIAP &middot; Tech Challenge &middot; ML Engineering Fase 1 &middot; 2026</p>
+</div>
+
+</div><!-- #deck -->
+
+<div id="nav">
+  <button id="btn-prev" onclick="move(-1)" title="Anterior">&#8592;</button>
+  <span id="slide-counter"></span>
+  <button id="btn-next" onclick="move(1)" title="Próximo">&#8594;</button>
+</div>
+
+<script>
+// === Scaling: canvas 1536x864 centrado no viewport ===
+const DESIGN_W = 1536, DESIGN_H = 864;
+const deck = document.getElementById('deck');
+
+function scalePresentation() {
+  const s = Math.min(window.innerWidth / DESIGN_W, window.innerHeight / DESIGN_H);
+  deck.style.transform = 'scale(' + s + ')';
+  deck.style.left = Math.round((window.innerWidth  - DESIGN_W * s) / 2) + 'px';
+  deck.style.top  = Math.round((window.innerHeight - DESIGN_H * s) / 2) + 'px';
+}
+window.addEventListener('resize', scalePresentation);
+scalePresentation();
+
+// === Slides ===
+const slides = document.querySelectorAll('.slide');
+const total  = slides.length;
+let cur = 0;
+
+function show(idx) {
+  slides[cur].classList.remove('active');
+  cur = Math.max(0, Math.min(idx, total - 1));
+  slides[cur].classList.add('active');
+  document.getElementById('slide-counter').textContent = (cur + 1) + ' / ' + total;
+  document.getElementById('slide-badge').textContent   = (cur + 1) + ' / ' + total;
+  document.getElementById('progress-bar').style.width  = ((cur + 1) / total * 100) + '%';
+  document.getElementById('btn-prev').disabled = cur === 0;
+  document.getElementById('btn-next').disabled = cur === total - 1;
+}
+
+function move(dir) { show(cur + dir); }
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); move(1);  }
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')                    { e.preventDefault(); move(-1); }
+  if (e.key === 'Home') show(0);
+  if (e.key === 'End')  show(total - 1);
+});
+
+var tx = 0;
+document.addEventListener('touchstart', function(e) { tx = e.touches[0].clientX; });
+document.addEventListener('touchend',   function(e) {
+  var dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 50) move(dx < 0 ? 1 : -1);
+});
+
+show(0);
+
+// === Churn Donut Chart ===
+function drawChurnChart() {
+  var canvas = document.getElementById('churn-chart');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+
+  var cx = Math.round(W * 0.37), cy = Math.round(H / 2);
+  var r  = Math.min(cx, cy) * 0.80;
+
+  var segments = [
+    { label: 'Não Churn', value: 5174, pct: 73.5, color: '#3b82f6' },
+    { label: 'Churn',     value: 1869, pct: 26.5, color: '#f59e0b' }
+  ];
+
+  // Pie slices
+  var angle = -Math.PI / 2;
+  segments.forEach(function(seg) {
+    var sweep = (seg.pct / 100) * 2 * Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, angle, angle + sweep);
+    ctx.closePath();
+    ctx.fillStyle = seg.color;
+    ctx.fill();
+    // Gap line
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+    ctx.strokeStyle = '#0d1117';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    angle += sweep;
+  });
+
+  // Donut hole
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.52, 0, 2 * Math.PI);
+  ctx.fillStyle = '#1f2937';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.52, 0, 2 * Math.PI);
+  ctx.strokeStyle = '#30363d';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Center text
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#e6edf3';
+  ctx.font = 'bold 24px Segoe UI, sans-serif';
+  ctx.fillText('7.043', cx, cy - 9);
+  ctx.font = '12px Segoe UI, sans-serif';
+  ctx.fillStyle = '#8b949e';
+  ctx.fillText('clientes', cx, cy + 12);
+
+  // Legend (right side)
+  var lx = Math.round(W * 0.64);
+  segments.forEach(function(seg, i) {
+    var ly = Math.round(H * 0.20 + i * 128);
+
+    // Color swatch
+    ctx.fillStyle = seg.color;
+    ctx.fillRect(lx, ly, 14, 14);
+
+    // Percentage
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#e6edf3';
+    ctx.font = 'bold 30px Segoe UI, sans-serif';
+    ctx.fillText(seg.pct.toFixed(1).replace('.', ',') + '%', lx + 22, ly + 28);
+
+    // Label
+    ctx.font = '14px Segoe UI, sans-serif';
+    ctx.fillStyle = seg.color;
+    ctx.fillText(seg.label, lx + 22, ly + 50);
+
+    // Count
+    ctx.font = '12px Segoe UI, sans-serif';
+    ctx.fillStyle = '#8b949e';
+    ctx.fillText(seg.value.toLocaleString('pt-BR') + ' clientes', lx + 22, ly + 70);
+  });
+}
+
+drawChurnChart();
+</script>
+</body>
+</html>
