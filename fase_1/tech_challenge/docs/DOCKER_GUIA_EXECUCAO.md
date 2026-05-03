@@ -714,7 +714,7 @@ API_URL = "http://localhost:8000"
 class ChurnPredictor:
     def __init__(self, api_url):
         self.api_url = api_url
-    
+
     def predict_single(self, features_dict):
         """Fazer predição simples"""
         payload = {
@@ -726,7 +726,7 @@ class ChurnPredictor:
             json=payload
         )
         return response.json()
-    
+
     def predict_batch(self, features_list):
         """Fazer predição em lote"""
         payload = {
@@ -738,7 +738,7 @@ class ChurnPredictor:
             json=payload
         )
         return response.json()
-    
+
     def get_model_info(self):
         """Obter informações do modelo"""
         response = requests.get(f"{self.api_url}/api/model-info")
@@ -849,6 +849,6 @@ curl http://localhost:5000/health
 
 ---
 
-**Última atualização:** Abril 2026  
-**Versão da Documentação:** 1.0  
+**Última atualização:** Abril 2026
+**Versão da Documentação:** 1.0
 **Autor:** MLOps Team
