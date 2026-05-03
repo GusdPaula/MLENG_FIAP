@@ -1,4 +1,7 @@
-﻿# processed
+# processed
 
-Esta pasta contem os dados ja tratados para treino, validacao e experimentos.
-Estes arquivos podem ser regenerados pelos pipelines de preprocessamento.
+Esta pasta concentra arquivos de 'processed' no projeto.
+
+## Referências dos arquivos
+
+- [telco_churn_processed.csv](./telco_churn_processed.csv): arquivo de dados tabulares para entrada, treino ou avaliação.

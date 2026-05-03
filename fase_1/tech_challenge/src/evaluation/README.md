@@ -1,4 +1,8 @@
-﻿# evaluation
+# evaluation
 
-Esta pasta contem funcoes de avaliacao e metricas de desempenho.
-Ela apoia comparacao e validacao dos modelos treinados.
+Esta pasta concentra arquivos de 'evaluation' no projeto.
+
+## Referências dos arquivos
+
+- [__init__.py](./__init__.py): script Python com lógica de processamento, treino ou serviços.
+- [metrics.py](./metrics.py): script Python com lógica de processamento, treino ou serviços.

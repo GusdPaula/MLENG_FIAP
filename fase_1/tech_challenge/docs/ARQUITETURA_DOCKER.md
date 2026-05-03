@@ -1,19 +1,19 @@
-﻿# Arquitetura Docker Implementada
+# Arquitetura Docker Implementada
 
 ## Visao Geral
 
-A stack local do projeto roda com `docker-compose` e quatro servicos:
+A stack local do projeto roda com `docker-compose` e quatro serviços:
 
 - `db` (PostgreSQL) para backend store do MLflow
 - `mlflow` para tracking, registry e artifacts
-- `api` (FastAPI) para inferencia
+- `api` (FastAPI) para inferência
 - `training` (on-demand) para treino e registro de modelos
 
 ## Diagrama da Arquitetura Docker
 
 ```mermaid
 flowchart TB
-    USER["Usuario / Cliente HTTP"] --> API["FastAPI API :8000"]
+    USER["Usuário / Cliente HTTP"] --> API["FastAPI API :8000"]
     USER --> MLFLOWUI["MLflow UI :5000"]
 
     subgraph COMPOSE["docker-compose / mlflow_network"]
@@ -31,11 +31,11 @@ flowchart TB
     MLFLOW --> ART
 ```
 
-## Fluxo Final de Predicao
+## Fluxo Final de Predição
 
 ```mermaid
 sequenceDiagram
-    participant U as Usuario
+    participant U as Usuário
     participant A as FastAPI
     participant M as ModelManager
     participant F as MLflow
@@ -45,7 +45,7 @@ sequenceDiagram
     U->>A: POST /api/predict
     A->>M: valida payload e monta DataFrame
     M->>F: verifica /health
-    F-->>M: servidor disponivel
+    F-->>M: servidor disponível
     M->>R: carrega models:/TelcoChurnPipeline@champion
     R-->>M: retorna pipeline sklearn
     M->>P: predict / predict_proba
@@ -63,4 +63,4 @@ docker-compose logs -f api
 
 ## Nota
 
-Os experimentos foram salvos no MLflow, mas os artefatos de experimento nao foram comitados no Git para manter o repositorio limpo.
+Os experimentos foram salvos no MLflow, mas os artefatos de experimento não foram comitados no Git para manter o repositório limpo.

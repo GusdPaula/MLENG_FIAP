@@ -1,7 +1,7 @@
-﻿# Arquitetura de Deploy - Telco Churn Prediction
+# Arquitetura de Deploy - Telco Churn Prediction
 
 Data: 2026-05-03
-Versao: 2.0
+Versão: 2.0
 Status: Deploy em nuvem pendente
 
 ## Resumo Executivo
@@ -12,14 +12,14 @@ Status: Deploy em nuvem pendente
 
 ```mermaid
 flowchart LR
-    USER["Usuario"] --> API["FastAPI :8000"]
+    USER["Usuário"] --> API["FastAPI :8000"]
     API --> MLFLOW["MLflow :5000"]
     TRAIN["Training on-demand"] --> MLFLOW
     MLFLOW --> DB["PostgreSQL :5432"]
     MLFLOW --> ART["./mlartifacts"]
 ```
 
-## Observacao de Governanca
+## Observação de Governança
 
 Os experimentos foram salvos no MLflow durante os estudos.
-Os artefatos de experimento nao foram comitados no Git para manter o repositorio limpo.
+Os artefatos de experimento não foram comitados no Git para manter o repositório limpo.

@@ -1,4 +1,5 @@
-﻿# registry
+# registry
 
-Esta pasta guarda metadados de registry local de modelos quando gerados.
-Pode variar conforme o fluxo de treinamento e tracking.
+Esta pasta concentra arquivos de 'registry' no projeto.
+
+No momento, não há outros arquivos além deste README.

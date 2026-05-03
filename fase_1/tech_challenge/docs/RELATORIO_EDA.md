@@ -200,29 +200,29 @@ Std Dev:   $2,266.79 (muito variável)
 ## 7️⃣ Próximas Etapas (Roadmap)
 
 ### 📋 Etapa 2 - Modelagem com Redes Neurais
-1. [ ] Treinar baselines (DummyClassifier, LogReg)
-2. [ ] Construir MLP (3 camadas, ReLU, Dropout)
-3. [ ] Implementar early stopping e learning rate scheduler
-4. [ ] Comparar todos os modelos
+1. ✅ Treinar baselines (DummyClassifier, LogReg)
+2. ✅ Construir MLP (3 camadas, ReLU, Dropout)
+3. ✅ Implementar early stopping e learning rate scheduler
+4. ✅ Comparar todos os modelos
 
 ### 📋 Etapa 3 - API e Engenharia
-1. [ ] Refatorar em modelos reutilizáveis
-2. [ ] Criar pipeline sklearn
-3. [ ] Escrever testes (pytest)
-4. [ ] Construir API FastAPI
+1. ✅ Refatorar em modelos reutilizáveis
+2. ✅ Criar pipeline sklearn
+3. ✅ Escrever testes (pytest)
+4. ✅ Construir API FastAPI
 
 ### 📋 Etapa 4 - Documentação
-1. [ ] Model Card completo
-2. [ ] Análise de Fairness
-3. [ ] README + instruções
-4. [ ] Vídeo STAR (5 min)
+1. ✅ Model Card completo
+2. ✅ Análise de Fairness
+3. ✅ README + instruções
+4. ✅ Vídeo STAR (5 min)
 
 ---
 
 ## 📂 Arquivos Gerados
 
-- ✅ `ml_canvas.md` - ML Canvas detalhado
-- ✅ `Relatório_EDA.md` - Este arquivo
+- ✅ `ML_CANVAS.md` - ML Canvas detalhado
+- ✅ `RELATORIO_EDA.md` - Este arquivo
 - ✅ `01_eda_analysis.py` - Script de análise
 - ✅ `data/processed/telco_churn_processed.csv` - Dataset limpo
 - ✅ `notebooks/01_eda_and_ml_canvas.ipynb` - Jupyter notebook
@@ -236,10 +236,8 @@ Os dados revelam **oportunidades claras de segmentação** para retenção:
 - Estratégia: Oferecer incentivos para upgrade a contrato anual
 - Automatizar: Pagamento automático (reduz churn em 65%)
 
-**Status**: Projeto pronto para fase de modelagem! 🚀
 
 ---
 
 **Versão**: 1.0
 **Data Conclusão**: Abril 2026
-**Próxima Revisão**: Após Etapa 2

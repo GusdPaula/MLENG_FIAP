@@ -1,4 +1,7 @@
-﻿# smoke_test
+# smoke_test
 
-Esta pasta contem testes de smoke para validacoes rapidas de ponta a ponta.
-Use estes testes para verificar se o fluxo principal esta funcional.
+Esta pasta concentra arquivos de 'smoke_test' no projeto.
+
+## Referências dos arquivos
+
+- [MLTelco.postman_collection](./MLTelco.postman_collection): arquivo de apoio da pasta.

@@ -1,8 +1,7 @@
-﻿# src
+# src
 
-Esta pasta contem o codigo-fonte principal do projeto.
+Esta pasta concentra arquivos de 'src' no projeto.
 
-- `api/`: servico FastAPI de inferencia.
-- `data/`: carga e preprocessamento.
-- `evaluation/`: metricas de avaliacao.
-- `models/`: treino e utilitarios de modelo.
+## Referências dos arquivos
+
+- [__init__.py](./__init__.py): script Python com lógica de processamento, treino ou serviços.

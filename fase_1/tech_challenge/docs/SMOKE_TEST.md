@@ -1,4 +1,4 @@
-# Smoke Test — Guia de Execução
+# Smoke Test - Guia de Execução
 
 Este guia descreve como executar o smoke test da API de predição de churn, disponível em `tests/smoke_test/MLTelco.postman_collection`.
 
@@ -35,7 +35,7 @@ Aguarde a API responder em `http://localhost:8000/health` antes de rodar os test
 
 ---
 
-## Opção 1 — Postman (interface gráfica)
+## Opção 1 - Postman (interface gráfica)
 
 1. Abra o Postman
 2. Clique em **Import**
@@ -47,7 +47,7 @@ Aguarde a API responder em `http://localhost:8000/health` antes de rodar os test
 
 ---
 
-## Opção 2 — Newman (linha de comando)
+## Opção 2 - Newman (linha de comando)
 
 ### Instalação
 
@@ -137,4 +137,3 @@ newman run tests/smoke_test/MLTelco.postman_collection \
   "return_probabilities": true
 }
 ```
-

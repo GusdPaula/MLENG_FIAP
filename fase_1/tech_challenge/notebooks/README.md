@@ -1,8 +1,9 @@
-﻿# notebooks
+# notebooks
 
-Esta pasta contem os notebooks e scripts exploratorios do projeto.
+Esta pasta concentra arquivos de 'notebooks' no projeto.
 
-Arquivos principais:
-- `01_eda_and_ml_canvas.ipynb`: analise exploratoria e contexto de negocio.
-- `02_experimento_controlado.ipynb`: comparacao de modelos e analise de custo-beneficio.
-- `01_eda_analysis.py`: script de EDA e preparacao de dados.
+## Referências dos arquivos
+
+- [01_eda_analysis.py](./01_eda_analysis.py): script Python com lógica de processamento, treino ou serviços.
+- [01_eda_and_ml_canvas.ipynb](./01_eda_and_ml_canvas.ipynb): notebook com análises, experimentos ou exploração de dados.
+- [02_experimento_controlado.ipynb](./02_experimento_controlado.ipynb): notebook com análises, experimentos ou exploração de dados.

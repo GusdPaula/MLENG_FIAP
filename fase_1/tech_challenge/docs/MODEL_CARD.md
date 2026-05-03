@@ -1,20 +1,20 @@
 # Model Card - Telco Churn Prediction
 
-Ultima atualizacao: 2026-05-03
-Fonte oficial das metricas e custos: `notebooks/02_experimento_controlado.ipynb`
+Última atualização: 2026-05-03
+Fonte oficial das métricas e custos: `notebooks/02_experimento_controlado.ipynb`
 
 ## 1) Modelo recomendado no notebook
 
 - Modelo: **LogisticRegression-balanced**
-- Criterio de recomendacao: maior **Net Benefit** na analise de trade-off
-- Threshold otimo: **0.15**
-- Net Benefit maximo: **$706,000**
-- Performance no threshold otimo:
+- Critério de recomendação: maior **Net Benefit** na análise de trade-off
+- Threshold ótimo: **0.15**
+- Net Benefit máximo: **$706,000**
+- Performance no threshold ótimo:
   - Recall: **0.9840** (98.40%)
   - Precision: **0.3802** (38.02%)
   - TP=**368**, FP=**600**, FN=**6**
 
-## 2) Comparacao de metricas (threshold padrao 0.5)
+## 2) Comparação de métricas (threshold padrão 0.5)
 
 | Modelo | AUC-ROC | PR-AUC | Accuracy | Precision | Recall | F1-score |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -27,14 +27,14 @@ Fonte oficial das metricas e custos: `notebooks/02_experimento_controlado.ipynb`
 | RandomForestClassifier | 0.833785 | 0.627266 | 0.793471 | 0.640678 | 0.505348 | 0.565022 |
 | DummyClassifier-most_frequent | 0.500000 | 0.265436 | 0.734564 | 0.000000 | 0.000000 | 0.000000 |
 
-## 3) Comparacao de custo-beneficio (threshold otimo por modelo)
+## 3) Comparação de custo-benefício (threshold ótimo por modelo)
 
 Premissas do notebook:
 
 - custo de falso positivo (`cost_fp`) = **$50**
 - custo de falso negativo evitado (`cost_fn`) = **$2000**
 
-| Modelo | Threshold otimo | Net Benefit | Recall | Precision |
+| Modelo | Threshold ótimo | Net Benefit | Recall | Precision |
 | --- | ---: | ---: | ---: | ---: |
 | LogisticRegression-balanced | 0.15 | $706,000 | 98.40% | 38.02% |
 | LogisticRegression-SMOTE | 0.15 | $705,500 | 98.13% | 39.17% |
@@ -45,17 +45,17 @@ Premissas do notebook:
 | RandomForestClassifier | 0.10 | $663,950 | 92.25% | 39.84% |
 | DummyClassifier-most_frequent | 0.10 | $0 | 0.00% | 0.00% |
 
-## 4) Decisao tecnica
+## 4) Decisão técnica
 
-Mesmo sem liderar AUC/F1 no threshold padrao 0.5, o **LogisticRegression-balanced** foi escolhido porque maximizou o resultado economico no cenario de negocio modelado no notebook.
+Mesmo sem liderar AUC/F1 no threshold padrão 0.5, o **LogisticRegression-balanced** foi escolhido porque maximizou o resultado econômico no cenário de negócio modelado no notebook.
 
-## 5) Limitacoes
+## 5) Limitações
 
 - O Net Benefit depende diretamente das premissas de custo (`$50` e `$2000`).
-- Alteracoes de custo real de campanha ou valor de cliente exigem recalibrar threshold e ranking.
-- Recomenda-se reavaliacao periodica com dados atualizados e custos reais.
+- Alterações de custo real de campanha ou valor de cliente exigem recalibrar threshold e ranking.
+- Recomenda-se reavaliação periódica com dados atualizados e custos reais.
 
 ## 6) Nota sobre MLflow e versionamento
 
 Os experimentos que embasaram este Model Card foram salvos no MLflow.
-Os artefatos de experimento nao foram comitados no Git por falta de necessidade para a execucao da aplicacao e para manter a limpeza do repositorio.
+Os artefatos de experimento não foram comitados no Git por falta de necessidade para a execução da aplicação e para manter a limpeza do repositório.

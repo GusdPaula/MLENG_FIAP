@@ -1,8 +1,0 @@
-artifact_location: file:C:/Users/vc/Documents/MLENG_FIAP/fase_1/tech_challenge/../mlruns/636075103224634009
-creation_time: 1777817158012
-experiment_id: '636075103224634009'
-last_update_time: 1777817158012
-lifecycle_stage: active
-name: Telco Churn - Baselines
-trace_location: null
-workspace: default

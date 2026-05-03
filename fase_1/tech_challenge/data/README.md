@@ -1,6 +1,5 @@
-﻿# data
+# data
 
-Esta pasta contem os dados usados no projeto.
+Esta pasta concentra arquivos de 'data' no projeto.
 
-- `raw/`: dados originais, sem transformacoes.
-- `processed/`: dados tratados para treino e avaliacao.
+No momento, não há outros arquivos além deste README.
