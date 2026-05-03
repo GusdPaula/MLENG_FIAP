@@ -69,7 +69,7 @@ Top 3 modelos por Net Benefit no notebook:
 | EDA | [notebooks/01_eda_and_ml_canvas.ipynb](notebooks/01_eda_and_ml_canvas.ipynb), [docs/RELATORIO_EDA.md](docs/RELATORIO_EDA.md) | Analise exploratoria, qualidade dos dados e principais insights de churn. |
 | Dataset processado | [data/processed/telco_churn_processed.csv](data/processed/telco_churn_processed.csv) | Base limpa para treino dos modelos. |
 | Experimento controlado | [notebooks/02_experimento_controlado.ipynb](notebooks/02_experimento_controlado.ipynb) | Comparacao entre baselines, Logistic Regression, Random Forest, XGBoost e MLP. |
-| Modelo treinado | [src/models/](src/models/), [mlruns/](mlruns/), [mlartifacts/](mlartifacts/) | Pipeline, metricas e artefatos registrados no MLflow. |
+| Modelo treinado | [models/](models/) | Modelos treinados *Também foram adicionados ao MLFlow. |
 | Model Card | [docs/MODEL_CARD.md](docs/MODEL_CARD.md) | Descricao tecnica do modelo, metricas, limitacoes e vieses. |
 | API de inferencia | [src/api/](src/api/) | FastAPI com predicao individual, predicao em lote, health check e model info. |
 | Testes | [tests/](tests/) | Testes automatizados da API, dados, metricas e treinamento. |
