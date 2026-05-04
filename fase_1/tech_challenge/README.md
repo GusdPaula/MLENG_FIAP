@@ -74,7 +74,8 @@ Top 3 modelos por Net Benefit no notebook:
 | API de inferência | [src/api/](src/api/) | FastAPI com predição individual, predição em lote, health check e model info. |
 | Testes | [tests/](tests/) | Testes automatizados da API, dados, métricas e treinamento. |
 | Docker | [docker-compose.yml](docker-compose.yml), [Dockerfile.api](Dockerfile.api), [Dockerfile.training](Dockerfile.training), [Dockerfile.mlflow](Dockerfile.mlflow) | Orquestração da API, treinamento, MLflow e PostgreSQL. |
-| Documentação operacional | [docs/ARQUITETURA_DEPLOY.md](docs/ARQUITETURA_DEPLOY.md),| Deploy e infraestrutura. |
+| Deploy AWS | [Dockerfile.beanstalk.api](Dockerfile.beanstalk.api), [scripts/build_eb_api_bundle.sh](scripts/build_eb_api_bundle.sh) | Deploy standalone no AWS Elastic Beanstalk com modelo empacotado. |
+| Documentação operacional | [docs/ARQUITETURA_DEPLOY.md](docs/ARQUITETURA_DEPLOY.md) | Arquitetura de deploy local (Compose) e em nuvem (Elastic Beanstalk). |
 | Vídeo STAR | A definir | Placeholder para o link do vídeo de apresentação no formato STAR. |
 
 ## Arquitetura do Projeto
@@ -195,7 +196,7 @@ make mlflow-ui
 - [docs/RELATORIO_EDA.md](docs/RELATORIO_EDA.md): relatório da exploração de dados.
 - [docs/MODEL_CARD.md](docs/MODEL_CARD.md): detalhes do modelo selecionado.
 - [docs/DICIONARIO_DADOS.md](docs/DICIONARIO_DADOS.md): descrição das variáveis.
-- [docs/ARQUITETURA_DEPLOY.md](docs/ARQUITETURA_DEPLOY.md): arquitetura proposta de deploy.
+- [docs/ARQUITETURA_DEPLOY.md](docs/ARQUITETURA_DEPLOY.md): arquitetura de deploy local e em nuvem (AWS Elastic Beanstalk).
 - [docs/PLANO_MONITORAMENTO.md](docs/PLANO_MONITORAMENTO.md): monitoramento e alertas.
 - [docs/TERRAFORM_AWS_PLAN.md](docs/TERRAFORM_AWS_PLAN.md): plano de infraestrutura AWS.
 - [DOCKER_GUIA_EXECUCAO.md](DOCKER_GUIA_EXECUCAO.md): guia para execução com Docker.
