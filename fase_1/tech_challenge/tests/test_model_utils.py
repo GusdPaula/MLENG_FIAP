@@ -27,7 +27,9 @@ def test_load_from_local_path_success(monkeypatch, tmp_path):
     manager = ModelManager()
 
     fake_pipeline = MagicMock()
-    with patch("src.api.model_utils.mlflow.sklearn.load_model", return_value=fake_pipeline) as mocked_load:
+    with patch(
+        "src.api.model_utils.mlflow.sklearn.load_model", return_value=fake_pipeline
+    ) as mocked_load:
         assert manager._load_from_local_path() is True
         mocked_load.assert_called_once_with(str(model_dir))
         assert manager.pipeline is fake_pipeline
@@ -70,9 +72,10 @@ def test_is_mlflow_ready_returns_false_on_exception():
 def test_load_from_mlflow_prefers_local_path():
     manager = ModelManager()
 
-    with patch.object(manager, "_load_from_local_path", return_value=True), patch.object(
-        manager, "is_mlflow_ready"
-    ) as mocked_ready:
+    with (
+        patch.object(manager, "_load_from_local_path", return_value=True),
+        patch.object(manager, "is_mlflow_ready") as mocked_ready,
+    ):
         assert manager.load_from_mlflow() is True
         mocked_ready.assert_not_called()
 
@@ -80,8 +83,9 @@ def test_load_from_mlflow_prefers_local_path():
 def test_load_from_mlflow_returns_false_when_mlflow_is_unavailable():
     manager = ModelManager()
 
-    with patch.object(manager, "_load_from_local_path", return_value=False), patch.object(
-        manager, "is_mlflow_ready", return_value=False
+    with (
+        patch.object(manager, "_load_from_local_path", return_value=False),
+        patch.object(manager, "is_mlflow_ready", return_value=False),
     ):
         assert manager.load_from_mlflow() is False
 
@@ -90,11 +94,14 @@ def test_load_from_mlflow_remote_success_sets_pipeline():
     manager = ModelManager()
     fake_pipeline = MagicMock()
 
-    with patch.object(manager, "_load_from_local_path", return_value=False), patch.object(
-        manager, "is_mlflow_ready", return_value=True
-    ), patch("src.api.model_utils.mlflow.set_tracking_uri") as mocked_set_uri, patch(
-        "src.api.model_utils.mlflow.sklearn.load_model", return_value=fake_pipeline
-    ) as mocked_load:
+    with (
+        patch.object(manager, "_load_from_local_path", return_value=False),
+        patch.object(manager, "is_mlflow_ready", return_value=True),
+        patch("src.api.model_utils.mlflow.set_tracking_uri") as mocked_set_uri,
+        patch(
+            "src.api.model_utils.mlflow.sklearn.load_model", return_value=fake_pipeline
+        ) as mocked_load,
+    ):
         assert manager.load_from_mlflow() is True
         mocked_set_uri.assert_called_once_with(manager.tracking_uri)
         mocked_load.assert_called_once_with(f"models:/{manager.model_name}@{manager.alias}")
@@ -104,10 +111,13 @@ def test_load_from_mlflow_remote_success_sets_pipeline():
 def test_load_from_mlflow_remote_failure_returns_false():
     manager = ModelManager()
 
-    with patch.object(manager, "_load_from_local_path", return_value=False), patch.object(
-        manager, "is_mlflow_ready", return_value=True
-    ), patch("src.api.model_utils.mlflow.set_tracking_uri"), patch(
-        "src.api.model_utils.mlflow.sklearn.load_model", side_effect=RuntimeError("load failed")
+    with (
+        patch.object(manager, "_load_from_local_path", return_value=False),
+        patch.object(manager, "is_mlflow_ready", return_value=True),
+        patch("src.api.model_utils.mlflow.set_tracking_uri"),
+        patch(
+            "src.api.model_utils.mlflow.sklearn.load_model", side_effect=RuntimeError("load failed")
+        ),
     ):
         assert manager.load_from_mlflow() is False
 
