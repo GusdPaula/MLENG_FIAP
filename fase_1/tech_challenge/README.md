@@ -171,9 +171,9 @@ pytest -q
 
 Serviços locais:
 
-- [API Swagger](http://localhost:8000/api/docs)
-- [Health check](http://localhost:8000/api/health)
-- [MLflow](http://localhost:5000)
+- API Swagger: `localhost:8000/api/docs`
+- Health check: `localhost:8000/api/health`
+- MLflow: `localhost:5000`
 - PostgreSQL: `localhost:5432`
 
 Atalhos úteis:
