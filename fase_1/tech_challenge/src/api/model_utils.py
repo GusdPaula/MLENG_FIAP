@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 
 import mlflow
 import requests
@@ -14,6 +15,25 @@ class ModelManager:
         self.model_name = os.getenv("MLFLOW_MODEL_NAME", "TelcoChurnPipeline")
         self.alias = os.getenv("MLFLOW_MODEL_ALIAS", "champion")
         self.tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "http://mlflow:5000")
+        self.local_model_path = os.getenv("LOCAL_MODEL_PATH")
+
+    def _load_from_local_path(self):
+        """Carrega um artefato MLflow empacotado junto com a aplicação."""
+        if not self.local_model_path:
+            return False
+
+        model_path = Path(self.local_model_path)
+        if not model_path.exists():
+            logger.error(f"❌ Modelo local não encontrado em {model_path}.")
+            return False
+
+        try:
+            self.pipeline = mlflow.sklearn.load_model(str(model_path))
+            logger.info(f"✅ Modelo local carregado com sucesso: {model_path}")
+            return True
+        except Exception as e:
+            logger.error(f"❌ Falha ao carregar modelo local em {model_path}: {e}")
+            return False
 
     def is_mlflow_ready(self):
         """Verifica se o servidor MLflow está acessível."""
@@ -25,6 +45,9 @@ class ModelManager:
 
     def load_from_mlflow(self):
         """Carrega o modelo 'champion' utilizando a sintaxe @."""
+        if self._load_from_local_path():
+            return True
+
         if not self.is_mlflow_ready():
             logger.error(f"❌ MLflow inacessível em {self.tracking_uri}.")
             return False

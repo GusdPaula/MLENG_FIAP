@@ -36,6 +36,7 @@ models/*.h5
 mlruns/
 .mlflow/
 mlruns.db
+mlartifacts/
 outputs/
 
 # Testing
