@@ -125,6 +125,39 @@ sh scripts/build_eb_api_bundle.sh
 # Elastic Beanstalk → Telco-api-env → Upload and deploy → dist/elastic_beanstalk_api.zip
 ```
 
+### Teste de Predição via AWS
+
+Após o deploy bem-sucedido, teste a predição diretamente via curl:
+
+```bash
+curl -X POST http://telco-api-env.eba-23kf5mjw.us-east-1.elasticbeanstalk.com/api/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "features": {
+      "gender": "Male",
+      "senior_citizen": "No",
+      "partner": "No",
+      "dependents": "No",
+      "tenure_months": 2,
+      "phone_service": "Yes",
+      "multiple_lines": "No",
+      "internet_service": "DSL",
+      "online_security": "No",
+      "online_backup": "No",
+      "device_protection": "No",
+      "tech_support": "No",
+      "streaming_tv": "No",
+      "streaming_movies": "No",
+      "contract": "Month-to-month",
+      "paperless_billing": "Yes",
+      "payment_method": "Mailed check",
+      "monthly_charges": 53.85,
+      "total_charges": 108.15
+    },
+    "return_probability": true
+  }'
+```
+
 ---
 
 ## 3. Comparativo dos ambientes
