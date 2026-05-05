@@ -137,3 +137,72 @@ newman run tests/smoke_test/MLTelco.postman_collection \
   "return_probabilities": true
 }
 ```
+
+---
+
+## Teste do Endpoint AWS
+
+Para testar o endpoint em produção no AWS Elastic Beanstalk, use a collection Postman exclusiva: `tests/smoke_test/MLTelco_AWS.postman_collection`
+
+### Execução Local com Postman (interface gráfica)
+
+1. Abra o Postman
+2. Clique em **Import**
+3. Selecione o arquivo `tests/smoke_test/MLTelco_AWS.postman_collection`
+4. Abra a coleção importada **ML Telco - AWS Endpoint**
+5. Clique em **Run collection**
+6. Clique em **Run ML Telco - AWS Endpoint**
+7. Verifique que todos os testes estão marcados como **passed**
+
+### Execução Local com Newman (linha de comando)
+
+```bash
+# Instalação (primeira vez)
+npm install -g newman
+
+# Execução simples
+newman run tests/smoke_test/MLTelco_AWS.postman_collection
+
+# Com relatório HTML
+npm install -g newman-reporter-htmlextra
+
+newman run tests/smoke_test/MLTelco_AWS.postman_collection \
+  --reporters cli,htmlextra \
+  --reporter-htmlextra-export reports/smoke_test_aws_report.html
+```
+
+### Na CI/CD
+
+O teste é executado automaticamente na esteira de CI após todos os testes unitários passarem.
+O job `smoke-test-aws` utiliza Newman para validar:
+
+1. **Health Check** (`GET /api/health`)
+   - Status HTTP 200
+   - Campo `status` igual a `"healthy"`
+   - Campo `model_loaded` igual a `true`
+   - Tempo de resposta < 2000ms
+
+2. **Predição** (`POST /api/predict`)
+   - Status HTTP 200
+   - Campo `prediction` é `0` ou `1`
+   - Campo `probability` entre `0` e `1`
+   - Campo `confidence` entre `0` e `1`
+   - Campo `processing_time_ms` maior que `0`
+   - Tempo de resposta < 5000ms
+
+3. **Validação de erro - Campo obrigatório faltando** (`POST /api/predict` sem `gender`)
+   - Status HTTP 422
+   - Campo `detail` é um array não vazio
+   - Pelo menos um erro referencia o campo `gender`
+   - Cada item de erro possui `type`, `loc` e `msg`
+   - Tempo de resposta < 3000ms
+
+### Endpoint Testado
+
+- **Base URL**: `http://telco-api-env.eba-23kf5mjw.us-east-1.elasticbeanstalk.com/api`
+- **Health**: `GET /api/health`
+- **Predict**: `POST /api/predict`
+
+### Resultado da CI
+
+O resultado dos testes é salvo como artefato (`newman-aws-smoke-test`) e disponível no workflow.

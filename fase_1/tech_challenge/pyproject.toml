@@ -43,6 +43,8 @@ dependencies = [
     "imblearn",
     "pytest-cov>=7.1.0",
     "pytest-asyncio>=1.3.0",
+    "boto3>=1.43.2",
+    "sagemaker>=3.10.0",
 ]
 
 [project.optional-dependencies]
