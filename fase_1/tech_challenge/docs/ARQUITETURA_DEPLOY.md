@@ -15,6 +15,11 @@ O projeto possui dois ambientes de deploy funcionais:
 
 Endpoint público AWS: `http://telco-api-env.eba-23kf5mjw.us-east-1.elasticbeanstalk.com`
 
+**Endpoints principais:**
+- Health Check: `http://telco-api-env.eba-23kf5mjw.us-east-1.elasticbeanstalk.com/api/health`
+- Documentação Swagger: `http://telco-api-env.eba-23kf5mjw.us-east-1.elasticbeanstalk.com/api/docs`
+- Predição: `http://telco-api-env.eba-23kf5mjw.us-east-1.elasticbeanstalk.com/api/predict`
+
 ---
 
 ## 1. Deploy Local — Docker Compose
