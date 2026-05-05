@@ -45,3 +45,30 @@ jobs:
         working-directory: ./fase_1/tech_challenge
         run: |
           uv run  pytest --cov=src --cov-report=term-missing --cov-fail-under=80
+
+  smoke-test-aws:
+    name: AWS Endpoint Smoke Test (Newman)
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Newman
+        run: |
+          npm install -g newman
+
+      - name: Run AWS Smoke Test via Newman
+        working-directory: ./fase_1/tech_challenge
+        run: |
+          newman run tests/smoke_test/MLTelco_AWS.postman_collection \
+            --reporters cli,json \
+            --reporter-json-export /tmp/newman-results.json
+
+      - name: Upload Newman Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-aws-smoke-test
+          path: /tmp/newman-results.json

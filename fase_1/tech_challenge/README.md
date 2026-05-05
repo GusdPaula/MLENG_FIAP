@@ -76,7 +76,7 @@ Top 3 modelos por Net Benefit no notebook:
 | Docker | [docker-compose.yml](docker-compose.yml), [Dockerfile.api](Dockerfile.api), [Dockerfile.training](Dockerfile.training), [Dockerfile.mlflow](Dockerfile.mlflow) | Orquestração da API, treinamento, MLflow e PostgreSQL. |
 | Deploy AWS | [Dockerfile.beanstalk.api](Dockerfile.beanstalk.api), [scripts/build_eb_api_bundle.sh](scripts/build_eb_api_bundle.sh) | Deploy standalone no AWS Elastic Beanstalk com modelo empacotado. |
 | Documentação operacional | [docs/ARQUITETURA_DEPLOY.md](docs/ARQUITETURA_DEPLOY.md) | Arquitetura de deploy local (Compose) e em nuvem (Elastic Beanstalk). |
-| Vídeo STAR | A definir | Placeholder para o link do vídeo de apresentação no formato STAR. |
+| Vídeo STAR | [YouTube - Apresentação STAR](https://youtu.be/c48ILFGrYZ8?si=q0uGIaHcDSFWoE3W) | Apresentação em formato STAR da solução completa. |
 
 ## Arquitetura do Projeto
 
@@ -176,12 +176,6 @@ Serviços locais:
 - [MLflow](http://localhost:5000)
 - PostgreSQL: `localhost:5432`
 
-## Entrega Final
-
-| Item | Status | Link |
-| --- | --- | --- |
-| Vídeo STAR | Pendente | TODO: adicionar link do vídeo STAR |
-
 Atalhos úteis:
 
 ```bash
@@ -190,6 +184,51 @@ make docker-train
 make test-cov
 make mlflow-ui
 ```
+
+### Predição via AWS
+
+Utilize a estrutura e endpoints abaixo para execução de predições na AWS:
+
+```bash
+curl -X POST http://telco-api-env.eba-23kf5mjw.us-east-1.elasticbeanstalk.com/api/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "features": {
+      "gender": "Male",
+      "senior_citizen": "No",
+      "partner": "No",
+      "dependents": "No",
+      "tenure_months": 2,
+      "phone_service": "Yes",
+      "multiple_lines": "No",
+      "internet_service": "DSL",
+      "online_security": "No",
+      "online_backup": "No",
+      "device_protection": "No",
+      "tech_support": "No",
+      "streaming_tv": "No",
+      "streaming_movies": "No",
+      "contract": "Month-to-month",
+      "paperless_billing": "Yes",
+      "payment_method": "Mailed check",
+      "monthly_charges": 53.85,
+      "total_charges": 108.15
+    },
+    "return_probability": true
+  }'
+```
+
+**Resposta esperada:**
+
+```json
+{
+    "prediction": 1,
+    "probability": 0.6607840845778465,
+    "confidence": 0.6607840845778465,
+    "processing_time_ms": 13.441801071166992
+}
+```
+
 
 ## Documentação Complementar
 

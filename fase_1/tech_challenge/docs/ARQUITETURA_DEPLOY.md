@@ -47,11 +47,6 @@ flowchart LR
 | `api` | `Dockerfile.api` | 8000 | FastAPI de inferência |
 | `training` | `Dockerfile.training` | — | Job de treinamento on-demand |
 
-### Volume compartilhado de artefatos
-
-Os serviços `mlflow`, `api` e `training` montam `./mlartifacts:/mlartifacts`.
-Isso garante que os artefatos salvos pelo treinamento fiquem acessíveis para a API sem passagem por rede.
-
 ### Como executar
 
 ```bash
@@ -162,6 +157,19 @@ curl -X POST http://telco-api-env.eba-23kf5mjw.us-east-1.elasticbeanstalk.com/ap
     "return_probability": true
   }'
 ```
+
+**Resposta esperada:**
+
+```json
+{
+    "prediction": 1,
+    "probability": 0.6607840845778465,
+    "confidence": 0.6607840845778465,
+    "processing_time_ms": 13.441801071166992
+}
+```
+
+
 
 ---
 
