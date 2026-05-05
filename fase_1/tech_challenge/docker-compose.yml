@@ -55,8 +55,6 @@
         condition: service_healthy
     ports:
       - "8000:8000"
-    volumes:
-      - ./mlartifacts:/mlartifacts
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
     command: ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
@@ -72,8 +70,6 @@
     depends_on:
       mlflow:
         condition: service_healthy
-    volumes:
-      - ./mlartifacts:/mlartifacts
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
     networks:
