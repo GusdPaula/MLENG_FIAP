@@ -1,6 +1,7 @@
 name: Fase 1 CI
 
 on:
+  workflow_dispatch: {}
   push:
     paths:
       - 'fase_1/**'
