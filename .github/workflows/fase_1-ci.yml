@@ -1,12 +1,12 @@
-name: CI
+name: Fase 1 CI
 
 on:
   push:
-    branches:
-      - '**'
+    paths:
+      - 'fase_1/**'
   pull_request:
-    branches:
-      - '**'
+    paths:
+      - 'fase_1/**'
 
 jobs:
   test:
