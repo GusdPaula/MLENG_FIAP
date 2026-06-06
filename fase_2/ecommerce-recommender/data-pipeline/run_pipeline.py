@@ -1,15 +1,18 @@
 import argparse
+import logging
 import os
-import sys
-from pathlib import Path
-
-current_dir = Path(__file__).resolve().parent
-if str(current_dir) not in sys.path:
-    sys.path.insert(0, str(current_dir))
 
 from bigquery_uploader import BigQueryUploader
+from dotenv import find_dotenv, load_dotenv
 from kaggle_data_loader import KaggleDataLoader
 from pipeline import DataPipeline
+
+load_dotenv(find_dotenv())
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 
 def parse_args() -> argparse.Namespace:
@@ -23,18 +26,17 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--gcp-project",
-        default=os.getenv("GCP_PROJECT_ID"),
-        required=True,
+        default=os.getenv("GCP_PROJECT"),
         help="Google Cloud project id for BigQuery.",
     )
     parser.add_argument(
         "--gcp-dataset",
-        default=os.getenv("BIGQUERY_DATASET", "ecommerce_dataset"),
+        default=os.getenv("BIGQUERY_DATASET", os.getenv("GCP_DATASET", "ecommerce_dataset")),
         help="BigQuery dataset id where tables will be loaded.",
     )
     parser.add_argument(
         "--location",
-        default=os.getenv("BIGQUERY_LOCATION", "US"),
+        default=os.getenv("BIGQUERY_LOCATION", os.getenv("GCP_REGION", "US")),
         help="Google BigQuery dataset location.",
     )
     parser.add_argument(
@@ -63,9 +65,9 @@ def main() -> None:
 
     results = pipeline.run()
 
-    print("Uploaded tables:")
+    logger.info("Uploaded tables:")
     for name, destination in results.items():
-        print(f"- {name}: {destination}")
+        logger.info("- %s: %s", name, destination)
 
 
 if __name__ == "__main__":

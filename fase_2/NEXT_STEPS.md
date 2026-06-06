@@ -1,17 +1,20 @@
-# Next Steps
+# Próximos Passos
 
-1. Validate the code
-   - Run unit tests and linting
-   - Confirm the data pipeline scripts execute correctly
-2. Set keys for GCP and Kaggle
-   - Configure `GOOGLE_APPLICATION_CREDENTIALS`
-   - Set Kaggle credentials for `kagglehub`
-3. Add DVC to the pipeline
-   - Track raw and processed datasets
-   - Define DVC stages for preprocess, feature_eng, train, and evaluate
-4. Perform EDA
-   - Explore `events.csv`, `category_tree.csv`, and combined item properties
-   - Identify feature engineering opportunities
-5. Build and train the model
-   - Implement recommendation model training
-   - Log experiments to MLflow
+1. Validar o código
+   - Executar testes unitários e linting
+   - Confirmar que os scripts do pipeline de dados executam corretamente
+2. Configurar chaves para GCP e Kaggle
+   - Configurar `GOOGLE_APPLICATION_CREDENTIALS`
+   - Definir credenciais do Kaggle para `kagglehub`
+3. Adicionar DVC ao pipeline
+   - Rastrear datasets brutos e processados
+   - Definir estágios DVC para preprocessamento, feature_eng, treino e avaliação
+4. Realizar EDA
+   - Explorar `events.csv`, `category_tree.csv` e propriedades de item combinadas
+   - Identificar oportunidades de engenharia de features
+5. Construir e treinar o modelo
+   - Implementar o treinamento do modelo de recomendação
+   - Registrar experimentos no MLflow
+6. Revisar pre-commit e pipeline de CI
+   - Definir hooks de pre-commit para formatação e checagens estáticas
+   - Adicionar workflow de CI para executar testes e validar mudanças no pipeline

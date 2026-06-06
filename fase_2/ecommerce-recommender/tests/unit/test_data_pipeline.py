@@ -1,4 +1,5 @@
 import sys
+import types
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
@@ -15,6 +16,8 @@ def test_data_pipeline_runs_with_prefixed_tables(tmp_path):
     kaggle_module_path = Path(__file__).resolve().parents[2] / "data-pipeline" / "kaggle_data_loader.py"
     bigquery_module_path = Path(__file__).resolve().parents[2] / "data-pipeline" / "bigquery_uploader.py"
     pipeline_module_path = Path(__file__).resolve().parents[2] / "data-pipeline" / "pipeline.py"
+
+    sys.modules["kagglehub"] = types.SimpleNamespace(dataset_download=lambda dataset_name: str(tmp_path))
 
     load_module_from_path("kaggle_data_loader", kaggle_module_path)
     load_module_from_path("bigquery_uploader", bigquery_module_path)

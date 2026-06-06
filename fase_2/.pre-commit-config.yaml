@@ -7,19 +7,17 @@ repos:
       - id: check-yaml
       - id: check-added-large-files
 
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.0.284
-    hooks:
-      - id: ruff
-        args: ["check", "--config=fase_2/ruff.toml", "fase_2/ecommerce-recommender", "fase_2/ecommerce-recommender/tests"]
-        pass_filenames: false
-
   - repo: local
     hooks:
+      - id: ruff
+        name: phase2-ruff
+        entry: bash -lc 'cd fase_2 && poetry run python -m ruff check --config=ruff.toml ecommerce-recommender ecommerce-recommender/tests'
+        language: system
+        pass_filenames: false
+        always_run: true
       - id: pytest
-        name: pytest
+        name: phase2-pytest
         entry: bash -lc 'cd fase_2 && poetry run pytest ecommerce-recommender/tests/unit'
         language: system
         pass_filenames: false
         always_run: true
-        stages: [commit, push]

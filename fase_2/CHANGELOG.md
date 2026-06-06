@@ -1,12 +1,19 @@
-# Changelog
+# Registro de alterações
 
-All notable changes to this project will be documented in this file.
+Todas as alterações relevantes deste projeto serão documentadas neste arquivo.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+O formato é baseado em [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
-- Initialize Poetry project and add runtime/dev dependencies
-- Create local virtual environment `.venv`
-- Add `pyproject.toml` and `poetry.lock`
-- Add `data-pipeline` package with Kaggle download and BigQuery upload support
-- Add `run_pipeline.py` entrypoint and module README
+- Inicializar o projeto Poetry e adicionar dependências de runtime/dev
+- Criar ambiente virtual local `.venv`
+- Adicionar `pyproject.toml` e `poetry.lock`
+- Adicionar pacote `data-pipeline` com suporte a download do Kaggle e upload para BigQuery
+- Adicionar `run_pipeline.py` como ponto de entrada e README do módulo
+- Adicionar `bigquery_query.py` para extração de BigQuery e exportação/versionamento com DVC
+- Adicionar notebook `ecommerce-recommender/notebooks/data_pipeline_eda.ipynb` para análise exploratória
+- Atualizar `.gitignore` para permitir rastrear `poetry.lock` e ignorar arquivos `.env` locais
+- Adicionar `ecommerce-recommender/README.md` com visão geral do pacote e documentação do data-pipeline
+- Adicionar configuração dedicada `fase_2/.pre-commit-config.yaml` para executar `ruff` e `pytest` no contexto fase_2
+- Ajustar `fase_2/ruff.toml` para excluir notebooks e usar a configuração de lint correta
+- Corrigir `BigQueryQuery` para aceitar `dvc_repo_path` explícito e permitir versionamento local com DVC

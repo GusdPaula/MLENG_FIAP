@@ -7,8 +7,8 @@ on:
     branches: ['**']
 
 jobs:
-  test:
-    name: Run pytest and ruff
+  fase1_test:
+    name: Fase 1 Test Suite
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -18,7 +18,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 1. Install uv first
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
@@ -30,12 +29,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # 2. Sync dependencies using the pyproject.toml
       - name: Install Dependencies
         run: |
           uv sync --project fase_1/tech_challenge
 
-      # 3. Use 'uv run' to execute tools within the synced environment
       - name: Run ruff (Lint & PEP8)
         run: |
           uv run --project fase_1/tech_challenge ruff check .
@@ -44,12 +41,48 @@ jobs:
       - name: Run pytest
         working-directory: ./fase_1/tech_challenge
         run: |
-          uv run  pytest --cov=src --cov-report=term-missing --cov-fail-under=80
+          uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=80
+
+  data_pipeline_test:
+    name: Fase 2 Data Pipeline Lint/Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install poetry
+
+      - name: Install dependencies for fase_2
+        run: |
+          cd fase_2
+          poetry install --no-interaction --no-root
+
+      - name: Run ruff
+        run: |
+          cd fase_2
+          poetry run ruff check ecommerce-recommender ecommerce-recommender/tests --config ruff.toml
+
+      - name: Run pytest
+        run: |
+          cd fase_2
+          poetry run pytest ecommerce-recommender/tests/unit
 
   smoke-test-aws:
     name: AWS Endpoint Smoke Test (Newman)
     runs-on: ubuntu-latest
-    needs: test
+    needs: fase1_test
 
     steps:
       - name: Checkout repository

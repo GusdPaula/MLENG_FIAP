@@ -1,10 +1,3 @@
-import sys
-from pathlib import Path
-
-current_dir = Path(__file__).resolve().parent
-if str(current_dir) not in sys.path:
-    sys.path.insert(0, str(current_dir))
-
 from bigquery_uploader import BigQueryUploader
 from kaggle_data_loader import KaggleDataLoader
 
