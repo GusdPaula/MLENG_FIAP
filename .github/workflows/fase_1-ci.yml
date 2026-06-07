@@ -34,8 +34,8 @@ jobs:
 
       - name: Run ruff
         run: |
-          poetry run ruff check ecommerce-recommender tests
+          poetry run ruff check ecommerce_recommender tests
 
       - name: Run pytest
         run: |
-          poetry run pytest ecommerce-recommender/tests/unit
+          poetry run pytest ecommerce_recommender/tests/unit

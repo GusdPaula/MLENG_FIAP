@@ -39,7 +39,7 @@ jobs:
       - name: Run ruff
         run: |
           cd fase_2
-          poetry run python -m ruff check --config ruff.toml ecommerce-recommender ecommerce_recommender/tests
+          poetry run python -m ruff check --config ruff.toml ecommerce_recommender ecommerce_recommender/tests
 
       - name: Run pytest
         run: |
