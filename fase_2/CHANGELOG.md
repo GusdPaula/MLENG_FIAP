@@ -4,7 +4,7 @@ Todas as alterações relevantes deste projeto serão documentadas neste arquivo
 
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased version]
+## [Unreleased]
 - Inicializar o projeto Poetry e adicionar dependências de runtime/dev
 - Criar ambiente virtual local `.venv`
 - Adicionar `pyproject.toml` e `poetry.lock`
