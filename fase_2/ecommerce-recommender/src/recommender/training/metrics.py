@@ -24,7 +24,9 @@ def hit_rate_at_k(
 
     with torch.no_grad():
         for user_idx, true_items in users_items.items():
-            user_tensor = torch.full((num_items,), user_idx, dtype=torch.long).to(device)
+            user_tensor = torch.full((num_items,), user_idx, dtype=torch.long).to(
+                device
+            )
             item_tensor = torch.arange(num_items, dtype=torch.long).to(device)
 
             scores = model(user_tensor, item_tensor)
@@ -59,7 +61,9 @@ def ndcg_at_k(
 
     with torch.no_grad():
         for user_idx, true_items in users_items.items():
-            user_tensor = torch.full((num_items,), user_idx, dtype=torch.long).to(device)
+            user_tensor = torch.full((num_items,), user_idx, dtype=torch.long).to(
+                device
+            )
             item_tensor = torch.arange(num_items, dtype=torch.long).to(device)
 
             scores = model(user_tensor, item_tensor)
@@ -71,7 +75,9 @@ def ndcg_at_k(
                 if item_id in true_items:
                     dcg += 1.0 / np.log2(rank + 2)
 
-            ideal_dcg = sum(1.0 / np.log2(i + 2) for i in range(min(len(true_items), k)))
+            ideal_dcg = sum(
+                1.0 / np.log2(i + 2) for i in range(min(len(true_items), k))
+            )
             ndcg = dcg / ideal_dcg if ideal_dcg > 0 else 0.0
             ndcg_scores.append(ndcg)
 

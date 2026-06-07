@@ -31,7 +31,9 @@ def create_interaction_matrix(events: pd.DataFrame):
 class RecommenderDataset(Dataset):
     """Dataset para treino com negative sampling."""
 
-    def __init__(self, interactions: pd.DataFrame, num_items: int, num_negatives: int = 4):
+    def __init__(
+        self, interactions: pd.DataFrame, num_items: int, num_negatives: int = 4
+    ):
         self.interactions = interactions[["user_idx", "item_idx"]].values
         self.num_items = num_items
         self.num_negatives = num_negatives

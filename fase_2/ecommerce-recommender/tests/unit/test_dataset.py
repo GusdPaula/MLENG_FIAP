@@ -1,17 +1,23 @@
 import pandas as pd
 import numpy as np
-from recommender.data.dataset import load_events, create_interaction_matrix, RecommenderDataset
+from recommender.data.dataset import (
+    load_events,
+    create_interaction_matrix,
+    RecommenderDataset,
+)
 
 
 def test_load_events_adds_weight(tmp_path):
     csv_path = tmp_path / "events.csv"
-    df = pd.DataFrame({
-        "timestamp": [1, 2, 3],
-        "visitorid": [1, 1, 2],
-        "event": ["view", "addtocart", "transaction"],
-        "itemid": [10, 20, 10],
-        "transactionid": [None, None, 100],
-    })
+    df = pd.DataFrame(
+        {
+            "timestamp": [1, 2, 3],
+            "visitorid": [1, 1, 2],
+            "event": ["view", "addtocart", "transaction"],
+            "itemid": [10, 20, 10],
+            "transactionid": [None, None, 100],
+        }
+    )
     df.to_csv(csv_path, index=False)
 
     result = load_events(str(csv_path))
@@ -21,11 +27,13 @@ def test_load_events_adds_weight(tmp_path):
 
 
 def test_create_interaction_matrix():
-    events = pd.DataFrame({
-        "visitorid": [1, 1, 2, 3],
-        "itemid": [10, 20, 10, 30],
-        "event": ["view", "view", "addtocart", "transaction"],
-    })
+    events = pd.DataFrame(
+        {
+            "visitorid": [1, 1, 2, 3],
+            "itemid": [10, 20, 10, 30],
+            "event": ["view", "view", "addtocart", "transaction"],
+        }
+    )
 
     result, user2idx, item2idx = create_interaction_matrix(events)
 
@@ -36,11 +44,13 @@ def test_create_interaction_matrix():
 
 
 def test_recommender_dataset_size():
-    events = pd.DataFrame({
-        "visitorid": [1, 1, 2],
-        "itemid": [10, 20, 10],
-        "event": ["view", "view", "view"],
-    })
+    events = pd.DataFrame(
+        {
+            "visitorid": [1, 1, 2],
+            "itemid": [10, 20, 10],
+            "event": ["view", "view", "view"],
+        }
+    )
     events["user_idx"] = [0, 0, 1]
     events["item_idx"] = [0, 1, 0]
 
@@ -53,11 +63,13 @@ def test_recommender_dataset_size():
 
 
 def test_recommender_dataset_item_returns_correct_types():
-    events = pd.DataFrame({
-        "visitorid": [1, 2],
-        "itemid": [10, 20],
-        "event": ["view", "view"],
-    })
+    events = pd.DataFrame(
+        {
+            "visitorid": [1, 2],
+            "itemid": [10, 20],
+            "event": ["view", "view"],
+        }
+    )
     events["user_idx"] = [0, 1]
     events["item_idx"] = [0, 1]
 

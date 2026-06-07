@@ -3,7 +3,11 @@ import torch
 import numpy as np
 from torch.utils.data import DataLoader, random_split
 
-from recommender.data.dataset import load_events, create_interaction_matrix, RecommenderDataset
+from recommender.data.dataset import (
+    load_events,
+    create_interaction_matrix,
+    RecommenderDataset,
+)
 from recommender.models.ncf import NCFModel
 from recommender.training.trainer import Trainer
 from recommender.training.metrics import hit_rate_at_k, ndcg_at_k
@@ -39,7 +43,9 @@ def run_training_pipeline(config_path: str = "configs/model.yaml"):
 
     # 4. Dataset com negative sampling
     print("Gerando dataset com negative sampling...")
-    dataset = RecommenderDataset(events, num_items, num_negatives=config["num_negatives"])
+    dataset = RecommenderDataset(
+        events, num_items, num_negatives=config["num_negatives"]
+    )
     print(f"  Total de samples (positivos + negativos): {len(dataset)}")
 
     # 5. Split treino/validação
@@ -51,7 +57,9 @@ def run_training_pipeline(config_path: str = "configs/model.yaml"):
         generator=torch.Generator().manual_seed(config["seed"]),
     )
 
-    train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True)
+    train_loader = DataLoader(
+        train_dataset, batch_size=config["batch_size"], shuffle=True
+    )
     val_loader = DataLoader(val_dataset, batch_size=config["batch_size"])
 
     # 6. Modelo
@@ -86,7 +94,9 @@ def run_training_pipeline(config_path: str = "configs/model.yaml"):
     print("-" * 60)
     print("Calculando métricas de ranking...")
     val_indices = val_dataset.indices
-    val_samples = np.array([dataset.samples[i] for i in val_indices[:min(10000, len(val_indices))]])
+    val_samples = np.array(
+        [dataset.samples[i] for i in val_indices[: min(10000, len(val_indices))]]
+    )
     positive_only = val_samples[val_samples[:, 2] == 1.0][:, :2].astype(np.int64)
 
     hr = hit_rate_at_k(model, positive_only[:1000], num_items, k=10, device=device)
