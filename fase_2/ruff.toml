@@ -2,4 +2,4 @@ line-length = 88
 target-version = "py312"
 select = ["E", "F", "I", "N", "T", "B", "C"]
 ignore = ["E501", "N999"]
-exclude = ["ecommerce-recommender/notebooks"]
+exclude = ["ecommerce_recommender/notebooks"]

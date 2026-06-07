@@ -1,6 +1,6 @@
 # Data Pipeline
 
-Este módulo `data-pipeline` contém a lógica para baixar dados de e-commerce do Kaggle e carregá-los no Google BigQuery.
+Este módulo `data_pipeline` contém a lógica para baixar dados de e-commerce do Kaggle e carregá-los no Google BigQuery.
 
 ## Módulos
 
@@ -27,7 +27,7 @@ Este módulo `data-pipeline` contém a lógica para baixar dados de e-commerce d
 
 ## Uso
 
-A partir do diretório `ecommerce-recommender/data-pipeline`, execute:
+A partir do diretório `ecommerce_recommender/data_pipeline`, execute:
 
 ```bash
 python run_pipeline.py \

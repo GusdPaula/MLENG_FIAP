@@ -1,5 +1,5 @@
 [project]
-name = "ecommerce-recommender"
+name = "ecommerce_recommender"
 version = "0.1.0"
 description = "E-commerce recommender system using PyTorch, MLflow, and DVC"
 authors = [

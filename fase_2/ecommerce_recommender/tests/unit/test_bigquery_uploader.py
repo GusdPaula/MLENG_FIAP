@@ -71,7 +71,7 @@ def test_bigquery_uploader_upload_csv(tmp_path):
     sys.modules["google.cloud"] = cloud_module
     sys.modules["google.cloud.bigquery"] = bigquery_module
 
-    module_path = Path(__file__).resolve().parents[2] / "data-pipeline" / "bigquery_uploader.py"
+    module_path = Path(__file__).resolve().parents[2] / "data_pipeline" / "bigquery_uploader.py"
     uploader_module = load_module_from_path("bigquery_uploader", module_path)
 
     source_file = tmp_path / "events.csv"
@@ -108,7 +108,7 @@ def test_bigquery_uploader_missing_file(tmp_path):
     sys.modules["google.cloud"] = cloud_module
     sys.modules["google.cloud.bigquery"] = bigquery_module
 
-    module_path = Path(__file__).resolve().parents[2] / "data-pipeline" / "bigquery_uploader.py"
+    module_path = Path(__file__).resolve().parents[2] / "data_pipeline" / "bigquery_uploader.py"
     uploader_module = load_module_from_path("bigquery_uploader_missing", module_path)
 
     uploader = uploader_module.BigQueryUploader(project_id="test-project", dataset_id="test_dataset")

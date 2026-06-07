@@ -1,8 +1,12 @@
 import csv
+import logging
 import subprocess
 from pathlib import Path
 
 from google.cloud import bigquery
+from tqdm import tqdm
+
+logger = logging.getLogger(__name__)
 
 
 def _find_dvc_root(start_path: Path) -> Path | None:
@@ -33,9 +37,9 @@ class BigQueryQuery:
         """
         self.project_id = project_id
         self.dataset_id = dataset_id
-        self.output_dir = Path(output_dir)
+        self.output_dir = Path(output_dir).resolve()
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.dvc_repo_path = Path(dvc_repo_path) if dvc_repo_path else Path.cwd()
+        self.dvc_repo_path = Path(dvc_repo_path).resolve() if dvc_repo_path else Path.cwd().resolve()
         self.dvc_repo_root = (
             self.dvc_repo_path
             if dvc_repo_path is not None
@@ -43,15 +47,27 @@ class BigQueryQuery:
         )
         self.client = bigquery.Client(project=self.project_id)
 
-    def extract_table(self, table_name: str, destination_name: str | None = None) -> Path:
+    def extract_table(
+        self,
+        table_name: str,
+        destination_name: str | None = None,
+        force: bool = False,
+    ) -> Path:
         """Extract an entire BigQuery table to a local CSV file and version it with DVC."""
         destination_name = destination_name or f"{table_name}.csv"
         query = f"SELECT * FROM `{self.project_id}.{self.dataset_id}.{table_name}`"
-        return self.extract_query(query, destination_name)
+        return self.extract_query(query, destination_name, force=force)
 
-    def extract_query(self, query: str, destination_name: str) -> Path:
+    def extract_query(self, query: str, destination_name: str, force: bool = False) -> Path:
         """Run an arbitrary SQL query, write the results to CSV, and version the output."""
         destination_path = self.output_dir / destination_name
+        if destination_path.exists() and not force:
+            logger.info(
+                f"Skipping BigQuery export for '{destination_name}' because the file already exists. "
+                "Pass force=True to overwrite and create a new DVC version."
+            )
+            return destination_path
+
         self._write_query_results_to_csv(query, destination_path)
         self._version_with_dvc(destination_path)
         return destination_path
@@ -61,11 +77,29 @@ class BigQueryQuery:
         result = query_job.result()
 
         headers = [field.name for field in result.schema]
+        row_count = int(result.total_rows) if result.total_rows is not None else None
+        column_count = len(headers)
+
+        logger.info(
+            f"Downloading BigQuery result: {row_count if row_count is not None else 'unknown'} rows x {column_count} columns"
+        )
+
         with destination_path.open("w", newline="", encoding="utf-8") as output_file:
             writer = csv.writer(output_file)
             writer.writerow(headers)
-            for row in result:
+            progress_bar = tqdm(
+                result,
+                total=row_count,
+                unit="row",
+                desc=f"Exporting {destination_path.name}",
+                dynamic_ncols=True,
+            )
+            for row in progress_bar:
                 writer.writerow([row[field] for field in headers])
+
+        logger.info(
+            f"Finished writing {destination_path.name}: {progress_bar.n} rows x {column_count} columns"
+        )
 
     def _version_with_dvc(self, destination_path: Path) -> None:
         if self.dvc_repo_root is None:
@@ -75,9 +109,24 @@ class BigQueryQuery:
                 "Initialize DVC with `dvc init` in your repository root or pass a valid `dvc_repo_path`."
             )
 
+        destination_path = destination_path.resolve()
+        if not destination_path.exists():
+            raise RuntimeError(
+                f"DVC cannot add '{destination_path}' because it does not exist. "
+                "Ensure the query output was written successfully before versioning."
+            )
+
+        try:
+            relative_destination = destination_path.relative_to(self.dvc_repo_root)
+        except ValueError as exc:
+            raise RuntimeError(
+                f"DVC output path '{destination_path}' is outside the DVC repository root '{self.dvc_repo_root}'. "
+                "Use an output directory inside the DVC repo or pass a correct dvc_repo_path."
+            ) from exc
+
         try:
             completed = subprocess.run(
-                ["dvc", "add", str(destination_path)],
+                ["dvc", "add", str(relative_destination)],
                 cwd=str(self.dvc_repo_root),
                 capture_output=True,
                 text=True,

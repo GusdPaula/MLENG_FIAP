@@ -1,4 +1,4 @@
-# ecommerce-recommender
+# ecommerce_recommender
 
 Estrutura base para o Tech Challenge Fase 02 (Etapa 1: Clean Code e Estrutura).
 
@@ -47,7 +47,7 @@ Estrutura base para o Tech Challenge Fase 02 (Etapa 1: Clean Code e Estrutura).
 
 ## Data Pipeline Module
 
-O diretório `data-pipeline/` contém a implementação de ingestão e exportação de dados:
+O diretório `data_pipeline/` contém a implementação de ingestão e exportação de dados:
 
 - `kaggle_data_loader.py`: baixa e prepara os dados do Kaggle.
 - `bigquery_uploader.py`: carrega CSVs para BigQuery.
