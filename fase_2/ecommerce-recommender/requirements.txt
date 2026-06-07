@@ -1,0 +1,7 @@
+torch>=2.0
+pandas
+numpy
+scikit-learn
+pyyaml
+kaggle
+pytest
