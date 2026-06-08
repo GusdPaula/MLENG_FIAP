@@ -1,5 +1,5 @@
 app:
-  name: ecommerce-recommender
+  name: ecommerce_recommender
   environment: dev
 
 paths:

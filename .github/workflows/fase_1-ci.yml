@@ -1,0 +1,41 @@
+name: Fase 1 CI
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - 'fase_1/**'
+  pull_request:
+    paths:
+      - 'fase_1/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install poetry
+
+      - name: Install dependencies
+        run: |
+          poetry config virtualenvs.in-project true
+          poetry install --no-interaction
+
+      - name: Run ruff
+        run: |
+          poetry run ruff check ecommerce_recommender tests
+
+      - name: Run pytest
+        run: |
+          poetry run pytest ecommerce_recommender/tests/unit

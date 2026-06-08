@@ -1,0 +1,5 @@
+outs:
+- md5: 57dbbd3197061b8f9e7fd1624d166993
+  size: 16124
+  hash: md5
+  path: category_tree.csv
