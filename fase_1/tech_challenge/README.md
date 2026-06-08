@@ -1,4 +1,4 @@
-# Tech Challenge - Telco Churn Prediction
+# Tech Challenge | Telco Churn Prediction
 
 Este projeto implementa uma solução de Machine Learning Engineering para prever churn de clientes de telecomunicações.
 
