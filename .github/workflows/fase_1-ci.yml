@@ -36,9 +36,10 @@ jobs:
           uv sync --project fase_1/tech_challenge
 
       - name: Run ruff (Lint & PEP8)
+        working-directory: ./fase_1/tech_challenge
         run: |
-          uv run --project fase_1/tech_challenge ruff check .
-          uv run --project fase_1/tech_challenge ruff format --check .
+          uv run ruff check .
+          uv run ruff format --check .
 
       - name: Run pytest
         working-directory: ./fase_1/tech_challenge
