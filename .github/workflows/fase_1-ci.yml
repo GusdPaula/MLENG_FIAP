@@ -13,6 +13,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: fase_1/tech_challenge
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
