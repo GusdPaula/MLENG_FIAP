@@ -1,7 +1,6 @@
 name: Fase 1 CI
 
 on:
-  workflow_dispatch: {}
   push:
     paths:
       - 'fase_1/**'
@@ -10,36 +9,39 @@ on:
       - 'fase_1/**'
 
 jobs:
-  test:
+  fase1_test:
+    name: Fase 1 Test Suite
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: fase_1/tech_challenge
+    strategy:
+      matrix:
+        python-version: ["3.12"]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python-version }}
 
-      - name: Install Poetry
+      - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install poetry
+          uv sync --project fase_1/tech_challenge
 
-      - name: Install dependencies
+      - name: Run ruff (Lint & PEP8)
+        working-directory: ./fase_1/tech_challenge
         run: |
-          poetry config virtualenvs.in-project true
-          poetry install --no-interaction
-
-      - name: Run ruff
-        run: |
-          poetry run ruff check ecommerce_recommender tests
+          uv run ruff check .
+          uv run ruff format --check .
 
       - name: Run pytest
+        working-directory: ./fase_1/tech_challenge
         run: |
-          poetry run pytest ecommerce_recommender/tests/unit
+          uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=80
