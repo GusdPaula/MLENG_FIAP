@@ -1,4 +1,4 @@
-# Próximos Passos
+# Próximos Passos...
 
 1. ~~Validar o código~~
    - ~~Executar testes unitários e linting~~
