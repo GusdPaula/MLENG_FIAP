@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Poetry
+.python-version
+poetry.lock
+*.lock
+
+# DVC
+.dvc/
+.cache/
+
+# Environment
+.env
+
+# MLflow
+mlruns/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+
+# Logs and temp
+*.log
+*.tmp
+*.temp
+
+# Data
+data/raw/
+data/interim/
+
+# Models and artifacts
+models/
+reports/

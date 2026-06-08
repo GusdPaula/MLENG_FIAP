@@ -1,0 +1,9 @@
+app:
+  name: ecommerce_recommender
+  environment: dev
+
+paths:
+  raw_data: data/raw
+  interim_data: data/interim
+  processed_data: data/processed
+  model_artifacts: models

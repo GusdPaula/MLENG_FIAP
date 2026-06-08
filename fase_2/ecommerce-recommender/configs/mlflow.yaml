@@ -1,3 +1,0 @@
-mlflow:
-  tracking_uri: http://localhost:5000
-  experiment_name: ecommerce-recommender-dev
