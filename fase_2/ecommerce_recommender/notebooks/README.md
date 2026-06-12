@@ -17,3 +17,14 @@ O dataset de árvore de categorias apresenta uma estrutura que requer maior comp
 
 ## Conclusão
 Para avançar na análise e modelagem, é recomendável buscar documentação adicional sobre o significado das propriedades dos itens e a estrutura da árvore de categorias. Caso contrário, o foco principal do modelo de recomendação deverá residir nos dados de interação contidos no dataset de eventos.
+
+## Experimentos de Modelos
+
+O notebook `model_experiments_mlflow.ipynb` executa os modelos de recomendação com diferentes estratégias de processamento de dados, registrando:
+
+- parâmetros
+- métricas
+- datasets processados
+- artefatos dos modelos
+
+Ele também salva cada dataframe processado em arquivos compatíveis com DVC, para que os dados usados em cada experimento possam ser versionados separadamente.

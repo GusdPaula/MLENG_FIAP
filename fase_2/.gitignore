@@ -40,7 +40,10 @@ Thumbs.db
 # Data
 data/raw/
 data/interim/
+ecommerce_recommender/data/processed/mlflow_experiments/
 
 # Models and artifacts
-models/
 reports/
+ecommerce_recommender/models/
+ecommerce_recommender/mlflow.db
+ecommerce_recommender/notebooks/mlflow.db
