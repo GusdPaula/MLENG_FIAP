@@ -1,11 +1,21 @@
 model:
-  type: mlp
+  type: ncf  # one of: ncf, gmf, matrix_factorization
   seed: 42
   batch_size: 256
   learning_rate: 0.001
   epochs: 10
-  embedding_dim: 64
-  hidden_layers: [128, 64, 32]
-  dropout: 0.2
   num_negatives: 4
   min_interactions: 5
+  raw_events_path: data/raw/events.csv
+  artifact_dir: models
+
+  # Data-processing strategy (Strategy pattern).
+  # one of: weighted, binary, implicit
+  processor: weighted
+  processor_kwargs: {}
+
+  # Model-specific hyperparameters (forwarded to the model factory).
+  hyperparams:
+    embedding_dim: 64
+    hidden_layers: [128, 64, 32]
+    dropout: 0.2

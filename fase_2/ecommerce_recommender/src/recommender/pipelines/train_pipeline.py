@@ -1,103 +1,138 @@
+"""End-to-end training pipeline.
+
+The pipeline is fully driven by configuration. Two design patterns
+make the rest of the system pluggable:
+
+* **Model Factory** - :class:`recommender.models.ModelFactory` produces
+  the recommender model from a string identifier (``model.type`` in
+  the YAML). Adding a new model is a one-line registration.
+* **Strategy** - :class:`recommender.data.DataProcessorContext` selects
+  a data-processing strategy (``model.processor`` in the YAML). The
+  pipeline only calls ``context.process(...)`` and is unaware of the
+  concrete processor.
+"""
+from __future__ import annotations
+
 import logging
+from pathlib import Path
 
 import numpy as np
 import torch
 import yaml
 from torch.utils.data import DataLoader, random_split
 
-from recommender.data.dataset import (
+from ..data import (
+    DataProcessorContext,
     RecommenderDataset,
-    create_interaction_matrix,
     load_events,
 )
-from recommender.models.ncf import NCFModel
-from recommender.training.metrics import hit_rate_at_k, ndcg_at_k
-from recommender.training.trainer import Trainer
+from ..models import ModelFactory
+from ..training import Trainer, hit_rate_at_k, ndcg_at_k
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
 
 
-def run_training_pipeline(config_path: str = "configs/model.yaml"):
+def _build_model_hyperparams(config: dict) -> dict:
+    """Pick the model-specific hyperparameters from the config.
+
+    Each model has its own knobs. We forward the union of the well-known
+    ones and let the constructor ignore what it doesn't need. New
+    model-specific params can be added under ``model.hyperparams.<name>``.
+    """
+    hyper = config.get("hyperparams", {}) or {}
+    candidate_keys = (
+        "embedding_dim",
+        "hidden_layers",
+        "dropout",
+        "projection_dim",
+        "global_bias",
+    )
+    return {k: v for k, v in hyper.items() if k in candidate_keys}
+
+
+def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
+    """Train a recommender model end-to-end using the config file."""
     with open(config_path) as f:
-        config = yaml.safe_load(f)["model"]
+        cfg = yaml.safe_load(f)["model"]
 
-    torch.manual_seed(config["seed"])
-    np.random.seed(config["seed"])
+    torch.manual_seed(cfg["seed"])
+    np.random.seed(cfg["seed"])
 
-    # 1. Carregar dados
-    logger.info("Carregando eventos...")
-    events = load_events("data/raw/events.csv")
-    logger.info(f"  Total de eventos: {len(events)}")
+    # --- 1. Data: load raw events -------------------------------------
+    raw_path = cfg.get("raw_events_path", "data/raw/events.csv")
+    logger.info("Carregando eventos de %s ...", raw_path)
+    events = load_events(raw_path)
+    logger.info("  Total de eventos: %d", len(events))
 
-    # 2. Filtrar cold-start
-    min_interactions = config["min_interactions"]
-    user_counts = events["visitorid"].value_counts()
-    item_counts = events["itemid"].value_counts()
-    events = events[
-        events["visitorid"].isin(user_counts[user_counts >= min_interactions].index)
-        & events["itemid"].isin(item_counts[item_counts >= min_interactions].index)
-    ]
-    logger.info(
-        f"  Após filtro cold-start (min {min_interactions}): {len(events)} eventos")
+    # --- 2. Data: pick a processing strategy --------------------------
+    processor_cfg = cfg.get("processor", "weighted")
+    processor_kwargs = cfg.get("processor_kwargs", {}) or {}
+    processor = DataProcessorContext(processor_cfg, **processor_kwargs)
+    logger.info("Data processor: %s", processor.strategy_name)
 
-    # 3. Criar mapeamentos
-    events, user2idx, item2idx = create_interaction_matrix(events)
+    interactions, user2idx, item2idx = processor.process(
+        events, min_interactions=cfg.get("min_interactions", 1)
+    )
     num_users = len(user2idx)
     num_items = len(item2idx)
-    logger.info(f"  Users: {num_users}, Items: {num_items}")
+    logger.info("  Users: %d, Items: %d", num_users, num_items)
 
-    # 4. Dataset com negative sampling
+    # --- 3. Dataset with negative sampling ----------------------------
     logger.info("Gerando dataset com negative sampling...")
     dataset = RecommenderDataset(
-        events, num_items, num_negatives=config["num_negatives"]
+        interactions, num_items, num_negatives=cfg["num_negatives"]
     )
-    logger.info(f"  Total de samples (positivos + negativos): {len(dataset)}")
+    logger.info("  Total de samples: %d", len(dataset))
 
-    # 5. Split treino/validação
+    # --- 4. Train/val split ------------------------------------------
     train_size = int(0.8 * len(dataset))
     val_size = len(dataset) - train_size
     train_dataset, val_dataset = random_split(
         dataset,
         [train_size, val_size],
-        generator=torch.Generator().manual_seed(config["seed"]),
+        generator=torch.Generator().manual_seed(cfg["seed"]),
     )
 
     train_loader = DataLoader(
-        train_dataset, batch_size=config["batch_size"], shuffle=True
+        train_dataset, batch_size=cfg["batch_size"], shuffle=True
     )
-    val_loader = DataLoader(val_dataset, batch_size=config["batch_size"])
+    val_loader = DataLoader(val_dataset, batch_size=cfg["batch_size"])
 
-    # 6. Modelo
+    # --- 5. Model: use the factory -----------------------------------
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    logger.info(f"Device: {device}")
+    logger.info("Device: %s", device)
 
-    model = NCFModel(
+    model_type = cfg.get("type", "ncf")
+    hyperparams = _build_model_hyperparams(cfg)
+    model = ModelFactory.create(
+        model_type,
         num_users=num_users,
         num_items=num_items,
-        embedding_dim=config["embedding_dim"],
-        hidden_layers=config["hidden_layers"],
-        dropout=config["dropout"],
+        **hyperparams,
     )
+    logger.info("Model: %s (%s)", model_type, model.model_name)
 
-    # 7. Treinar
-    trainer = Trainer(model, config, device=device)
+    # --- 6. Training loop --------------------------------------------
+    trainer = Trainer(model, cfg, device=device)
 
-    logger.info(f"\nIniciando treino ({config['epochs']} epochs)...")
+    logger.info("\nIniciando treino (%d epochs)...", cfg["epochs"])
     logger.info("-" * 60)
 
-    for epoch in range(config["epochs"]):
+    for epoch in range(cfg["epochs"]):
         train_loss = trainer.train_epoch(train_loader)
         metrics = trainer.evaluate(val_loader)
         logger.info(
-            f"Epoch {epoch + 1:02d}/{config['epochs']} | "
-            f"Loss: {train_loss:.4f} | "
-            f"AUC: {metrics['auc_roc']:.4f} | "
-            f"AP: {metrics['avg_precision']:.4f}"
+            "Epoch %02d/%d | Loss: %.4f | AUC: %.4f | AP: %.4f",
+            epoch + 1,
+            cfg["epochs"],
+            train_loss,
+            metrics["auc_roc"],
+            metrics["avg_precision"],
         )
 
-    # 8. Métricas de ranking no validation set
+    # --- 7. Ranking metrics on the validation set ---------------------
     logger.info("-" * 60)
     logger.info("Calculando métricas de ranking...")
     val_indices = val_dataset.indices
@@ -108,16 +143,21 @@ def run_training_pipeline(config_path: str = "configs/model.yaml"):
 
     hr = hit_rate_at_k(model, positive_only[:1000], num_items, k=10, device=device)
     ndcg = ndcg_at_k(model, positive_only[:1000], num_items, k=10, device=device)
-    logger.info(f"  Hit Rate@10: {hr:.4f}")
-    logger.info(f"  NDCG@10: {ndcg:.4f}")
+    logger.info("  Hit Rate@10: %.4f", hr)
+    logger.info("  NDCG@10:     %.4f", ndcg)
 
-    # 9. Salvar modelo
+    # --- 8. Persist model --------------------------------------------
+    artifact_dir = Path(cfg.get("artifact_dir", "models"))
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    artifact_path = artifact_dir / f"{model.model_name}_model.pt"
+
     torch.save(
         {
+            "model_type": model_type,
             "model_state_dict": model.state_dict(),
             "user2idx": user2idx,
             "item2idx": item2idx,
-            "config": config,
+            "config": cfg,
             "metrics": {
                 "auc_roc": metrics["auc_roc"],
                 "avg_precision": metrics["avg_precision"],
@@ -125,9 +165,9 @@ def run_training_pipeline(config_path: str = "configs/model.yaml"):
                 "ndcg_at_10": ndcg,
             },
         },
-        "models/ncf_model.pt",
+        artifact_path,
     )
-    logger.info("\nModelo salvo em models/ncf_model.pt")
+    logger.info("\nModelo salvo em %s", artifact_path)
 
 
 if __name__ == "__main__":

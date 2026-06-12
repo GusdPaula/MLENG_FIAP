@@ -18,7 +18,9 @@ dependencies = [
     "tqdm (>=4.67.3,<5.0.0)",
     "google-cloud-bigquery (>=3.41.0,<4.0.0)",
     "kagglehub (>=1.0.1,<2.0.0)",
-    "seaborn (>=0.13.2,<0.14.0)"
+    "seaborn (>=0.13.2,<0.14.0)",
+    "ipywidgets (>=8.1.8,<9.0.0)",
+    "jupyterlab-widgets (>=3.0.16,<4.0.0)"
 ]
 
 

@@ -5,3 +5,4 @@ scikit-learn
 pyyaml
 kaggle
 pytest
+mlflow

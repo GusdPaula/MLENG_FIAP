@@ -1,0 +1,15 @@
+model:
+  type: matrix_factorization
+  seed: 42
+  batch_size: 256
+  learning_rate: 0.001
+  epochs: 10
+  num_negatives: 4
+  min_interactions: 5
+  raw_events_path: data/raw/events.csv
+  artifact_dir: models
+  processor: weighted
+  processor_kwargs: {}
+  hyperparams:
+    embedding_dim: 64
+    global_bias: 0.0
