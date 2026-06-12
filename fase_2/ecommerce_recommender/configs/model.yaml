@@ -4,6 +4,7 @@ model:
   batch_size: 256
   learning_rate: 0.001
   epochs: 10
+  show_progress: true
   num_negatives: 4
   min_interactions: 5
   raw_events_path: data/raw/events.csv

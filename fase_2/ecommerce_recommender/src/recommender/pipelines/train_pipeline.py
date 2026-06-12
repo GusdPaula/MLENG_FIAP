@@ -14,6 +14,7 @@ make the rest of the system pluggable:
 from __future__ import annotations
 
 import logging
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -32,6 +33,14 @@ from ..training import Trainer, hit_rate_at_k, ndcg_at_k
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
+
+
+def _resolve_device() -> str:
+    """Pick CUDA when usable, otherwise fall back to CPU quietly."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        cuda_available = torch.cuda.is_available()
+    return "cuda" if cuda_available else "cpu"
 
 
 def _build_model_hyperparams(config: dict) -> dict:
@@ -101,7 +110,7 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
     val_loader = DataLoader(val_dataset, batch_size=cfg["batch_size"])
 
     # --- 5. Model: use the factory -----------------------------------
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = _resolve_device()
     logger.info("Device: %s", device)
 
     model_type = cfg.get("type", "ncf")
@@ -121,7 +130,11 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
     logger.info("-" * 60)
 
     for epoch in range(cfg["epochs"]):
-        train_loss = trainer.train_epoch(train_loader)
+        train_loss = trainer.train_epoch(
+            train_loader,
+            show_progress=cfg.get("show_progress", True),
+            description=f"Epoch {epoch + 1}/{cfg['epochs']}",
+        )
         metrics = trainer.evaluate(val_loader)
         logger.info(
             "Epoch %02d/%d | Loss: %.4f | AUC: %.4f | AP: %.4f",

@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from sklearn.metrics import average_precision_score, roc_auc_score
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 
 class Trainer:
@@ -15,11 +16,17 @@ class Trainer:
             model.parameters(), lr=config["learning_rate"]
         )
 
-    def train_epoch(self, dataloader: DataLoader) -> float:
+    def train_epoch(
+        self,
+        dataloader: DataLoader,
+        show_progress: bool = False,
+        description: str = "Training",
+    ) -> float:
         self.model.train()
         total_loss = 0.0
 
-        for users, items, labels in dataloader:
+        batches = tqdm(dataloader, desc=description, leave=False) if show_progress else dataloader
+        for users, items, labels in batches:
             users = users.to(self.device)
             items = items.to(self.device)
             labels = labels.to(self.device)
@@ -30,7 +37,10 @@ class Trainer:
             loss.backward()
             self.optimizer.step()
 
-            total_loss += loss.item() * len(users)
+            batch_loss = loss.item()
+            total_loss += batch_loss * len(users)
+            if show_progress:
+                batches.set_postfix(loss=f"{batch_loss:.4f}")
 
         return total_loss / len(dataloader.dataset)
 
