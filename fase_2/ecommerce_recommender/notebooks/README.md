@@ -28,3 +28,13 @@ O notebook `model_experiments_mlflow.ipynb` executa os modelos de recomendação
 - artefatos dos modelos
 
 Ele também salva cada dataframe processado em arquivos compatíveis com DVC, para que os dados usados em cada experimento possam ser versionados separadamente.
+
+Durante a execução, o notebook mostra o progresso por etapa:
+
+- preparação de cada dataset processado
+- comando `dvc add` para cada processor
+- número do run atual na matriz de experimentos
+- device usado no treino
+- progresso por epoch
+- métricas de treino e validação a cada epoch
+- caminho do artefato final do modelo

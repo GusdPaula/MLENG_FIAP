@@ -42,6 +42,9 @@ data/raw/
 data/interim/
 ecommerce_recommender/data/processed/mlflow_experiments/
 
+# FIXED: Un-ignore .dvc files in the experiments folder so Git can track them
+!ecommerce_recommender/data/processed/mlflow_experiments/*.dvc
+
 # Models and artifacts
 reports/
 ecommerce_recommender/models/
