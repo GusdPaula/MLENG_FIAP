@@ -1,3 +1,5 @@
+"""Ranking metrics for recommender systems evaluation."""
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -10,9 +12,20 @@ def hit_rate_at_k(
     k: int = 10,
     device: str = "cpu",
 ) -> float:
-    """
-    Para cada user no teste, gera top-K recomendações
-    e verifica se o item real está nessa lista.
+    """Calculate Hit Rate@K for the model.
+
+    For each user in the test set, generates top-K recommendations
+    and checks if the actual item is in that list.
+
+    Args:
+        model: Trained recommender model.
+        test_interactions: Array of (user, item) pairs for testing.
+        num_items: Total number of items in the catalog.
+        k: Number of top items to consider. Defaults to 10.
+        device: Device to run computations on. Defaults to "cpu".
+
+    Returns:
+        Hit rate at K (proportion of users where the true item is in top-K).
     """
     model.eval()
     hits = 0
@@ -48,9 +61,20 @@ def ndcg_at_k(
     k: int = 10,
     device: str = "cpu",
 ) -> float:
-    """
-    Normalized Discounted Cumulative Gain at K.
-    Mede não só se o item está no top-K, mas em qual posição.
+    """Calculate Normalized Discounted Cumulative Gain at K (NDCG@K).
+
+    Measures not only if the item is in the top-K, but also its position.
+    Higher-ranked items contribute more to the score.
+
+    Args:
+        model: Trained recommender model.
+        test_interactions: Array of (user, item) pairs for testing.
+        num_items: Total number of items in the catalog.
+        k: Number of top items to consider. Defaults to 10.
+        device: Device to run computations on. Defaults to "cpu".
+
+    Returns:
+        NDCG at K score (normalized discounted cumulative gain).
     """
     model.eval()
     ndcg_scores = []

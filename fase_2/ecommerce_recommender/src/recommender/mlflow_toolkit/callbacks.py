@@ -1,12 +1,12 @@
 """MLflow logging callbacks for training."""
 
 import logging
-from typing import Any
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
 
-def create_mlflow_logger(mlflow_toolkit: Any):
+def create_mlflow_logger(mlflow_toolkit: Any) -> Callable[[Any], None]:
     """Create an MLflow logging callback for training epochs.
 
     Args:

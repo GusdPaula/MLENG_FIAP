@@ -33,17 +33,12 @@ logger = getLogger(__name__)
 class EpochResult:
     """Container for the metrics of a single epoch.
 
-    Attributes
-    ----------
-    epoch:
-        1-indexed epoch number.
-    train_loss:
-        Average training loss for the epoch.
-    eval_metrics:
-        Dictionary of evaluation metrics (e.g. ``auc_roc``,
-        ``avg_precision``) returned by :meth:`Trainer.evaluate`.
-    learning_rate:
-        Learning rate used by the optimizer during the epoch.
+    Attributes:
+        epoch: 1-indexed epoch number.
+        train_loss: Average training loss for the epoch.
+        eval_metrics: Dictionary of evaluation metrics (e.g. ``auc_roc``,
+            ``avg_precision``) returned by :meth:`Trainer.evaluate`.
+        learning_rate: Learning rate used by the optimizer during the epoch.
     """
 
     epoch: int
@@ -56,6 +51,13 @@ class Trainer:
     """Encapsulates a single-epoch train/evaluate cycle."""
 
     def __init__(self, model: nn.Module, config: dict, device: str = "cpu"):
+        """Initialize the trainer.
+
+        Args:
+            model: PyTorch model to train.
+            config: Training configuration dictionary.
+            device: Device to run computations on. Defaults to "cpu".
+        """
         self.model = model.to(device)
         self.device = device
         self.config = config
@@ -82,9 +84,12 @@ class Trainer:
         :meth:`train_epoch` helper below) is responsible for moving
         tensors to ``self.device`` and for any progress reporting.
 
-        Returns
-        -------
-        float
+        Args:
+            users: User IDs tensor.
+            items: Item IDs tensor.
+            labels: Label tensor.
+
+        Returns:
             The loss value for this batch (post-backprop, pre-step).
         """
         self.model.train()
@@ -109,9 +114,12 @@ class Trainer:
     ) -> float:
         """Train one full epoch by iterating ``dataloader`` batch-by-batch.
 
-        Returns
-        -------
-        float
+        Args:
+            dataloader: DataLoader providing training batches.
+            show_progress: Whether to show progress bar. Defaults to False.
+            description: Description for progress bar. Defaults to "Training".
+
+        Returns:
             The average training loss for the epoch.
         """
         self.model.train()
@@ -144,12 +152,18 @@ class Trainer:
     ) -> dict:
         """Evaluate the model on ``dataloader``.
 
-        Supported metrics:
+        Args:
+            dataloader: DataLoader providing validation batches.
+            metrics: Tuple of metric names to compute. Supported metrics:
+                - ``"auc_roc"`` - area under the ROC curve
+                - ``"avg_precision"`` - average precision (AP)
+                - ``"loss"`` - binary cross-entropy over the predictions
+                - ``"ndcg_at_k"`` - NDCG@K (requires num_items parameter, uses sampling for efficiency)
+            num_items: Total number of items in the catalog (required for ndcg_at_k).
+            k: K value for NDCG@K metric. Defaults to 10.
 
-        * ``"auc_roc"`` - area under the ROC curve
-        * ``"avg_precision"`` - average precision (AP)
-        * ``"loss"`` - binary cross-entropy over the predictions
-        * ``"ndcg_at_k"`` - NDCG@K (requires num_items parameter, uses sampling for efficiency)
+        Returns:
+            Dictionary of metric names to computed values.
         """
         self.model.eval()
         all_preds: list[float] = []
@@ -211,16 +225,20 @@ class Trainer:
     ) -> list[EpochResult]:
         """Run the train/eval loop for ``epochs`` epochs.
 
-        Parameters
-        ----------
-        metric_for_best, mode:
-            If ``metric_for_best`` is provided, the trainer keeps a
-            deep-copy of the model state dict with the best value of
-            that metric (according to ``mode`` - ``"min"`` or
-            ``"max"``) and reloads it before returning.
-        log_callback:
-            Optional callable invoked with the :class:`EpochResult`
-            of every epoch, useful for MLflow / progress logging.
+        Args:
+            train_loader: DataLoader for training data.
+            val_loader: DataLoader for validation data.
+            epochs: Number of epochs to train.
+            show_progress: Whether to show progress bars. Defaults to False.
+            metric_for_best: If provided, the trainer keeps a deep-copy of the model
+                state dict with the best value of that metric.
+            mode: ``"min"`` if lower metric is better, ``"max"`` if higher is better.
+                Defaults to "min".
+            log_callback: Optional callable invoked with the :class:`EpochResult`
+                of every epoch, useful for MLflow / progress logging.
+
+        Returns:
+            List of EpochResult objects for each epoch.
         """
         results: list[EpochResult] = []
         best_value: float | None = None
@@ -273,19 +291,22 @@ class Trainer:
     ) -> tuple[list[EpochResult], dict]:
         """Train with early stopping.
 
-        Returns
-        -------
-        tuple
-            (history, best)
+        Args:
+            train_loader: DataLoader for training data.
+            val_loader: DataLoader for validation data.
+            epochs: Maximum number of epochs to train.
+            early_stopping: EarlyStopping instance.
+            monitor: Metric to monitor for early stopping. Defaults to "val_loss".
+            show_progress: Whether to show progress bars. Defaults to False.
+            log_callback: Optional callable invoked with the :class:`EpochResult`
+                of every epoch, useful for MLflow / progress logging.
+            num_items: Total number of items (required for ranking metrics).
+            ranking_k: K value for ranking metrics. Defaults to 10.
 
-            history:
-                List of EpochResult objects for every executed epoch.
-
-            best:
-                Dictionary containing:
-                    value       -> best monitored metric
-                    epoch       -> epoch where the best metric occurred
-                    state_dict  -> best model weights
+        Returns:
+            Tuple of (history, best) where:
+            - history: List of EpochResult objects for every executed epoch.
+            - best: Dictionary containing value, epoch, and state_dict of the best model.
         """
 
         history: list[EpochResult] = []

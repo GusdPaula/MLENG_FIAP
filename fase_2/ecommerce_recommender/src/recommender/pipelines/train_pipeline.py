@@ -39,7 +39,11 @@ logger = logging.getLogger(__name__)
 
 
 def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
-    """Train a recommender model end-to-end using the config file."""
+    """Train a recommender model end-to-end using the config file.
+
+    Args:
+        config_path: Path to the model configuration YAML file. Defaults to "configs/model.yaml".
+    """
     with open(config_path) as f:
         cfg = yaml.safe_load(f)["model"]
 
@@ -48,9 +52,9 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
 
     # --- 1. Data: load raw events -------------------------------------
     raw_path = cfg.get("raw_events_path", "data/raw/events.csv")
-    logger.info("Carregando eventos de %s ...", raw_path)
+    logger.info("Loading events from %s ...", raw_path)
     events = load_events(raw_path)
-    logger.info("  Total de eventos: %d", len(events))
+    logger.info("  Total events: %d", len(events))
 
     # --- 2. Data: pick a processing strategy --------------------------
     processor_cfg = cfg.get("processor", "weighted")
@@ -66,11 +70,11 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
     logger.info("  Users: %d, Items: %d", num_users, num_items)
 
     # --- 3. Dataset with negative sampling ----------------------------
-    logger.info("Gerando dataset com negative sampling...")
+    logger.info("Generating dataset with negative sampling...")
     dataset = RecommenderDataset(
         interactions, num_items, num_negatives=cfg["num_negatives"]
     )
-    logger.info("  Total de samples: %d", len(dataset))
+    logger.info("  Total samples: %d", len(dataset))
 
     # --- 4. Train/val split ------------------------------------------
     train_size = int(0.8 * len(dataset))
@@ -105,7 +109,7 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
     early_stopping_cfg = cfg.get("early_stopping", {}) or {}
     use_early_stopping = bool(early_stopping_cfg.get("enabled", False))
 
-    logger.info("\nIniciando treino (%d epochs)...", cfg["epochs"])
+    logger.info("\nStarting training (%d epochs)...", cfg["epochs"])
     logger.info("-" * 60)
 
     last_epoch = cfg["epochs"]

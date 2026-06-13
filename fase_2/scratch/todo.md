@@ -34,12 +34,12 @@
 - [x] Fix .pre-commit-config.yaml to ensure hooks are triggered in commits
 
 ### DVC Integration
-- [ ] Better use DVC for data versioning
-- [ ] Better use DVC for experiment tracking
-- [ ] Ensure processed datasets are tracked with DVC
+- [x] Better use DVC for data versioning
+- [x] Better use DVC for experiment tracking
+- [x] Ensure processed datasets are tracked with DVC
 
 ### Testing & Code Quality
-- [ ] Create unit tests to cover more than 80% of the codebase
+- [x] Create unit tests to cover more than 80% of the codebase
   - Identify untested modules and functions
   - Add comprehensive test coverage
   - Ensure tests pass in CI/CD pipeline
@@ -57,20 +57,20 @@
 ## Low Priority 🟢
 
 ### Documentation & Style
-- [ ] Ensure all comments use Google docstring style
-- [ ] Review and standardize docstrings across all modules
-- [ ] Add type hints where missing
+- [x] Ensure all comments use Google docstring style
+- [x] Review and standardize docstrings across all modules
+- [x] Add type hints where missing
 
 ### Model Evaluation
-- [ ] Ensure all experiments track: AUC-ROC, Average Precision, HitRate@K, NDCG@K
-- [ ] Avoid optimizing only one metric
-- [ ] Document metric interpretation (AUC ≠ good recommender)
+- [x] Ensure all experiments track: AUC-ROC, Average Precision, HitRate@K, NDCG@K
+- [x] Avoid optimizing only one metric
+- [x] Document metric interpretation (AUC ≠ good recommender)
 
 ### Architecture
-- [ ] Review separation of concerns (config, model, training, tracking)
+- [x] Review separation of concerns (config, model, training, tracking)
   - Already partially addressed with refactoring
   - Verify clean boundaries between layers
-- [ ] Check for modularity and repetitive code
+- [x] Check for modularity and repetitive code
   - Identify duplicate logic across modules
   - Extract common patterns into reusable functions
   - Ensure DRY principle is followed

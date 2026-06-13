@@ -1,0 +1,3 @@
+# DVC pipeline configuration
+# Track data files and model outputs for versioning
+# Use `dvc experiments run` to run experiments with parameter tracking

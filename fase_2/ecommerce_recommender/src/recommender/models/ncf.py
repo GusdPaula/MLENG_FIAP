@@ -23,6 +23,15 @@ class NCFModel(BaseRecommenderModel):
         hidden_layers: list[int] | tuple[int, ...] = (128, 64, 32),
         dropout: float = 0.2,
     ):
+        """Initialize the NCF model.
+
+        Args:
+            num_users: Number of unique users in the dataset.
+            num_items: Number of unique items in the dataset.
+            embedding_dim: Dimension of the embedding vectors. Defaults to 64.
+            hidden_layers: List of hidden layer sizes for the MLP. Defaults to (128, 64, 32).
+            dropout: Dropout rate for regularization. Defaults to 0.2.
+        """
         super().__init__(num_users, num_items, embedding_dim)
 
         self.user_embedding = nn.Embedding(num_users, embedding_dim)
@@ -43,13 +52,9 @@ class NCFModel(BaseRecommenderModel):
         self._init_weights()
 
     def _init_weights(self) -> None:
-        for module in self.modules():
-            if isinstance(module, nn.Embedding):
-                nn.init.xavier_uniform_(module.weight)
-            elif isinstance(module, nn.Linear):
-                nn.init.kaiming_uniform_(module.weight, nonlinearity="relu")
-                if module.bias is not None:
-                    nn.init.zeros_(module.bias)
+        """Initialize model weights using Xavier uniform for embeddings and Kaiming uniform for linear layers."""
+        self._init_embeddings("xavier_uniform")
+        self._init_linear_layers("kaiming_uniform", nonlinearity="relu")
 
     def forward(
         self, user_ids: torch.Tensor, item_ids: torch.Tensor

@@ -94,7 +94,16 @@ class MLflowToolkit:
         tags: dict[str, Any] | None = None,
         nested: bool = False,
     ) -> Iterator[Any]:
-        """Open an MLflow run and yield it as a context manager."""
+        """Open an MLflow run and yield it as a context manager.
+
+        Args:
+            run_name: Name for the MLflow run.
+            tags: Dictionary of tags to add to the run.
+            nested: Whether the run is nested inside a parent run.
+
+        Yields:
+            The MLflow run object.
+        """
         mlflow = self._require_mlflow()
         self.setup()
         run_tags = dict(tags or {})
@@ -104,17 +113,30 @@ class MLflowToolkit:
             yield run
 
     def log_params(self, params: dict[str, Any]) -> None:
-        """Log a parameter dictionary to the active MLflow run."""
+        """Log a parameter dictionary to the active MLflow run.
+
+        Args:
+            params: Dictionary of parameter names to values.
+        """
         mlflow = self._require_mlflow()
         mlflow.log_params(params)
 
     def log_metrics(self, metrics: dict[str, float], step: int | None = None) -> None:
-        """Log a metric dictionary to the active MLflow run."""
+        """Log a metric dictionary to the active MLflow run.
+
+        Args:
+            metrics: Dictionary of metric names to values.
+            step: Step number for the metrics.
+        """
         mlflow = self._require_mlflow()
         mlflow.log_metrics(metrics, step=step)
 
     def log_artifact(self, artifact_path: str | Path) -> None:
-        """Log an artifact file or folder to the active MLflow run."""
+        """Log an artifact file or folder to the active MLflow run.
+
+        Args:
+            artifact_path: Path to the artifact file or folder.
+        """
         mlflow = self._require_mlflow()
         mlflow.log_artifact(str(artifact_path))
 
@@ -129,6 +151,12 @@ class MLflowToolkit:
 
         The method prefers the native MLflow dataset API when available,
         and falls back to logging a CSV artifact plus metadata tags.
+
+        Args:
+            dataset: Pandas DataFrame to log.
+            name: Name for the dataset.
+            source: Source path or description of the dataset.
+            context: Context in which the dataset is used. Defaults to "training".
         """
         mlflow = self._require_mlflow()
         self.setup()
