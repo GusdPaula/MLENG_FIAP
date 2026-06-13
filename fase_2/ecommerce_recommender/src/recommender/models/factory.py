@@ -29,6 +29,14 @@ class ModelFactory:
 
     _registry: dict[str, type[BaseRecommenderModel]] = {}
 
+    # Mapping of model types to their allowed hyperparameters.
+    # This prevents passing invalid parameters to models that don't support them.
+    MODEL_PARAM_MAP: dict[str, set[str]] = {
+        "gmf": {"embedding_dim", "projection_dim", "dropout"},
+        "ncf": {"embedding_dim", "hidden_layers", "dropout"},
+        "matrix_factorization": {"embedding_dim", "global_bias"},
+    }
+
     @classmethod
     def register(cls, name: str) -> Callable[[type[BaseRecommenderModel]], type[BaseRecommenderModel]]:
         """Class decorator that registers a model under ``name``."""
@@ -50,11 +58,30 @@ class ModelFactory:
                 f"Unknown model type '{model_type}'. "
                 f"Available models: {available}."
             )
+
+        # Filter hyperparameters to only include those allowed for this model type
+        allowed_params = cls.MODEL_PARAM_MAP.get(model_type, set())
+        filtered_params = {
+            k: v for k, v in hyperparams.items() if k in allowed_params
+        }
+
+        # Warn about unexpected parameters that were filtered out
+        unexpected_params = set(hyperparams.keys()) - allowed_params
+        if unexpected_params:
+            import warnings
+            warnings.warn(
+                f"Unexpected hyperparameters for model type '{model_type}' "
+                f"were filtered out: {unexpected_params}. "
+                f"Allowed parameters: {allowed_params}.",
+                UserWarning,
+                stacklevel=2,
+            )
+
         model_cls = cls._registry[model_type]
         return model_cls(
             num_users=num_users,
             num_items=num_items,
-            **hyperparams,
+            **filtered_params,
         )
 
     @classmethod

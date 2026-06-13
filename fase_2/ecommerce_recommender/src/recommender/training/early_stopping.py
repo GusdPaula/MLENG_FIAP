@@ -25,24 +25,19 @@ from typing import Any, Literal
 class EarlyStopping:
     """Stop training when a monitored metric stops improving.
 
-    Parameters
-    ----------
-    patience:
-        Number of epochs with no improvement after which training
-        is stopped. ``0`` or a negative value disables early stopping
-        (the stopper will never report ``stop=True``).
-    mode:
-        ``"min"`` if a lower metric value is better (e.g. loss) or
-        ``"max"`` if a higher value is better (e.g. AUC). Defaults to
-        ``"min"``.
-    min_delta:
-        Minimum change in the monitored metric that qualifies as an
-        improvement. Useful to avoid stopping on noisy fluctuations.
-    restore_best:
-        When ``True`` the stopper keeps a deep-copy of the best value
-        and the caller can retrieve it via :attr:`best_value`. The
-        caller is responsible for restoring the model weights (the
-        stopper does not touch the model).
+    Args:
+        patience: Number of epochs with no improvement after which training
+            is stopped. ``0`` or a negative value disables early stopping
+            (the stopper will never report ``stop=True``).
+        mode: ``"min"`` if a lower metric value is better (e.g. loss) or
+            ``"max"`` if a higher value is better (e.g. AUC). Defaults to
+            ``"min"``.
+        min_delta: Minimum change in the monitored metric that qualifies as an
+            improvement. Useful to avoid stopping on noisy fluctuations.
+        restore_best: When ``True`` the stopper keeps a deep-copy of the best value
+            and the caller can retrieve it via :attr:`best_value`. The
+            caller is responsible for restoring the model weights (the
+            stopper does not touch the model).
     """
 
     def __init__(
@@ -93,9 +88,11 @@ class EarlyStopping:
     def __call__(self, metric: float, epoch: int | None = None) -> bool:
         """Update the stopper with a new metric value.
 
-        Returns
-        -------
-        bool
+        Args:
+            metric: Current metric value.
+            epoch: Current epoch number (1-indexed). If None, epoch tracking is disabled.
+
+        Returns:
             ``True`` if training should stop, ``False`` otherwise.
         """
         if not self.is_active:

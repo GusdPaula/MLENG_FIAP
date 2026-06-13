@@ -23,6 +23,15 @@ class GMFModel(BaseRecommenderModel):
         projection_dim: int | None = None,
         dropout: float = 0.0,
     ):
+        """Initialize the GMF model.
+
+        Args:
+            num_users: Number of unique users in the dataset.
+            num_items: Number of unique items in the dataset.
+            embedding_dim: Dimension of the embedding vectors. Defaults to 64.
+            projection_dim: Dimension of the projection layer. If None, no projection is used.
+            dropout: Dropout rate for regularization. Defaults to 0.0.
+        """
         super().__init__(num_users, num_items, embedding_dim)
 
         self.user_embedding = nn.Embedding(num_users, embedding_dim)
@@ -41,13 +50,9 @@ class GMFModel(BaseRecommenderModel):
         self._init_weights()
 
     def _init_weights(self) -> None:
-        for module in self.modules():
-            if isinstance(module, nn.Embedding):
-                nn.init.xavier_uniform_(module.weight)
-            elif isinstance(module, nn.Linear):
-                nn.init.xavier_uniform_(module.weight)
-                if module.bias is not None:
-                    nn.init.zeros_(module.bias)
+        """Initialize model weights using Xavier uniform initialization."""
+        self._init_embeddings("xavier_uniform")
+        self._init_linear_layers("xavier_uniform")
 
     def forward(
         self, user_ids: torch.Tensor, item_ids: torch.Tensor

@@ -24,6 +24,14 @@ class MatrixFactorizationModel(BaseRecommenderModel):
         embedding_dim: int = 64,
         global_bias: float = 0.0,
     ):
+        """Initialize the Matrix Factorization model.
+
+        Args:
+            num_users: Number of unique users in the dataset.
+            num_items: Number of unique items in the dataset.
+            embedding_dim: Dimension of the embedding vectors. Defaults to 64.
+            global_bias: Global bias term. Defaults to 0.0.
+        """
         super().__init__(num_users, num_items, embedding_dim)
 
         self.user_embedding = nn.Embedding(num_users, embedding_dim)
@@ -38,10 +46,9 @@ class MatrixFactorizationModel(BaseRecommenderModel):
         self._init_weights()
 
     def _init_weights(self) -> None:
-        nn.init.normal_(self.user_embedding.weight, std=0.01)
-        nn.init.normal_(self.item_embedding.weight, std=0.01)
-        nn.init.zeros_(self.user_bias.weight)
-        nn.init.zeros_(self.item_bias.weight)
+        """Initialize model weights using normal distribution for embeddings and zeros for biases."""
+        self._init_embeddings("normal")
+        self._init_linear_layers("zeros")
 
     def forward(
         self, user_ids: torch.Tensor, item_ids: torch.Tensor

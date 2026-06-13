@@ -36,12 +36,28 @@ class DataProcessor(ABC):
 
     @abstractmethod
     def process(self, events: pd.DataFrame, **kwargs: Any) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
-        """Return ``(interactions, user2idx, item2idx)``."""
+        """Process events into interactions with user/item mappings.
+
+        Args:
+            events: Raw events DataFrame.
+            **kwargs: Additional processor-specific parameters.
+
+        Returns:
+            Tuple of (interactions DataFrame, user2idx mapping, item2idx mapping).
+        """
 
     # --- shared helpers used by concrete strategies -----------------
 
     @staticmethod
     def _build_mappings(events: pd.DataFrame) -> tuple[dict[int, int], dict[int, int]]:
+        """Build user and item ID to index mappings.
+
+        Args:
+            events: DataFrame with visitorid and itemid columns.
+
+        Returns:
+            Tuple of (user2idx mapping, item2idx mapping).
+        """
         user_ids = events["visitorid"].unique()
         item_ids = events["itemid"].unique()
         user2idx = {int(uid): idx for idx, uid in enumerate(user_ids)}
@@ -49,11 +65,43 @@ class DataProcessor(ABC):
         return user2idx, item2idx
 
     @staticmethod
+    def _filter_by_min_interactions(
+        df: pd.DataFrame, min_interactions: int
+    ) -> pd.DataFrame:
+        """Filter DataFrame to keep only users/items with minimum interactions.
+
+        Args:
+            df: DataFrame with visitorid and itemid columns.
+            min_interactions: Minimum number of interactions per user/item.
+
+        Returns:
+            Filtered DataFrame.
+        """
+        if min_interactions > 1:
+            user_counts = df["visitorid"].value_counts()
+            item_counts = df["itemid"].value_counts()
+            df = df[
+                df["visitorid"].isin(user_counts[user_counts >= min_interactions].index)
+                & df["itemid"].isin(item_counts[item_counts >= min_interactions].index)
+            ]
+        return df
+
+    @staticmethod
     def _apply_index_columns(
         events: pd.DataFrame,
         user2idx: dict[int, int],
         item2idx: dict[int, int],
     ) -> pd.DataFrame:
+        """Apply index columns to events DataFrame.
+
+        Args:
+            events: DataFrame with visitorid and itemid columns.
+            user2idx: User ID to index mapping.
+            item2idx: Item ID to index mapping.
+
+        Returns:
+            DataFrame with user_idx and item_idx columns.
+        """
         out = events.copy()
         out["user_idx"] = out["visitorid"].map(user2idx)
         out["item_idx"] = out["itemid"].map(item2idx)
@@ -75,21 +123,29 @@ class WeightedEventProcessor(DataProcessor):
     }
 
     def __init__(self, weights: dict[str, float] | None = None):
+        """Initialize the weighted event processor.
+
+        Args:
+            weights: Custom weights for event types. If None, uses DEFAULT_WEIGHTS.
+        """
         self.weights = weights or self.DEFAULT_WEIGHTS
 
     def process(
         self, events: pd.DataFrame, min_interactions: int = 1, **_: Any
     ) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
+        """Process events with weighted event types.
+
+        Args:
+            events: Raw events DataFrame.
+            min_interactions: Minimum interactions per user/item. Defaults to 1.
+            **_: Additional ignored parameters for interface compatibility.
+
+        Returns:
+            Tuple of (interactions DataFrame with weights, user2idx mapping, item2idx mapping).
+        """
         df = events.copy()
         df["weight"] = df["event"].map(self.weights).fillna(0.0)
-
-        if min_interactions > 1:
-            user_counts = df["visitorid"].value_counts()
-            item_counts = df["itemid"].value_counts()
-            df = df[
-                df["visitorid"].isin(user_counts[user_counts >= min_interactions].index)
-                & df["itemid"].isin(item_counts[item_counts >= min_interactions].index)
-            ]
+        df = self._filter_by_min_interactions(df, min_interactions)
 
         user2idx, item2idx = self._build_mappings(df)
         return self._apply_index_columns(df, user2idx, item2idx), user2idx, item2idx
@@ -107,21 +163,29 @@ class BinaryInteractionProcessor(DataProcessor):
     POSITIVE_EVENTS: tuple[str, ...] = ("addtocart", "transaction")
 
     def __init__(self, positive_events: tuple[str, ...] | None = None):
+        """Initialize the binary interaction processor.
+
+        Args:
+            positive_events: Tuple of event types to treat as positive. If None, uses POSITIVE_EVENTS.
+        """
         self.positive_events = positive_events or self.POSITIVE_EVENTS
 
     def process(
         self, events: pd.DataFrame, min_interactions: int = 1, **_: Any
     ) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
+        """Process events keeping only positive events.
+
+        Args:
+            events: Raw events DataFrame.
+            min_interactions: Minimum interactions per user/item. Defaults to 1.
+            **_: Additional ignored parameters for interface compatibility.
+
+        Returns:
+            Tuple of (interactions DataFrame with weight=1.0, user2idx mapping, item2idx mapping).
+        """
         df = events[events["event"].isin(self.positive_events)].copy()
         df["weight"] = 1.0
-
-        if min_interactions > 1:
-            user_counts = df["visitorid"].value_counts()
-            item_counts = df["itemid"].value_counts()
-            df = df[
-                df["visitorid"].isin(user_counts[user_counts >= min_interactions].index)
-                & df["itemid"].isin(item_counts[item_counts >= min_interactions].index)
-            ]
+        df = self._filter_by_min_interactions(df, min_interactions)
 
         user2idx, item2idx = self._build_mappings(df)
         return self._apply_index_columns(df, user2idx, item2idx), user2idx, item2idx
@@ -135,16 +199,19 @@ class ImplicitFeedbackProcessor(DataProcessor):
     def process(
         self, events: pd.DataFrame, min_interactions: int = 1, **_: Any
     ) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
+        """Process events treating all events as positive (implicit feedback).
+
+        Args:
+            events: Raw events DataFrame.
+            min_interactions: Minimum interactions per user/item. Defaults to 1.
+            **_: Additional ignored parameters for interface compatibility.
+
+        Returns:
+            Tuple of (interactions DataFrame with weight=1.0, user2idx mapping, item2idx mapping).
+        """
         df = events.copy()
         df["weight"] = 1.0
-
-        if min_interactions > 1:
-            user_counts = df["visitorid"].value_counts()
-            item_counts = df["itemid"].value_counts()
-            df = df[
-                df["visitorid"].isin(user_counts[user_counts >= min_interactions].index)
-                & df["itemid"].isin(item_counts[item_counts >= min_interactions].index)
-            ]
+        df = self._filter_by_min_interactions(df, min_interactions)
 
         user2idx, item2idx = self._build_mappings(df)
         return self._apply_index_columns(df, user2idx, item2idx), user2idx, item2idx
@@ -163,6 +230,15 @@ class DataProcessorContext:
     }
 
     def __init__(self, strategy: str | DataProcessor = "weighted", **strategy_kwargs: Any):
+        """Initialize the data processor context with a strategy.
+
+        Args:
+            strategy: Strategy name or DataProcessor instance. Defaults to "weighted".
+            **strategy_kwargs: Additional arguments for strategy initialization.
+
+        Raises:
+            ValueError: If strategy name is not recognized.
+        """
         if isinstance(strategy, DataProcessor):
             self._strategy = strategy
         elif strategy in self._STRATEGIES:
@@ -176,11 +252,22 @@ class DataProcessorContext:
 
     @property
     def strategy_name(self) -> str:
+        """Return the name of the current strategy."""
         return self._strategy.name
 
     def process(self, events: pd.DataFrame, **kwargs: Any) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
+        """Process events using the configured strategy.
+
+        Args:
+            events: Raw events DataFrame.
+            **kwargs: Additional arguments for the strategy process method.
+
+        Returns:
+            Tuple of (interactions DataFrame, user2idx mapping, item2idx mapping).
+        """
         return self._strategy.process(events, **kwargs)
 
     @classmethod
     def available_strategies(cls) -> list[str]:
+        """Return list of available strategy names."""
         return sorted(cls._STRATEGIES)

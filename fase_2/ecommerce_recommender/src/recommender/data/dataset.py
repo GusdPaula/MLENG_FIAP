@@ -29,17 +29,28 @@ from torch.utils.data import Dataset
 
 
 def load_events(path: str) -> pd.DataFrame:
-    """Carrega e filtra eventos relevantes."""
+    """Load and filter relevant events from CSV file.
+
+    Args:
+        path: Path to the events CSV file.
+
+    Returns:
+        DataFrame with events and computed weights (view=1, addtocart=2, transaction=3).
+    """
     df = pd.read_csv(path)
     event_weights = {"view": 1, "addtocart": 2, "transaction": 3}
     df["weight"] = df["event"].map(event_weights)
     return df
 
 
-def create_interaction_matrix(events: pd.DataFrame):
-    """
-    Cria mapeamentos user/item -> índices inteiros e
-    gera pares positivos (user_idx, item_idx).
+def create_interaction_matrix(events: pd.DataFrame) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
+    """Create user/item to index mappings and positive interaction pairs.
+
+    Args:
+        events: DataFrame containing user and item interactions.
+
+    Returns:
+        Tuple of (events with indices, user2idx mapping, item2idx mapping).
     """
     user_ids = events["visitorid"].unique()
     item_ids = events["itemid"].unique()

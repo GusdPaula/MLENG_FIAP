@@ -25,12 +25,13 @@ model:
   # Disabled by default - set enabled: true to stop training once the
   # monitored metric stops improving for `patience` consecutive epochs.
   # `monitor` can be "val_loss" or any metric returned by Trainer.evaluate
-  # (e.g. "auc_roc", "avg_precision"). `mode` is "min" for loss and
+  # (e.g. "auc_roc", "avg_precision", "ndcg_at_k"). `mode` is "min" for loss and
   # "max" for higher-is-better metrics.
+  # Note: "ndcg_at_k" uses sampling for efficiency during training.
   early_stopping:
     enabled: true
-    monitor: val_loss
-    mode: min
+    monitor: ndcg_at_k
+    mode: max
     patience: 3
     min_delta: 0.0
 

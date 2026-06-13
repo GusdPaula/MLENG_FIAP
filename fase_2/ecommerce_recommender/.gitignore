@@ -1,8 +1,10 @@
 # Data files
 data/raw/*.csv
 
-# Model artifacts
-models/*.pt
+# MLflow experiments - use DVC for tracking
+models/mlflow_experiments/
+!models/mlflow_experiments/*.dvc
+!models/mlflow_experiments/**/*.dvc
 
 # Python
 __pycache__/

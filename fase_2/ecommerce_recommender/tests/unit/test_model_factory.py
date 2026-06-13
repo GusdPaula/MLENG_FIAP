@@ -100,3 +100,129 @@ def test_factory_register_decorator():
     assert isinstance(model, _Dummy)
     # Cleanup the registry so other tests aren't polluted.
     ModelFactory._registry.pop("dummy_for_test", None)
+
+
+# -- parameter filtering tests ----------------------------------------------
+
+
+def test_factory_filters_invalid_params_gmf():
+    """GMF should reject hidden_layers parameter."""
+    import warnings
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        model = ModelFactory.create(
+            "gmf",
+            num_users=10,
+            num_items=5,
+            embedding_dim=8,
+            hidden_layers=[32, 16],  # Invalid for GMF
+        )
+        # Should create model successfully
+        assert isinstance(model, GMFModel)
+        # Should warn about filtered parameter
+        assert len(w) == 1
+        assert "hidden_layers" in str(w[0].message)
+
+
+def test_factory_filters_invalid_params_ncf():
+    """NCF should reject projection_dim parameter."""
+    import warnings
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        model = ModelFactory.create(
+            "ncf",
+            num_users=10,
+            num_items=5,
+            embedding_dim=8,
+            projection_dim=16,  # Invalid for NCF
+        )
+        # Should create model successfully
+        assert isinstance(model, NCFModel)
+        # Should warn about filtered parameter
+        assert len(w) == 1
+        assert "projection_dim" in str(w[0].message)
+
+
+def test_factory_filters_invalid_params_mf():
+    """MatrixFactorization should reject hidden_layers and dropout parameters."""
+    import warnings
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        model = ModelFactory.create(
+            "matrix_factorization",
+            num_users=10,
+            num_items=5,
+            embedding_dim=8,
+            hidden_layers=[32, 16],  # Invalid for MF
+            dropout=0.2,  # Invalid for MF
+        )
+        # Should create model successfully
+        assert isinstance(model, MatrixFactorizationModel)
+        # Should warn about filtered parameters
+        assert len(w) == 1
+        assert "hidden_layers" in str(w[0].message)
+        assert "dropout" in str(w[0].message)
+
+
+def test_factory_accepts_valid_params_gmf():
+    """GMF should accept its valid parameters."""
+    import warnings
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        model = ModelFactory.create(
+            "gmf",
+            num_users=10,
+            num_items=5,
+            embedding_dim=8,
+            projection_dim=16,
+            dropout=0.2,
+        )
+        # Should create model successfully
+        assert isinstance(model, GMFModel)
+        # Should NOT warn about any parameters
+        assert len(w) == 0
+
+
+def test_factory_accepts_valid_params_ncf():
+    """NCF should accept its valid parameters."""
+    import warnings
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        model = ModelFactory.create(
+            "ncf",
+            num_users=10,
+            num_items=5,
+            embedding_dim=8,
+            hidden_layers=[32, 16],
+            dropout=0.2,
+        )
+        # Should create model successfully
+        assert isinstance(model, NCFModel)
+        # Should NOT warn about any parameters
+        assert len(w) == 0
+
+
+def test_factory_accepts_valid_params_mf():
+    """MatrixFactorization should accept its valid parameters."""
+    import warnings
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        model = ModelFactory.create(
+            "matrix_factorization",
+            num_users=10,
+            num_items=5,
+            embedding_dim=8,
+            global_bias=0.1,
+        )
+        # Should create model successfully
+        assert isinstance(model, MatrixFactorizationModel)
+        # Should NOT warn about any parameters
+        assert len(w) == 0
+
+
+def test_factory_param_map_coverage():
+    """Ensure all registered models have parameter mappings."""
+    for model_type in ModelFactory.available_models():
+        assert model_type in ModelFactory.MODEL_PARAM_MAP, (
+            f"Model type '{model_type}' is registered but not in MODEL_PARAM_MAP"
+        )
