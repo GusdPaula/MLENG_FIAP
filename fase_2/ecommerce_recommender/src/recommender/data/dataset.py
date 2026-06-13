@@ -102,7 +102,7 @@ def make_batches(
         items = []
         labels = []
         for idx in range(start, min(end, n)):
-            u, i, l = dataset[idx]
+            u, i, l = dataset[idx] # noqa: E741
             users.append(u)
             items.append(i)
             labels.append(l)

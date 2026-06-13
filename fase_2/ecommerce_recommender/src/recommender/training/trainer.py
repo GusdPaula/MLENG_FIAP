@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass, field
+from logging import getLogger
 from typing import Any, Callable
 
 import torch
@@ -24,6 +25,8 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from .early_stopping import EarlyStopping
+
+logger = getLogger(__name__)
 
 
 @dataclass
@@ -292,7 +295,7 @@ class Trainer:
                 learning_rate=self.optimizer.param_groups[0]["lr"],
             )
 
-            print(
+            logger.info(
                 f"Epoch {result.epoch:02d}/{epochs} | "
                 f"loss={result.train_loss:.4f} | "
                 f"auc={result.eval_metrics['auc_roc']:.4f} | "
@@ -326,7 +329,7 @@ class Trainer:
                 monitored_value,
                 epoch=result.epoch,
             ):
-                print(
+                logger.info(
                     f"Early stopping triggered at epoch {result.epoch}. "
                     f"Best {monitor}: {best['value']:.4f} "
                     f"(epoch {best['epoch']})"
