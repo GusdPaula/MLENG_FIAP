@@ -327,16 +327,19 @@ class Trainer:
                 description=description,
             )
 
-            # Pass num_items and k if monitoring NDCG
+            # Pass num_items and k if monitoring NDCG, and include metric in evaluation
             eval_kwargs = {}
+            eval_metrics_tuple = ("auc_roc", "avg_precision")
             if monitor == "ndcg_at_k" and num_items is not None:
                 eval_kwargs["num_items"] = num_items
                 eval_kwargs["k"] = ranking_k
+                eval_metrics_tuple = ("auc_roc", "avg_precision", "ndcg_at_k")
             elif monitor.startswith("ndcg_at") and num_items is not None:
                 eval_kwargs["num_items"] = num_items
                 eval_kwargs["k"] = ranking_k
+                eval_metrics_tuple = ("auc_roc", "avg_precision", monitor)
 
-            eval_metrics = self.evaluate(val_loader, **eval_kwargs)
+            eval_metrics = self.evaluate(val_loader, metrics=eval_metrics_tuple, **eval_kwargs)
 
             result = EpochResult(
                 epoch=epoch + 1,
