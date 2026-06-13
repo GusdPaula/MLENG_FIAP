@@ -49,3 +49,8 @@ ecommerce_recommender/data/processed/mlflow_experiments/
 reports/
 ecommerce_recommender/mlflow.db
 ecommerce_recommender/notebooks/mlflow.db
+
+# MLflow experiments - use DVC for tracking data files, unignore .dvc files
+ecommerce_recommender/models/mlflow_experiments/
+!ecommerce_recommender/models/mlflow_experiments/*.dvc
+!ecommerce_recommender/models/mlflow_experiments/**/*.dvc

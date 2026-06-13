@@ -22,3 +22,7 @@
 ### Fixed
 
 - Training pipeline import now points to `recommender.training.trainer`.
+- **ModelFactory** now filters hyperparameters per model type via `MODEL_PARAM_MAP` to prevent passing invalid parameters to models (e.g., GMF now rejects `hidden_layers`).
+- **Early stopping** metric changed from AUC to NDCG@10 for better ranking evaluation. Added lightweight NDCG@K computation to trainer's evaluate method with sampling for efficiency.
+- **.gitignore** updated to properly handle model artifacts with unignore hierarchy for mlflow_experiments while keeping specific .pt models in Git as needed.
+- **.pre-commit-config.yaml** fixed to ensure hooks are triggered in commits by running from correct directory where pyproject.toml is located.

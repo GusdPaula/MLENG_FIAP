@@ -139,6 +139,8 @@ class Trainer:
         self,
         dataloader: DataLoader,
         metrics: tuple[str, ...] = ("auc_roc", "avg_precision"),
+        num_items: int | None = None,
+        k: int = 10,
     ) -> dict:
         """Evaluate the model on ``dataloader``.
 
@@ -147,10 +149,14 @@ class Trainer:
         * ``"auc_roc"`` - area under the ROC curve
         * ``"avg_precision"`` - average precision (AP)
         * ``"loss"`` - binary cross-entropy over the predictions
+        * ``"ndcg_at_k"`` - NDCG@K (requires num_items parameter, uses sampling for efficiency)
         """
         self.model.eval()
         all_preds: list[float] = []
         all_labels: list[float] = []
+
+        # Collect positive samples for NDCG computation
+        positive_samples: list[tuple[int, int]] = []
 
         with torch.no_grad():
             for users, items, labels in dataloader:
@@ -160,6 +166,12 @@ class Trainer:
                 predictions = self.model(users, items)
                 all_preds.extend(predictions.cpu().numpy())
                 all_labels.extend(labels.numpy())
+
+                # Collect positive samples for NDCG
+                if "ndcg_at_k" in metrics and num_items is not None:
+                    for user, item, label in zip(users.cpu().numpy(), items.cpu().numpy(), labels.numpy(), strict=True):
+                        if label == 1.0:
+                            positive_samples.append((int(user), int(item)))
 
         result: dict[str, float] = {}
         for metric in metrics:
@@ -173,6 +185,12 @@ class Trainer:
                 preds_tensor = torch.tensor(all_preds, dtype=torch.float32)
                 labels_tensor = torch.tensor(all_labels, dtype=torch.float32)
                 result[metric] = float(self.criterion(preds_tensor, labels_tensor))
+            elif metric == "ndcg_at_k":
+                if num_items is None:
+                    raise ValueError("num_items must be provided for ndcg_at_k metric")
+                result[metric] = self._compute_ndcg_at_k_sampled(
+                    positive_samples, num_items, k
+                )
             else:
                 raise ValueError(f"Unknown evaluation metric: {metric!r}")
         return result
@@ -250,6 +268,8 @@ class Trainer:
         monitor: str = "val_loss",
         show_progress: bool = False,
         log_callback: Callable[[EpochResult], None] | None = None,
+        num_items: int | None = None,
+        ranking_k: int = 10,
     ) -> tuple[list[EpochResult], dict]:
         """Train with early stopping.
 
@@ -286,7 +306,16 @@ class Trainer:
                 description=description,
             )
 
-            eval_metrics = self.evaluate(val_loader)
+            # Pass num_items and k if monitoring NDCG
+            eval_kwargs = {}
+            if monitor == "ndcg_at_k" and num_items is not None:
+                eval_kwargs["num_items"] = num_items
+                eval_kwargs["k"] = ranking_k
+            elif monitor.startswith("ndcg_at") and num_items is not None:
+                eval_kwargs["num_items"] = num_items
+                eval_kwargs["k"] = ranking_k
+
+            eval_metrics = self.evaluate(val_loader, **eval_kwargs)
 
             result = EpochResult(
                 epoch=epoch + 1,
@@ -345,6 +374,60 @@ class Trainer:
     # ------------------------------------------------------------------
     # helpers
     # ------------------------------------------------------------------
+
+    def _compute_ndcg_at_k_sampled(
+        self, positive_samples: list[tuple[int, int]], num_items: int, k: int = 10, sample_limit: int = 100
+    ) -> float:
+        """Compute NDCG@K using sampled positive samples for efficiency.
+
+        Args:
+            positive_samples: List of (user_id, item_id) tuples for positive interactions.
+            num_items: Total number of items in the catalog.
+            k: Rank position for NDCG computation.
+            sample_limit: Maximum number of positive samples to evaluate.
+
+        Returns:
+            NDCG@K score.
+        """
+        if not positive_samples:
+            return 0.0
+
+        # Sample users for efficiency
+        import numpy as np
+        sampled_indices = np.random.choice(
+            len(positive_samples),
+            min(sample_limit, len(positive_samples)),
+            replace=False
+        )
+        sampled = [positive_samples[i] for i in sampled_indices]
+
+        # Group by user
+        users_items: dict[int, list[int]] = {}
+        for user, item in sampled:
+            users_items.setdefault(user, []).append(item)
+
+        ndcg_scores = []
+        with torch.no_grad():
+            for user_idx, true_items in users_items.items():
+                user_tensor = torch.full((num_items,), user_idx, dtype=torch.long).to(self.device)
+                item_tensor = torch.arange(num_items, dtype=torch.long).to(self.device)
+
+                scores = self.model(user_tensor, item_tensor)
+                _, top_k_indices = torch.topk(scores, k)
+                top_k_list = top_k_indices.cpu().numpy()
+
+                dcg = 0.0
+                for rank, item_id in enumerate(top_k_list):
+                    if item_id in true_items:
+                        dcg += 1.0 / np.log2(rank + 2)
+
+                ideal_dcg = sum(
+                    1.0 / np.log2(i + 2) for i in range(min(len(true_items), k))
+                )
+                ndcg = dcg / ideal_dcg if ideal_dcg > 0 else 0.0
+                ndcg_scores.append(ndcg)
+
+        return float(np.mean(ndcg_scores)) if ndcg_scores else 0.0
 
     @staticmethod
     def _is_better(current: float, best: float, mode: str) -> bool:
