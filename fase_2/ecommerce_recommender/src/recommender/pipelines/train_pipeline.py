@@ -28,7 +28,7 @@ from ..data import (
     load_events,
 )
 from ..models import ModelFactory
-from ..training import Trainer, hit_rate_at_k, ndcg_at_k
+from ..training import EarlyStopping, Trainer, hit_rate_at_k, ndcg_at_k
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -126,32 +126,83 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
     # --- 6. Training loop --------------------------------------------
     trainer = Trainer(model, cfg, device=device)
 
+    early_stopping_cfg = cfg.get("early_stopping", {}) or {}
+    use_early_stopping = bool(early_stopping_cfg.get("enabled", False))
+
     logger.info("\nIniciando treino (%d epochs)...", cfg["epochs"])
     logger.info("-" * 60)
 
-    for epoch in range(cfg["epochs"]):
-        train_loss = trainer.train_epoch(
-            train_loader,
+    last_epoch = cfg["epochs"]
+    metrics: dict = {}
+    train_loss = 0.0
+
+    if use_early_stopping:
+        stopper = EarlyStopping(
+            patience=int(early_stopping_cfg.get("patience", 3)),
+            mode=early_stopping_cfg.get("mode", "min"),
+            min_delta=float(early_stopping_cfg.get("min_delta", 0.0)),
+        )
+        monitor = early_stopping_cfg.get("monitor", "val_loss")
+        history, best = trainer.fit_with_early_stopping(
+            train_loader=train_loader,
+            val_loader=val_loader,
+            epochs=cfg["epochs"],
+            early_stopping=stopper,
+            monitor=monitor,
             show_progress=cfg.get("show_progress", True),
-            description=f"Epoch {epoch + 1}/{cfg['epochs']}",
         )
-        metrics = trainer.evaluate(val_loader)
+        last_epoch = len(history)
+        if history:
+            metrics = history[-1].eval_metrics
+            train_loss = history[-1].train_loss
         logger.info(
-            "Epoch %02d/%d | Loss: %.4f | AUC: %.4f | AP: %.4f",
-            epoch + 1,
+            "Early stopping (monitor=%s, mode=%s) - best=%s @ epoch %s | ran %d/%d epochs",
+            monitor,
+            stopper.mode,
+            best["value"],
+            best["epoch"],
+            last_epoch,
             cfg["epochs"],
-            train_loss,
-            metrics["auc_roc"],
-            metrics["avg_precision"],
         )
+    else:
+        history = trainer.fit(
+            train_loader=train_loader,
+            val_loader=val_loader,
+            epochs=cfg["epochs"],
+            show_progress=cfg.get("show_progress", True),
+        )
+        if history:
+            metrics = history[-1].eval_metrics
+            train_loss = history[-1].train_loss
+            logger.info(
+                "Epoch %02d/%d | Loss: %.4f | AUC: %.4f | AP: %.4f",
+                last_epoch,
+                cfg["epochs"],
+                train_loss,
+                metrics["auc_roc"],
+                metrics["avg_precision"],
+            )
 
     # --- 7. Ranking metrics on the validation set ---------------------
     logger.info("-" * 60)
     logger.info("Calculando métricas de ranking...")
     val_indices = val_dataset.indices
-    val_samples = np.array(
-        [dataset.samples[i] for i in val_indices[: min(10000, len(val_indices))]]
-    )
+    ranking_limit = min(10000, len(val_indices))
+    if dataset.streaming:
+        val_pairs = [
+            (int(dataset.interactions[i // (1 + dataset.num_negatives)][0]),
+             int(dataset.interactions[i // (1 + dataset.num_negatives)][1]))
+            for i in val_indices[:ranking_limit]
+            if (i % (1 + dataset.num_negatives)) == 0
+        ]
+        val_samples = np.array(
+            [(u, i, 1.0) for u, i in val_pairs[:ranking_limit]],
+            dtype=object,
+        )
+    else:
+        val_samples = np.array(
+            [dataset.samples[i] for i in val_indices[:ranking_limit]]
+        )
     positive_only = val_samples[val_samples[:, 2] == 1.0][:, :2].astype(np.int64)
 
     hr = hit_rate_at_k(model, positive_only[:1000], num_items, k=10, device=device)
