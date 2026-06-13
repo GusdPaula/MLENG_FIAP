@@ -3,9 +3,11 @@
 Exposes the dataset helpers and the data-processor strategies.
 """
 from .dataset import (
+    BatchCollator,
     RecommenderDataset,
     create_interaction_matrix,
     load_events,
+    make_batches,
 )
 from .processors import (
     BinaryInteractionProcessor,
@@ -16,9 +18,11 @@ from .processors import (
 )
 
 __all__ = [
+    "BatchCollator",
     "RecommenderDataset",
     "create_interaction_matrix",
     "load_events",
+    "make_batches",
     "DataProcessor",
     "DataProcessorContext",
     "WeightedEventProcessor",

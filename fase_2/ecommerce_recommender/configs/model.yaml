@@ -15,6 +15,25 @@ model:
   processor: weighted
   processor_kwargs: {}
 
+  # Memory-efficient batch processing.
+  # When true, negatives are sampled lazily per positive (streaming mode),
+  # keeping the in-memory sample table bounded. The trainer still iterates
+  # the DataLoader in fixed-size batches.
+  streaming: false
+
+  # Early stopping.
+  # Disabled by default - set enabled: true to stop training once the
+  # monitored metric stops improving for `patience` consecutive epochs.
+  # `monitor` can be "val_loss" or any metric returned by Trainer.evaluate
+  # (e.g. "auc_roc", "avg_precision"). `mode` is "min" for loss and
+  # "max" for higher-is-better metrics.
+  early_stopping:
+    enabled: true
+    monitor: val_loss
+    mode: min
+    patience: 3
+    min_delta: 0.0
+
   # Model-specific hyperparameters (forwarded to the model factory).
   hyperparams:
     embedding_dim: 64

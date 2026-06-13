@@ -1,0 +1,4 @@
+- Need to improce @messy_function into pieces and modules.
+- Need to improve model training based on https://chatgpt.com/c/6a2d9fb9-c37c-83e9-b637-afbe2034923b
+- Need to better use DVC for data versioning and experiment tracking.
+- Need to make sure the the comments are using google docs style
