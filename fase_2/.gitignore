@@ -10,8 +10,6 @@ env/
 
 # Poetry
 .python-version
-poetry.lock
-*.lock
 
 # DVC
 .dvc/config.local
