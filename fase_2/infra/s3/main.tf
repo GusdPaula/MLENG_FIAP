@@ -96,3 +96,27 @@ resource "aws_iam_policy" "dvc_rw_policy" {
   })
 }
 
+# Usuário IAM para usar com o DVC
+resource "aws_iam_user" "dvc_user" {
+  name = var.iam_user_name
+
+  tags = {
+    Name        = "DVC User"
+    Environment = "MLOps"
+  }
+}
+
+# Anexa a política customizada de Leitura/Escrita ao usuário IAM
+resource "aws_iam_user_policy_attachment" "dvc_rw_attach" {
+  user       = aws_iam_user.dvc_user.name
+  policy_arn = aws_iam_policy.dvc_rw_policy.arn
+}
+
+# Anexa a política gerenciada AWS SignInLocalDevelopmentAccess ao usuário IAM
+# para permitir o login via terminal/Console Credentials
+resource "aws_iam_user_policy_attachment" "signin_dev_attach" {
+  user       = aws_iam_user.dvc_user.name
+  policy_arn = "arn:aws:iam::aws:policy/SignInLocalDevelopmentAccess"
+}
+
+

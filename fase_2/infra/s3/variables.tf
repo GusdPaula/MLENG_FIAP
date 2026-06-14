@@ -9,3 +9,9 @@ variable "bucket_name" {
   description = "Name of the S3 bucket for DVC storage"
   default     = "fiap-ml-dvc-bucket-tech-challenger"
 }
+
+variable "iam_user_name" {
+  type        = string
+  description = "Nome do usuario IAM para o DVC"
+  default     = "fiap-dvc-user"
+}
