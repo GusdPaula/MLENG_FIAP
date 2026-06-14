@@ -182,7 +182,13 @@ resource "aws_iam_role_policy_attachment" "ec2_attach" {
   policy_arn = aws_iam_policy.ec2_policy.arn
 }
 
+resource "aws_iam_role_policy_attachment" "ec2_ssm" {
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
 resource "aws_iam_instance_profile" "ec2_profile" {
+
   name = "${var.project_name}-ec2-profile"
   role = aws_iam_role.ec2_role.name
 }
@@ -219,8 +225,20 @@ resource "aws_instance" "mlflow_server" {
     apt-get update
     apt-get install -y docker.io awscli jq
 
-    # Get the db password from Secrets Manager
-    DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_password_secret.name} --region ${var.aws_region} --query SecretString --output text)
+    # Get the db password from Secrets Manager (with retry loop for IAM propagation delay)
+    for i in {1..12}; do
+      DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.db_password_secret.name} --region ${var.aws_region} --query SecretString --output text 2>/dev/null || echo "")
+      if [ -n "$DB_PASSWORD" ]; then
+        break
+      fi
+      echo "Waiting for Secrets Manager permissions..."
+      sleep 5
+    done
+
+    if [ -z "$DB_PASSWORD" ]; then
+      echo "Failed to retrieve database password from Secrets Manager"
+      exit 1
+    fi
     
     # Construct DB URI
     DB_URI="postgresql://mlflow_user:$${DB_PASSWORD}@${aws_db_instance.mlflow_db.endpoint}/mlflow"
@@ -228,9 +246,10 @@ resource "aws_instance" "mlflow_server" {
     # Pull and Run from Docker Hub
     docker pull ${var.dockerhub_username}/mlflow-server:${var.docker_image_tag}
     docker run -d --restart always -p 5000:5000 \
-      -e MLFLOW_BACKEND_STORE_URI="$DB_URI" \
-      -e MLFLOW_DEFAULT_ARTIFACT_ROOT="s3://${aws_s3_bucket.mlflow_artifacts.bucket}" \
-      ${var.dockerhub_username}/mlflow-server:${var.docker_image_tag} --host 0.0.0.0
+      ${var.dockerhub_username}/mlflow-server:${var.docker_image_tag} \
+      --host 0.0.0.0 \
+      --backend-store-uri "$DB_URI" \
+      --default-artifact-root "s3://${aws_s3_bucket.mlflow_artifacts.bucket}"
   EOF
 }
 
