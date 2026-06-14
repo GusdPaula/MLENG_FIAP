@@ -433,12 +433,23 @@ class Trainer:
         ndcg_scores = []
         with torch.no_grad():
             for user_idx, true_items in users_items.items():
-                user_tensor = torch.full((num_items,), user_idx, dtype=torch.long).to(self.device)
-                item_tensor = torch.arange(num_items, dtype=torch.long).to(self.device)
+                # Sample negative items instead of using all items for efficiency
+                num_negatives = min(1000, num_items - len(true_items))
+                negative_items = np.random.choice(
+                    [i for i in range(num_items) if i not in true_items],
+                    num_negatives,
+                    replace=False
+                )
+
+                # Combine true items with sampled negatives
+                candidate_items = list(true_items) + list(negative_items)
+
+                user_tensor = torch.full((len(candidate_items),), user_idx, dtype=torch.long).to(self.device)
+                item_tensor = torch.tensor(candidate_items, dtype=torch.long).to(self.device)
 
                 scores = self.model(user_tensor, item_tensor)
                 _, top_k_indices = torch.topk(scores, k)
-                top_k_list = top_k_indices.cpu().numpy()
+                top_k_list = [candidate_items[i] for i in top_k_indices.cpu().numpy()]
 
                 dcg = 0.0
                 for rank, item_id in enumerate(top_k_list):
