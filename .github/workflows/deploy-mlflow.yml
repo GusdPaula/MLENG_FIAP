@@ -17,7 +17,7 @@ on:
         description: 'Activate custom domain (Only works AFTER validating the ACM cert in your DNS)'
         type: boolean
         required: true
-        default: true
+        default: false
 
 
 jobs:
@@ -68,13 +68,13 @@ jobs:
       - name: Terraform Plan
         run: |
           cd fase_2/infra/mlflow
-          terraform plan -input=false -var="dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" -var="docker_image_tag=${{ github.sha }}" -var="use_custom_domain=${{ github.event.inputs.use_custom_domain != 'false' }}"
+          terraform plan -input=false -var="dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" -var="docker_image_tag=${{ github.sha }}" -var="use_custom_domain=${{ github.event.inputs.use_custom_domain || 'false' }}"
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: |
           cd fase_2/infra/mlflow
-          terraform apply -auto-approve -input=false -var="dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" -var="docker_image_tag=${{ github.sha }}" -var="use_custom_domain=${{ github.event.inputs.use_custom_domain != 'false' }}"
+          terraform apply -auto-approve -input=false -var="dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" -var="docker_image_tag=${{ github.sha }}" -var="use_custom_domain=${{ github.event.inputs.use_custom_domain || 'false' }}"
 
 
 

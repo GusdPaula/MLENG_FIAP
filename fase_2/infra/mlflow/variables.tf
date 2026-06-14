@@ -37,7 +37,7 @@ variable "docker_image_tag" {
 variable "use_custom_domain" {
   description = "Whether to use custom domain with ACM certificate"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "custom_domain_name" {
