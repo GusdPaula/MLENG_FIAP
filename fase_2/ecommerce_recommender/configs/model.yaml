@@ -1,9 +1,9 @@
 model:
   type: ncf  # one of: ncf, gmf, matrix_factorization
   seed: 42
-  batch_size: 256
+  batch_size: 1024
   learning_rate: 0.001
-  epochs: 10
+  epochs: 3
   show_progress: true
   num_negatives: 4
   min_interactions: 5

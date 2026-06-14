@@ -44,7 +44,11 @@ class MLflowToolkit:
         return f"sqlite:///{self.offline_tracking_db}"
 
     def _apply_tracking_uri(self, mlflow: Any, tracking_uri: str | None) -> None:
-        if tracking_uri:
+        import os
+        env_uri = os.environ.get("MLFLOW_TRACKING_URI")
+        if env_uri:
+            mlflow.set_tracking_uri(env_uri)
+        elif tracking_uri:
             mlflow.set_tracking_uri(tracking_uri)
         else:
             mlflow.set_tracking_uri(self._offline_tracking_uri())

@@ -5,3 +5,4 @@ Este repositório foi criado para as aulas da pós-graduação em Machine Learni
 ## Estrutura
 
 - `fase_1`: materiais e atividades da primeira fase.
+- `fase_2`: materiais e atividades da segunda fase.

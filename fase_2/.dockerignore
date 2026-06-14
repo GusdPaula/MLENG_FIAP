@@ -1,0 +1,38 @@
+# VCS
+.git
+.github
+
+# Virtual Environments
+.venv
+venv
+env
+.python-version
+
+# Python artifacts
+**/__pycache__/
+**/*.py[cod]
+**/*.pyo
+**/*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# DVC internals (except tracked references if any, but in container context we don't need them)
+.dvc/tmp
+.dvc/cache
+.dvc/config.local
+
+# MLflow local databases & runs
+mlruns/
+mlflow.db
+ecommerce_recommender/mlflow.db
+ecommerce_recommender/notebooks/mlflow.db
+
+# Data & Models (we want to mount these via volumes, not bake them into the image)
+ecommerce_recommender/data/
+ecommerce_recommender/models/
+reports/
+
+# Environmental variables
+.env
+.env.*

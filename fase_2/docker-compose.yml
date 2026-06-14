@@ -1,0 +1,62 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mlflow_postgres
+    environment:
+      POSTGRES_USER: mlflow_user
+      POSTGRES_PASSWORD: mlflow_password
+      POSTGRES_DB: mlflow_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow_user -d mlflow_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+    container_name: mlflow_server
+    command: >
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri postgresql://mlflow_user:mlflow_password@db:5432/mlflow_db
+      --default-artifact-root /mlflow-artifacts
+      --allowed-hosts "*"
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_artifacts:/mlflow-artifacts
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  train:
+    build:
+      context: .
+      target: runtime
+    container_name: train_pipeline
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - ./ecommerce_recommender/data:/app/ecommerce_recommender/data
+      - ./ecommerce_recommender/models:/app/ecommerce_recommender/models
+      - ./ecommerce_recommender/configs:/app/ecommerce_recommender/configs
+    depends_on:
+      mlflow:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  mlflow_artifacts:
