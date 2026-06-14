@@ -4,3 +4,4 @@
     autostage = true
 ['remote "s3-public"']
     url = s3://fiap-ml-dvc-bucket-tech-challenger
+    profile = aws

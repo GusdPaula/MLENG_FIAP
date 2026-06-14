@@ -228,18 +228,17 @@ resource "aws_instance" "mlflow_server" {
     #!/bin/bash
     set -e
     
-    # Wait for background apt/dpkg locks to be released
-    echo "Waiting for dpkg locks..."
-    for i in {1..60}; do
-      if ! fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; then
+    # Wait for background apt/dpkg locks to be released by retrying apt-get update
+    echo "Updating package lists..."
+    for i in {1..12}; do
+      if apt-get update; then
         break
       fi
-      echo "Another package manager is running, waiting..."
-      sleep 5
+      echo "Apt is locked or network is not ready, waiting 10 seconds..."
+      sleep 10
     done
 
     # Install AWS CLI, Docker, and jq
-    apt-get update
     apt-get install -y docker.io awscli jq
 
     # Get the db password from Secrets Manager (with retry loop for IAM propagation delay)

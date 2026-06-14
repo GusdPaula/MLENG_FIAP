@@ -7,7 +7,7 @@ stages:
     deps:
     - path: configs/model.yaml
       hash: md5
-      md5: 837bf1de6454266ed77a825c6bf1b1c7
+      md5: 9a1fdd1c5a5e5457485289188ffe5312
       size: 1370
     - path: data/raw/events.csv
       hash: md5
