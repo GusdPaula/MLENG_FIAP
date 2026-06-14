@@ -21,3 +21,17 @@ variable "db_instance_class" {
   type        = string
   default     = "db.t4g.micro"
 }
+
+variable "dockerhub_username" {
+  description = "Docker Hub Username"
+  type        = string
+  default     = "dummy"
+}
+
+variable "docker_image_tag" {
+  description = "Docker Image Tag"
+  type        = string
+  default     = "latest"
+}
+
+

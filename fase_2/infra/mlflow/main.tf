@@ -225,21 +225,12 @@ resource "aws_instance" "mlflow_server" {
     # Construct DB URI
     DB_URI="postgresql://mlflow_user:$${DB_PASSWORD}@${aws_db_instance.mlflow_db.endpoint}/mlflow"
     
-    # Write Dockerfile
-    cat << 'DOCKERFILE' > /root/Dockerfile
-    FROM python:3.12-slim
-    RUN pip install --no-cache-dir "mlflow>=3.0.0" psycopg2-binary boto3
-    EXPOSE 5000
-    ENTRYPOINT ["mlflow", "server"]
-    DOCKERFILE
-
-    # Build and Run
-    cd /root
-    docker build -t mlflow-server .
+    # Pull and Run from Docker Hub
+    docker pull ${var.dockerhub_username}/mlflow-server:${var.docker_image_tag}
     docker run -d --restart always -p 5000:5000 \
       -e MLFLOW_BACKEND_STORE_URI="$DB_URI" \
       -e MLFLOW_DEFAULT_ARTIFACT_ROOT="s3://${aws_s3_bucket.mlflow_artifacts.bucket}" \
-      mlflow-server --host 0.0.0.0
+      ${var.dockerhub_username}/mlflow-server:${var.docker_image_tag} --host 0.0.0.0
   EOF
 }
 

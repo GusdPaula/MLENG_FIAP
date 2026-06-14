@@ -34,6 +34,20 @@ jobs:
         with:
           terraform_version: "1.7.0"
 
+      - name: Log in to Docker Hub
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-server:${{ github.sha }} -t ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-server:latest -f fase_2/Dockerfile.mlflow fase_2
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-server:${{ github.sha }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/mlflow-server:latest
+
       - name: Terraform Format check
         run: |
           cd fase_2/infra/mlflow
@@ -47,10 +61,12 @@ jobs:
       - name: Terraform Plan
         run: |
           cd fase_2/infra/mlflow
-          terraform plan -input=false
+          terraform plan -input=false -var="dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" -var="docker_image_tag=${{ github.sha }}"
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: |
           cd fase_2/infra/mlflow
-          terraform apply -auto-approve -input=false
+          terraform apply -auto-approve -input=false -var="dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" -var="docker_image_tag=${{ github.sha }}"
+
+
