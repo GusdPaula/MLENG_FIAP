@@ -133,6 +133,7 @@ resource "aws_db_instance" "mlflow_db" {
 # --- IAM Role for EC2 ---
 resource "aws_iam_role" "ec2_role" {
   name = "${var.project_name}-ec2-role"
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -148,6 +149,7 @@ resource "aws_iam_role" "ec2_role" {
 resource "aws_iam_policy" "ec2_policy" {
   name        = "${var.project_name}-ec2-policy"
   description = "Policy for EC2 to access S3 and Secrets Manager"
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -189,6 +191,7 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = ["099720109477"] # Canonical
+
   filter {
     name   = "name"
     values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
@@ -267,11 +270,12 @@ resource "aws_cloudfront_distribution" "mlflow_distribution" {
     forwarded_values {
       query_string = true
       headers      = ["*"]
+
       cookies {
         forward = "all"
       }
     }
-    
+
     min_ttl     = 0
     default_ttl = 0
     max_ttl     = 0
@@ -291,4 +295,3 @@ resource "aws_cloudfront_distribution" "mlflow_distribution" {
     Name = "${var.project_name}-cf"
   }
 }
-
