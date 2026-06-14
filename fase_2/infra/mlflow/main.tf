@@ -290,7 +290,7 @@ resource "aws_cloudfront_distribution" "mlflow_distribution" {
     cached_methods   = ["GET", "HEAD"]
     target_origin_id = "mlflow-ec2-origin"
 
-    viewer_protocol_policy = "allow-all"
+    viewer_protocol_policy = "redirect-to-https"
 
     forwarded_values {
       query_string = true
