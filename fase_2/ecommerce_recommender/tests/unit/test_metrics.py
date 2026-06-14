@@ -25,11 +25,13 @@ class MockModel(nn.Module):
 def test_hit_rate_at_k_basic():
     """Test basic hit rate calculation."""
     model = MockModel(num_users=10, num_items=5)
-    test_interactions = np.array([
-        [0, 0],  # user 0, item 0
-        [1, 1],  # user 1, item 1
-        [2, 2],  # user 2, item 2
-    ])
+    test_interactions = np.array(
+        [
+            [0, 0],  # user 0, item 0
+            [1, 1],  # user 1, item 1
+            [2, 2],  # user 2, item 2
+        ]
+    )
 
     hr = hit_rate_at_k(model, test_interactions, num_items=5, k=3, device="cpu")
 
@@ -60,11 +62,13 @@ def test_hit_rate_at_k_single_user():
 def test_ndcg_at_k_basic():
     """Test basic NDCG calculation."""
     model = MockModel(num_users=10, num_items=5)
-    test_interactions = np.array([
-        [0, 0],
-        [1, 1],
-        [2, 2],
-    ])
+    test_interactions = np.array(
+        [
+            [0, 0],
+            [1, 1],
+            [2, 2],
+        ]
+    )
 
     ndcg = ndcg_at_k(model, test_interactions, num_items=5, k=3, device="cpu")
 
@@ -95,11 +99,13 @@ def test_ndcg_at_k_single_user():
 def test_ndcg_at_k_multiple_items_per_user():
     """Test NDCG with user having multiple true items."""
     model = MockModel(num_users=10, num_items=5)
-    test_interactions = np.array([
-        [0, 0],
-        [0, 1],
-        [0, 2],
-    ])
+    test_interactions = np.array(
+        [
+            [0, 0],
+            [0, 1],
+            [0, 2],
+        ]
+    )
 
     ndcg = ndcg_at_k(model, test_interactions, num_items=5, k=3, device="cpu")
 

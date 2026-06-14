@@ -39,7 +39,9 @@ class BigQueryQuery:
         self.dataset_id = dataset_id
         self.output_dir = Path(output_dir).resolve()
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.dvc_repo_path = Path(dvc_repo_path).resolve() if dvc_repo_path else Path.cwd().resolve()
+        self.dvc_repo_path = (
+            Path(dvc_repo_path).resolve() if dvc_repo_path else Path.cwd().resolve()
+        )
         self.dvc_repo_root = (
             self.dvc_repo_path
             if dvc_repo_path is not None
@@ -58,7 +60,9 @@ class BigQueryQuery:
         query = f"SELECT * FROM `{self.project_id}.{self.dataset_id}.{table_name}`"
         return self.extract_query(query, destination_name, force=force)
 
-    def extract_query(self, query: str, destination_name: str, force: bool = False) -> Path:
+    def extract_query(
+        self, query: str, destination_name: str, force: bool = False
+    ) -> Path:
         """Run an arbitrary SQL query, write the results to CSV, and version the output."""
         destination_path = self.output_dir / destination_name
         if destination_path.exists() and not force:
@@ -133,7 +137,9 @@ class BigQueryQuery:
                 check=False,
             )
         except FileNotFoundError as exc:
-            raise RuntimeError("DVC executable was not found. Ensure DVC is installed and on PATH.") from exc
+            raise RuntimeError(
+                "DVC executable was not found. Ensure DVC is installed and on PATH."
+            ) from exc
 
         if completed.returncode != 0:
             raise RuntimeError(

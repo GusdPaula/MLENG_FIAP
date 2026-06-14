@@ -29,10 +29,12 @@ def test_compute_ranking_metrics_basic():
     model = MockModel(num_users=10, num_items=5)
 
     # Create simple dataset with proper format
-    interactions = pd.DataFrame({
-        "user_idx": [0, 1, 2, 0, 1],
-        "item_idx": [0, 1, 2, 1, 2],
-    })
+    interactions = pd.DataFrame(
+        {
+            "user_idx": [0, 1, 2, 0, 1],
+            "item_idx": [0, 1, 2, 1, 2],
+        }
+    )
     dataset = RecommenderDataset(interactions, num_items=5, num_negatives=2)
 
     # Create validation subset
@@ -54,8 +56,6 @@ def test_compute_ranking_metrics_basic():
     assert 0 <= ndcg <= 1
     assert isinstance(hr, float)
     assert isinstance(ndcg, float)
-
-
 
 
 def test_compute_ranking_metrics_k_parameter():

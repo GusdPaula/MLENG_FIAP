@@ -20,6 +20,7 @@ Available built-in strategies:
 * :class:`ImplicitFeedbackProcessor` - keeps all events as positives
   with weight 1 (purely implicit, no type hierarchy).
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -35,7 +36,9 @@ class DataProcessor(ABC):
     name: str = "abstract"
 
     @abstractmethod
-    def process(self, events: pd.DataFrame, **kwargs: Any) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
+    def process(
+        self, events: pd.DataFrame, **kwargs: Any
+    ) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
         """Process events into interactions with user/item mappings.
 
         Args:
@@ -226,10 +229,16 @@ class DataProcessorContext:
 
     _STRATEGIES: dict[str, type[DataProcessor]] = {
         cls.name: cls
-        for cls in (WeightedEventProcessor, BinaryInteractionProcessor, ImplicitFeedbackProcessor)
+        for cls in (
+            WeightedEventProcessor,
+            BinaryInteractionProcessor,
+            ImplicitFeedbackProcessor,
+        )
     }
 
-    def __init__(self, strategy: str | DataProcessor = "weighted", **strategy_kwargs: Any):
+    def __init__(
+        self, strategy: str | DataProcessor = "weighted", **strategy_kwargs: Any
+    ):
         """Initialize the data processor context with a strategy.
 
         Args:
@@ -255,7 +264,9 @@ class DataProcessorContext:
         """Return the name of the current strategy."""
         return self._strategy.name
 
-    def process(self, events: pd.DataFrame, **kwargs: Any) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
+    def process(
+        self, events: pd.DataFrame, **kwargs: Any
+    ) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
         """Process events using the configured strategy.
 
         Args:

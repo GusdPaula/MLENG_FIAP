@@ -8,6 +8,7 @@ from src.recommender.mlflow_toolkit.callbacks import create_mlflow_logger
 @dataclass
 class MockEpochResult:
     """Mock epoch result for testing."""
+
     epoch: int
     train_loss: float
     learning_rate: float

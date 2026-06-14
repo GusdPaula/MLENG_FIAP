@@ -18,6 +18,7 @@ Use :class:`BatchCollator` to control how the underlying triples
 are packed into PyTorch tensors and :func:`make_batches` for
 explicit batch iteration without a DataLoader.
 """
+
 from __future__ import annotations
 
 from typing import Iterator
@@ -43,7 +44,9 @@ def load_events(path: str) -> pd.DataFrame:
     return df
 
 
-def create_interaction_matrix(events: pd.DataFrame) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
+def create_interaction_matrix(
+    events: pd.DataFrame,
+) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
     """Create user/item to index mappings and positive interaction pairs.
 
     Args:
@@ -113,7 +116,7 @@ def make_batches(
         items = []
         labels = []
         for idx in range(start, min(end, n)):
-            u, i, l = dataset[idx] # noqa: E741
+            u, i, l = dataset[idx]  # noqa: E741
             users.append(u)
             items.append(i)
             labels.append(l)

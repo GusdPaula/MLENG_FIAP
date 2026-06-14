@@ -4,6 +4,7 @@ This abstract class is the contract that the ModelFactory relies on.
 Every concrete model (NCF, GMF, MatrixFactorization, ...) must implement
 ``forward`` taking ``(user_ids, item_ids)`` and returning a score tensor.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -43,7 +44,9 @@ class BaseRecommenderModel(nn.Module, ABC):
                 elif init_type == "zeros":
                     nn.init.zeros_(module.weight)
 
-    def _init_linear_layers(self, init_type: str = "xavier_uniform", nonlinearity: str = "relu") -> None:
+    def _init_linear_layers(
+        self, init_type: str = "xavier_uniform", nonlinearity: str = "relu"
+    ) -> None:
         """Initialize linear layers using specified initialization method.
 
         Args:
@@ -62,9 +65,7 @@ class BaseRecommenderModel(nn.Module, ABC):
                     nn.init.zeros_(module.bias)
 
     @abstractmethod
-    def forward(
-        self, user_ids: torch.Tensor, item_ids: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, user_ids: torch.Tensor, item_ids: torch.Tensor) -> torch.Tensor:
         """Return a score tensor of shape ``(batch,)`` for each (user, item) pair."""
 
     @property

@@ -1,4 +1,5 @@
 """Tests for the streaming RecommenderDataset."""
+
 import numpy as np
 import pandas as pd
 import torch
@@ -12,33 +13,26 @@ from src.recommender.data import (
 def test_recommender_dataset_streaming_mode():
     """Test that streaming mode works correctly."""
     # Create simple interaction data
-    interactions = pd.DataFrame({
-        "user_idx": [0, 1, 2],
-        "item_idx": [0, 1, 2]
-    })
+    interactions = pd.DataFrame({"user_idx": [0, 1, 2], "item_idx": [0, 1, 2]})
 
     # Test eager mode (default)
     dataset_eager = RecommenderDataset(
-        interactions=interactions,
-        num_items=5,
-        num_negatives=2,
-        streaming=False
+        interactions=interactions, num_items=5, num_negatives=2, streaming=False
     )
 
     assert len(dataset_eager) == 9  # 3 positives * (1 + 2 negatives) = 9 samples
-    assert hasattr(dataset_eager, 'samples')
+    assert hasattr(dataset_eager, "samples")
     assert isinstance(dataset_eager.samples, list)
 
     # Test streaming mode
     dataset_streaming = RecommenderDataset(
-        interactions=interactions,
-        num_items=5,
-        num_negatives=2,
-        streaming=True
+        interactions=interactions, num_items=5, num_negatives=2, streaming=True
     )
 
     assert len(dataset_streaming) == 9  # Same total count
-    assert not hasattr(dataset_streaming, 'samples')  # Should not have samples attribute in streaming mode
+    assert not hasattr(
+        dataset_streaming, "samples"
+    )  # Should not have samples attribute in streaming mode
 
     # Test that we can access items via __getitem__
     user, item, label = dataset_streaming[0]
@@ -58,26 +52,15 @@ def test_recommender_dataset_streaming_mode():
 def test_recommender_dataset_streaming_consistency():
     """Test that streaming mode produces consistent results."""
     # Create interaction data
-    interactions = pd.DataFrame({
-        "user_idx": [0, 1],
-        "item_idx": [0, 1]
-    })
+    interactions = pd.DataFrame({"user_idx": [0, 1], "item_idx": [0, 1]})
 
     # Test with fixed seed for reproducibility
     dataset1 = RecommenderDataset(
-        interactions=interactions,
-        num_items=5,
-        num_negatives=2,
-        streaming=True,
-        seed=42
+        interactions=interactions, num_items=5, num_negatives=2, streaming=True, seed=42
     )
 
     dataset2 = RecommenderDataset(
-        interactions=interactions,
-        num_items=5,
-        num_negatives=2,
-        streaming=True,
-        seed=42
+        interactions=interactions, num_items=5, num_negatives=2, streaming=True, seed=42
     )
 
     # Should produce same results with same seed
@@ -100,16 +83,10 @@ def test_recommender_dataset_streaming_consistency():
 
 def test_recommender_dataset_streaming_batching():
     """Test batch processing with streaming mode."""
-    interactions = pd.DataFrame({
-        "user_idx": [0, 1, 2],
-        "item_idx": [0, 1, 2]
-    })
+    interactions = pd.DataFrame({"user_idx": [0, 1, 2], "item_idx": [0, 1, 2]})
 
     dataset = RecommenderDataset(
-        interactions=interactions,
-        num_items=5,
-        num_negatives=2,
-        streaming=True
+        interactions=interactions, num_items=5, num_negatives=2, streaming=True
     )
 
     # Test batch iteration
@@ -151,16 +128,10 @@ def test_batch_collator():
 
 def test_make_batches():
     """Test the make_batches utility function."""
-    interactions = pd.DataFrame({
-        "user_idx": [0, 1, 2],
-        "item_idx": [0, 1, 2]
-    })
+    interactions = pd.DataFrame({"user_idx": [0, 1, 2], "item_idx": [0, 1, 2]})
 
     dataset = RecommenderDataset(
-        interactions=interactions,
-        num_items=5,
-        num_negatives=1,
-        streaming=False
+        interactions=interactions, num_items=5, num_negatives=1, streaming=False
     )
 
     batches = list(make_batches(dataset, batch_size=2))
@@ -179,10 +150,7 @@ def test_recommender_dataset_streaming_edge_cases():
     interactions = pd.DataFrame({"user_idx": [], "item_idx": []})
 
     dataset = RecommenderDataset(
-        interactions=interactions,
-        num_items=5,
-        num_negatives=2,
-        streaming=True
+        interactions=interactions, num_items=5, num_negatives=2, streaming=True
     )
 
     assert len(dataset) == 0
@@ -191,10 +159,7 @@ def test_recommender_dataset_streaming_edge_cases():
     interactions = pd.DataFrame({"user_idx": [0], "item_idx": [1]})
 
     dataset = RecommenderDataset(
-        interactions=interactions,
-        num_items=5,
-        num_negatives=2,
-        streaming=True
+        interactions=interactions, num_items=5, num_negatives=2, streaming=True
     )
 
     assert len(dataset) == 3  # 1 positive + 2 negatives

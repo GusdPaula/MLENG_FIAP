@@ -11,6 +11,7 @@ make the rest of the system pluggable:
   pipeline only calls ``context.process(...)`` and is unaware of the
   concrete processor.
 """
+
 from __future__ import annotations
 
 import logging
@@ -27,16 +28,15 @@ from ..data import (
     RecommenderDataset,
     load_events,
 )
+from ..mlflow_toolkit import MLflowToolkit, create_mlflow_logger
 from ..models import ModelFactory
 from ..training import EarlyStopping, Trainer
 from ..training.checkpoint import save_checkpoint
 from ..training.evaluator import compute_ranking_metrics
 from ..utils import resolve_device
 
-from ..mlflow_toolkit import MLflowToolkit, create_mlflow_logger
-
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(message)s')
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -57,6 +57,7 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
             mlflow_cfg = yaml.safe_load(f).get("mlflow", {})
 
     import os
+
     # Optimize CPU threads for PyTorch operations
     num_threads = cfg.get("num_threads", os.cpu_count() or 1)
     torch.set_num_threads(num_threads)
@@ -72,10 +73,13 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
     item2idx_path = processed_dir / "item2idx.json"
 
     import json
+
     import pandas as pd
 
     if interactions_path.exists() and user2idx_path.exists() and item2idx_path.exists():
-        logger.info("Dados pré-processados encontrados. Carregando de %s ...", processed_dir)
+        logger.info(
+            "Dados pré-processados encontrados. Carregando de %s ...", processed_dir
+        )
         interactions = pd.read_csv(interactions_path)
         with open(user2idx_path) as f:
             user2idx = json.load(f)
@@ -136,13 +140,13 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
         batch_size=cfg["batch_size"],
         shuffle=True,
         num_workers=num_workers,
-        pin_memory=True
+        pin_memory=True,
     )
     val_loader = DataLoader(
         val_dataset,
         batch_size=cfg["batch_size"],
         num_workers=num_workers,
-        pin_memory=True
+        pin_memory=True,
     )
 
     # --- 5. Model: use the factory -----------------------------------
@@ -172,16 +176,18 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
         tags={"model_type": model_type, "processor": processor_cfg},
     ):
         # Log MLflow parameters
-        mlflow_toolkit.log_params({
-            "model_type": model_type,
-            "processor": processor_cfg,
-            "seed": cfg["seed"],
-            "batch_size": cfg["batch_size"],
-            "learning_rate": cfg["learning_rate"],
-            "epochs": cfg["epochs"],
-            "num_negatives": cfg["num_negatives"],
-            "min_interactions": cfg.get("min_interactions", 1),
-        })
+        mlflow_toolkit.log_params(
+            {
+                "model_type": model_type,
+                "processor": processor_cfg,
+                "seed": cfg["seed"],
+                "batch_size": cfg["batch_size"],
+                "learning_rate": cfg["learning_rate"],
+                "epochs": cfg["epochs"],
+                "num_negatives": cfg["num_negatives"],
+                "min_interactions": cfg.get("min_interactions", 1),
+            }
+        )
 
         # Log MLflow dataset
         mlflow_toolkit.log_dataset(
@@ -242,11 +248,15 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
             )
 
             # Log early stopping best epoch details to MLflow
-            mlflow_toolkit.log_metrics({
-                "best_epoch": int(best["epoch"]),
-                "best_auc_roc": float(best["value"]) if monitor == "auc_roc" else 0.0,
-                "epochs_run": last_epoch,
-            })
+            mlflow_toolkit.log_metrics(
+                {
+                    "best_epoch": int(best["epoch"]),
+                    "best_auc_roc": float(best["value"])
+                    if monitor == "auc_roc"
+                    else 0.0,
+                    "epochs_run": last_epoch,
+                }
+            )
         else:
             history = trainer.fit(
                 train_loader=train_loader,
@@ -318,31 +328,36 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
 
         # Copiar para um caminho fixo para rastreamento no pipeline DVC
         import shutil
+
         dvc_model_path = artifact_dir / "model.pt"
         shutil.copyfile(artifact_path, dvc_model_path)
         logger.info("Cópia do modelo salva em %s para rastreamento DVC", dvc_model_path)
 
         # --- 9. Log Metrics and PyTorch Model to MLflow Server -----------
-        mlflow_toolkit.log_metrics({
-            "final_train_loss": train_loss,
-            "final_auc_roc": metrics["auc_roc"],
-            "final_avg_precision": metrics["avg_precision"],
-            "hit_rate_at_10": hr,
-            "ndcg_at_10": ndcg,
-        })
+        mlflow_toolkit.log_metrics(
+            {
+                "final_train_loss": train_loss,
+                "final_auc_roc": metrics["auc_roc"],
+                "final_avg_precision": metrics["avg_precision"],
+                "hit_rate_at_10": hr,
+                "ndcg_at_10": ndcg,
+            }
+        )
 
         logger.info("Logging PyTorch model to MLflow server...")
         mlflow_toolkit.log_pytorch_model(
             model=model,
             artifact_path="model",
-            registered_model_name=cfg.get("registered_model_name", "ecommerce_recommender"),
+            registered_model_name=cfg.get(
+                "registered_model_name", "ecommerce_recommender"
+            ),
         )
         logger.info("MLflow logging completed successfully.")
 
 
-
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(description="Run training pipeline.")
     parser.add_argument(
         "--config",

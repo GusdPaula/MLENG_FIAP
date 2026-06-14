@@ -3,6 +3,7 @@
 Importing :mod:`recommender.models` registers the built-in models in
 :data:`ModelFactory._registry` and exposes the abstract base class.
 """
+
 from .base import BaseRecommenderModel
 from .factory import ModelFactory
 from .gmf import GMFModel

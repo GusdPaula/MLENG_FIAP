@@ -4,6 +4,7 @@ GMF is the element-wise product branch of the original NCF paper. It
 learns separate embeddings for users and items and combines them with a
 hadamard product, optionally projected by a linear layer.
 """
+
 from __future__ import annotations
 
 import torch
@@ -54,9 +55,7 @@ class GMFModel(BaseRecommenderModel):
         self._init_embeddings("xavier_uniform")
         self._init_linear_layers("xavier_uniform")
 
-    def forward(
-        self, user_ids: torch.Tensor, item_ids: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, user_ids: torch.Tensor, item_ids: torch.Tensor) -> torch.Tensor:
         user_emb = self.user_embedding(user_ids)
         item_emb = self.item_embedding(item_ids)
         element_product = user_emb * item_emb

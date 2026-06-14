@@ -4,6 +4,7 @@ The toolkit keeps the MLflow-specific code in one place so the training
 pipeline can stay focused on data preparation, model training, and
 evaluation.
 """
+
 from __future__ import annotations
 
 import tempfile
@@ -45,6 +46,7 @@ class MLflowToolkit:
 
     def _apply_tracking_uri(self, mlflow: Any, tracking_uri: str | None) -> None:
         import os
+
         env_uri = os.environ.get("MLFLOW_TRACKING_URI")
         if env_uri:
             mlflow.set_tracking_uri(env_uri)
@@ -61,7 +63,9 @@ class MLflowToolkit:
         notebook can keep running offline.
         """
         mlflow = self._require_mlflow()
-        allow_fallback = self.allow_offline_fallback if allow_fallback is None else allow_fallback
+        allow_fallback = (
+            self.allow_offline_fallback if allow_fallback is None else allow_fallback
+        )
 
         try:
             self._apply_tracking_uri(mlflow, self.tracking_uri)
@@ -173,7 +177,9 @@ class MLflowToolkit:
             except Exception:
                 pass
 
-        with tempfile.NamedTemporaryFile(prefix=f"{name}_", suffix=".csv", delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(
+            prefix=f"{name}_", suffix=".csv", delete=False
+        ) as tmp:
             csv_path = Path(tmp.name)
         dataset.to_csv(csv_path, index=False)
         mlflow.log_artifact(str(csv_path))

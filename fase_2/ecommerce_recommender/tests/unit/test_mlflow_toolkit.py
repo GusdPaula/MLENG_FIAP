@@ -1,4 +1,5 @@
 """Tests for the MLflow toolkit wrapper."""
+
 from __future__ import annotations
 
 import sys
@@ -88,7 +89,9 @@ def _install_dummy_mlflow(monkeypatch):  # noqa: C901 - local test double with m
         log_input=log_input,
         set_tag=set_tag,
         register_model=register_model,
-        data=types.SimpleNamespace(from_pandas=lambda df, name=None: {"df": df, "name": name}),
+        data=types.SimpleNamespace(
+            from_pandas=lambda df, name=None: {"df": df, "name": name}
+        ),
         pytorch=types.SimpleNamespace(log_model=lambda **kwargs: None),
     )
     monkeypatch.setitem(sys.modules, "mlflow", dummy_mlflow)
@@ -117,10 +120,12 @@ def _install_failing_mlflow(monkeypatch):
             set_experiment=set_experiment,
             get_experiment_by_name=lambda name: None,
             create_experiment=lambda name: "exp-offline",
-            start_run=lambda run_name=None, tags=None, nested=False: types.SimpleNamespace(
-                __enter__=lambda self=None: self,
-                __exit__=lambda self, exc_type, exc, tb: False,
-                info=types.SimpleNamespace(run_id="run-offline"),
+            start_run=lambda run_name=None, tags=None, nested=False: (
+                types.SimpleNamespace(
+                    __enter__=lambda self=None: self,
+                    __exit__=lambda self, exc_type, exc, tb: False,
+                    info=types.SimpleNamespace(run_id="run-offline"),
+                )
             ),
             log_params=lambda params: calls["log_params"].append(params),
             log_metrics=lambda metrics, step=None: calls["log_metrics"].append(
@@ -134,7 +139,9 @@ def _install_failing_mlflow(monkeypatch):
             register_model=lambda model_uri, name: types.SimpleNamespace(
                 name=name, model_uri=model_uri
             ),
-            data=types.SimpleNamespace(from_pandas=lambda df, name=None: {"df": df, "name": name}),
+            data=types.SimpleNamespace(
+                from_pandas=lambda df, name=None: {"df": df, "name": name}
+            ),
             pytorch=types.SimpleNamespace(log_model=lambda **kwargs: None),
         ),
     )

@@ -17,6 +17,7 @@ Example:
     ...     if stopper(metric):
     ...         break
 """
+
 from __future__ import annotations
 
 from typing import Any, Literal
@@ -48,9 +49,7 @@ class EarlyStopping:
         restore_best: bool = True,
     ) -> None:
         if mode not in ("min", "max"):
-            raise ValueError(
-                f"mode must be 'min' or 'max', got {mode!r}"
-            )
+            raise ValueError(f"mode must be 'min' or 'max', got {mode!r}")
         self.patience = int(patience)
         self.mode = mode
         self.min_delta = float(min_delta)

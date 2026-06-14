@@ -25,10 +25,7 @@ def create_mlflow_logger(mlflow_toolkit: Any) -> Callable[[Any], None]:
         metrics = {
             "train_loss": float(epoch_result.train_loss),
             "learning_rate": float(epoch_result.learning_rate),
-            **{
-                k: float(v)
-                for k, v in epoch_result.eval_metrics.items()
-            },
+            **{k: float(v) for k, v in epoch_result.eval_metrics.items()},
         }
         mlflow_toolkit.log_metrics(metrics, step=epoch_result.epoch)
         logger.debug(f"Logged metrics for epoch {epoch_result.epoch}")

@@ -4,6 +4,7 @@ The model concatenates user and item embeddings and feeds them into an
 MLP whose output is squashed through a Sigmoid to produce a
 probability-like score in ``[0, 1]``.
 """
+
 from __future__ import annotations
 
 import torch
@@ -56,9 +57,7 @@ class NCFModel(BaseRecommenderModel):
         self._init_embeddings("xavier_uniform")
         self._init_linear_layers("kaiming_uniform", nonlinearity="relu")
 
-    def forward(
-        self, user_ids: torch.Tensor, item_ids: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, user_ids: torch.Tensor, item_ids: torch.Tensor) -> torch.Tensor:
         user_emb = self.user_embedding(user_ids)
         item_emb = self.item_embedding(item_ids)
         x = torch.cat([user_emb, item_emb], dim=-1)

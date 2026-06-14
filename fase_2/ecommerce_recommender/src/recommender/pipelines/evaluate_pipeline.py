@@ -4,19 +4,20 @@ import argparse
 import json
 import logging
 from pathlib import Path
-import yaml
+
 import numpy as np
 import pandas as pd
 import torch
+import yaml
 from torch.utils.data import DataLoader, random_split
 
 from ..data import RecommenderDataset
+from ..mlflow_toolkit import MLflowToolkit
 from ..models import ModelFactory
 from ..models.baselines import LogisticRegressionRecommender, PopularityRecommender
-from ..training import load_checkpoint, Trainer
+from ..training import Trainer, load_checkpoint
 from ..training.evaluator import compute_ranking_metrics
 from ..utils import resolve_device
-from ..mlflow_toolkit import MLflowToolkit
 
 # Configura o logging
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -59,9 +60,7 @@ def compute_baseline_ranking_metrics(
             if item_id in true_items:
                 dcg += 1.0 / np.log2(rank + 2)
 
-        ideal_dcg = sum(
-            1.0 / np.log2(i + 2) for i in range(min(len(true_items), k))
-        )
+        ideal_dcg = sum(1.0 / np.log2(i + 2) for i in range(min(len(true_items), k)))
         ndcg = dcg / ideal_dcg if ideal_dcg > 0 else 0.0
         ndcg_scores.append(ndcg)
 
@@ -87,7 +86,9 @@ def run_evaluation_pipeline(config_path: str = "configs/model.yaml") -> None:
     user2idx_path = processed_dir / "user2idx.json"
     item2idx_path = processed_dir / "item2idx.json"
 
-    if not (interactions_path.exists() and user2idx_path.exists() and item2idx_path.exists()):
+    if not (
+        interactions_path.exists() and user2idx_path.exists() and item2idx_path.exists()
+    ):
         raise FileNotFoundError(
             f"Dados processados não encontrados em {processed_dir}. Execute o estágio de pré-processamento primeiro."
         )
@@ -121,7 +122,9 @@ def run_evaluation_pipeline(config_path: str = "configs/model.yaml") -> None:
     # --- Carrega o modelo PyTorch -------------------------------------------
     checkpoint_path = Path(cfg.get("artifact_dir", "models")) / "model.pt"
     if not checkpoint_path.exists():
-        raise FileNotFoundError(f"Checkpoint do modelo treinado não encontrado em {checkpoint_path}")
+        raise FileNotFoundError(
+            f"Checkpoint do modelo treinado não encontrado em {checkpoint_path}"
+        )
 
     logger.info("Carregando checkpoint do modelo PyTorch de %s...", checkpoint_path)
     checkpoint = load_checkpoint(checkpoint_path)
@@ -143,7 +146,7 @@ def run_evaluation_pipeline(config_path: str = "configs/model.yaml") -> None:
         batch_size=cfg["batch_size"],
         shuffle=False,
         num_workers=cfg.get("num_workers", 1),
-        pin_memory=True
+        pin_memory=True,
     )
 
     trainer = Trainer(model, cfg, device=device)
@@ -183,49 +186,56 @@ def run_evaluation_pipeline(config_path: str = "configs/model.yaml") -> None:
 
     # --- 1. Baseline de Popularidade ---------------------------------------
     logger.info("Treinando e avaliando o Baseline de Popularidade...")
-    train_pos_df = pd.DataFrame({
-        "user_idx": train_users[train_labels == 1.0],
-        "item_idx": train_items[train_labels == 1.0],
-    })
+    train_pos_df = pd.DataFrame(
+        {
+            "user_idx": train_users[train_labels == 1.0],
+            "item_idx": train_items[train_labels == 1.0],
+        }
+    )
     pop_recommender = PopularityRecommender()
     pop_recommender.fit(train_pos_df)
     pop_preds = pop_recommender.predict(val_users, val_items)
 
-    from sklearn.metrics import roc_auc_score, average_precision_score
+    from sklearn.metrics import average_precision_score, roc_auc_score
+
     pop_auc = float(roc_auc_score(val_labels, pop_preds))
     pop_ap = float(average_precision_score(val_labels, pop_preds))
     pop_hr, pop_ndcg = compute_baseline_ranking_metrics(
-        pop_recommender.predict,
-        positive_only_val,
-        num_items,
-        k=10
+        pop_recommender.predict, positive_only_val, num_items, k=10
     )
 
     # --- 2. Baseline de Regressão Logística ------------------------------
     logger.info("Treinando e avaliando o Baseline de Regressão Logística...")
-    lr_recommender = LogisticRegressionRecommender(num_users=num_users, num_items=num_items)
+    lr_recommender = LogisticRegressionRecommender(
+        num_users=num_users, num_items=num_items
+    )
     lr_recommender.fit(train_users, train_items, train_labels)
     lr_preds = lr_recommender.predict(val_users, val_items)
 
     lr_auc = float(roc_auc_score(val_labels, lr_preds))
     lr_ap = float(average_precision_score(val_labels, lr_preds))
     lr_hr, lr_ndcg = compute_baseline_ranking_metrics(
-        lr_recommender.predict,
-        positive_only_val,
-        num_items,
-        k=10
+        lr_recommender.predict, positive_only_val, num_items, k=10
     )
 
     # --- Registra os resultados no terminal ------------------------------------------
-    logger.info("\n" + "="*80)
+    logger.info("\n" + "=" * 80)
     logger.info("TABELA COMPARATIVA (Conjunto de Validação)")
-    logger.info("="*80)
-    logger.info(f"{'Modelo':<30} | {'AUC-ROC':<10} | {'Avg Prec':<10} | {'Hit Rate@10':<12} | {'NDCG@10':<10}")
-    logger.info("-"*80)
-    logger.info(f"{f'Modelo PyTorch ({checkpoint['model_type'].upper()})':<30} | {pytorch_auc:<10.4f} | {pytorch_ap:<10.4f} | {pytorch_hr:<12.4f} | {pytorch_ndcg:<10.4f}")
-    logger.info(f"{'Recomendador Popularidade':<30} | {pop_auc:<10.4f} | {pop_ap:<10.4f} | {pop_hr:<12.4f} | {pop_ndcg:<10.4f}")
-    logger.info(f"{'Regressão Logística':<30} | {lr_auc:<10.4f} | {lr_ap:<10.4f} | {lr_hr:<12.4f} | {lr_ndcg:<10.4f}")
-    logger.info("="*80)
+    logger.info("=" * 80)
+    logger.info(
+        f"{'Modelo':<30} | {'AUC-ROC':<10} | {'Avg Prec':<10} | {'Hit Rate@10':<12} | {'NDCG@10':<10}"
+    )
+    logger.info("-" * 80)
+    logger.info(
+        f"{f'Modelo PyTorch ({checkpoint["model_type"].upper()})':<30} | {pytorch_auc:<10.4f} | {pytorch_ap:<10.4f} | {pytorch_hr:<12.4f} | {pytorch_ndcg:<10.4f}"
+    )
+    logger.info(
+        f"{'Recomendador Popularidade':<30} | {pop_auc:<10.4f} | {pop_ap:<10.4f} | {pop_hr:<12.4f} | {pop_ndcg:<10.4f}"
+    )
+    logger.info(
+        f"{'Regressão Logística':<30} | {lr_auc:<10.4f} | {lr_ap:<10.4f} | {lr_hr:<12.4f} | {lr_ndcg:<10.4f}"
+    )
+    logger.info("=" * 80)
 
     # --- Grava o arquivo metrics.json -------------------------------------------
     metrics_dict = {
@@ -269,22 +279,26 @@ def run_evaluation_pipeline(config_path: str = "configs/model.yaml") -> None:
         # Registra o Baseline de Popularidade
         with mlflow_toolkit.start_run(run_name="baseline-popularity"):
             mlflow_toolkit.log_params({"model_type": "popularity_baseline"})
-            mlflow_toolkit.log_metrics({
-                "final_auc_roc": pop_auc,
-                "final_avg_precision": pop_ap,
-                "hit_rate_at_10": pop_hr,
-                "ndcg_at_10": pop_ndcg,
-            })
+            mlflow_toolkit.log_metrics(
+                {
+                    "final_auc_roc": pop_auc,
+                    "final_avg_precision": pop_ap,
+                    "hit_rate_at_10": pop_hr,
+                    "ndcg_at_10": pop_ndcg,
+                }
+            )
 
         # Registra o Baseline de Regressão Logística
         with mlflow_toolkit.start_run(run_name="baseline-logistic-regression"):
             mlflow_toolkit.log_params({"model_type": "logistic_regression_baseline"})
-            mlflow_toolkit.log_metrics({
-                "final_auc_roc": lr_auc,
-                "final_avg_precision": lr_ap,
-                "hit_rate_at_10": lr_hr,
-                "ndcg_at_10": lr_ndcg,
-            })
+            mlflow_toolkit.log_metrics(
+                {
+                    "final_auc_roc": lr_auc,
+                    "final_avg_precision": lr_ap,
+                    "hit_rate_at_10": lr_hr,
+                    "ndcg_at_10": lr_ndcg,
+                }
+            )
         logger.info("Métricas dos baselines registradas com sucesso no MLflow Server.")
     except Exception as e:
         logger.warning("Falha ao registrar métricas dos baselines no MLflow: %s", e)

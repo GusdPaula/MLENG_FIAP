@@ -1,4 +1,5 @@
 """Tests for the training components (Trainer, EarlyStopping)."""
+
 import torch
 from src.recommender.models.ncf import NCFModel
 from src.recommender.training import EarlyStopping, Trainer
@@ -210,17 +211,14 @@ def test_trainer_fit():
 
     # Should return a list of EpochResult
     history = trainer.fit(
-        train_loader=train_loader,
-        val_loader=val_loader,
-        epochs=2,
-        show_progress=False
+        train_loader=train_loader, val_loader=val_loader, epochs=2, show_progress=False
     )
 
     assert isinstance(history, list)
     assert len(history) == 2
-    assert all(hasattr(result, 'epoch') for result in history)
-    assert all(hasattr(result, 'train_loss') for result in history)
-    assert all(hasattr(result, 'eval_metrics') for result in history)
+    assert all(hasattr(result, "epoch") for result in history)
+    assert all(hasattr(result, "train_loss") for result in history)
+    assert all(hasattr(result, "eval_metrics") for result in history)
 
 
 def test_trainer_fit_with_early_stopping():
@@ -261,7 +259,7 @@ def test_trainer_fit_with_early_stopping():
         epochs=3,
         early_stopping=stopper,
         monitor="val_loss",
-        show_progress=False
+        show_progress=False,
     )
 
     assert isinstance(history, list)
@@ -308,7 +306,7 @@ def test_trainer_fit_with_early_stopping_enabled():
         epochs=5,
         early_stopping=stopper,
         monitor="val_loss",
-        show_progress=False
+        show_progress=False,
     )
 
     assert isinstance(history, list)

@@ -45,10 +45,7 @@ def compute_ranking_metrics(
         [dataset.samples[i] for i in val_indices[: min(sample_limit, len(val_indices))]]
     )
 
-    positive_only = (
-        val_samples[val_samples[:, 2] == 1.0][:, :2]
-        .astype(np.int64)
-    )
+    positive_only = val_samples[val_samples[:, 2] == 1.0][:, :2].astype(np.int64)
 
     hr = hit_rate_at_k(
         model,

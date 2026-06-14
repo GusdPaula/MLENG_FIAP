@@ -11,6 +11,7 @@ For convenience, :meth:`Trainer.fit` and
 level of orchestration that the pipeline and notebooks can use to
 avoid repeating the same boilerplate.
 """
+
 from __future__ import annotations
 
 from copy import deepcopy
@@ -183,7 +184,12 @@ class Trainer:
 
                 # Collect positive samples for NDCG
                 if "ndcg_at_k" in metrics and num_items is not None:
-                    for user, item, label in zip(users.cpu().numpy(), items.cpu().numpy(), labels.numpy(), strict=True):
+                    for user, item, label in zip(
+                        users.cpu().numpy(),
+                        items.cpu().numpy(),
+                        labels.numpy(),
+                        strict=True,
+                    ):
                         if label == 1.0:
                             positive_samples.append((int(user), int(item)))
 
@@ -192,9 +198,7 @@ class Trainer:
             if metric == "auc_roc":
                 result[metric] = float(roc_auc_score(all_labels, all_preds))
             elif metric == "avg_precision":
-                result[metric] = float(
-                    average_precision_score(all_labels, all_preds)
-                )
+                result[metric] = float(average_precision_score(all_labels, all_preds))
             elif metric == "loss":
                 preds_tensor = torch.tensor(all_preds, dtype=torch.float32)
                 labels_tensor = torch.tensor(all_labels, dtype=torch.float32)
@@ -318,7 +322,6 @@ class Trainer:
         }
 
         for epoch in range(epochs):
-
             description = f"Epoch {epoch + 1}/{epochs}"
 
             train_loss = self.train_epoch(
@@ -339,7 +342,9 @@ class Trainer:
                 eval_kwargs["k"] = ranking_k
                 eval_metrics_tuple = ("auc_roc", "avg_precision", monitor)
 
-            eval_metrics = self.evaluate(val_loader, metrics=eval_metrics_tuple, **eval_kwargs)
+            eval_metrics = self.evaluate(
+                val_loader, metrics=eval_metrics_tuple, **eval_kwargs
+            )
 
             result = EpochResult(
                 epoch=epoch + 1,
@@ -365,13 +370,10 @@ class Trainer:
             monitored_value = self._resolve_monitor(monitor, result)
 
             # Save best model BEFORE checking whether to stop
-            if (
-                best["value"] is None
-                or self._is_better(
-                    monitored_value,
-                    best["value"],
-                    early_stopping.mode,
-                )
+            if best["value"] is None or self._is_better(
+                monitored_value,
+                best["value"],
+                early_stopping.mode,
             ):
                 best["value"] = monitored_value
                 best["epoch"] = result.epoch
@@ -400,7 +402,11 @@ class Trainer:
     # ------------------------------------------------------------------
 
     def _compute_ndcg_at_k_sampled(
-        self, positive_samples: list[tuple[int, int]], num_items: int, k: int = 10, sample_limit: int = 100
+        self,
+        positive_samples: list[tuple[int, int]],
+        num_items: int,
+        k: int = 10,
+        sample_limit: int = 100,
     ) -> float:
         """Compute NDCG@K using sampled positive samples for efficiency.
 
@@ -418,10 +424,11 @@ class Trainer:
 
         # Sample users for efficiency
         import numpy as np
+
         sampled_indices = np.random.choice(
             len(positive_samples),
             min(sample_limit, len(positive_samples)),
-            replace=False
+            replace=False,
         )
         sampled = [positive_samples[i] for i in sampled_indices]
 
@@ -433,7 +440,9 @@ class Trainer:
         ndcg_scores = []
         with torch.no_grad():
             for user_idx, true_items in users_items.items():
-                user_tensor = torch.full((num_items,), user_idx, dtype=torch.long).to(self.device)
+                user_tensor = torch.full((num_items,), user_idx, dtype=torch.long).to(
+                    self.device
+                )
                 item_tensor = torch.arange(num_items, dtype=torch.long).to(self.device)
 
                 scores = self.model(user_tensor, item_tensor)

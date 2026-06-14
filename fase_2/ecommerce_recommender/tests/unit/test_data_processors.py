@@ -1,4 +1,5 @@
 """Tests for the data-processor Strategy pattern."""
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -48,9 +49,7 @@ def test_binary_processor_keeps_only_positive_events():
 
     assert len(interactions) < len(df)
     # All retained events must be addtocart or transaction.
-    original_event_count = (
-        df["event"].isin(["addtocart", "transaction"]).sum()
-    )
+    original_event_count = df["event"].isin(["addtocart", "transaction"]).sum()
     assert len(interactions) == original_event_count
     assert (interactions["weight"] == 1.0).all()
 

@@ -1,4 +1,5 @@
 """Tests for the Model Factory and concrete models."""
+
 import pytest
 import torch
 from src.recommender.models import (
@@ -108,6 +109,7 @@ def test_factory_register_decorator():
 def test_factory_filters_invalid_params_gmf():
     """GMF should reject hidden_layers parameter."""
     import warnings
+
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
         model = ModelFactory.create(
@@ -127,6 +129,7 @@ def test_factory_filters_invalid_params_gmf():
 def test_factory_filters_invalid_params_ncf():
     """NCF should reject projection_dim parameter."""
     import warnings
+
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
         model = ModelFactory.create(
@@ -146,6 +149,7 @@ def test_factory_filters_invalid_params_ncf():
 def test_factory_filters_invalid_params_mf():
     """MatrixFactorization should reject hidden_layers and dropout parameters."""
     import warnings
+
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
         model = ModelFactory.create(
@@ -167,6 +171,7 @@ def test_factory_filters_invalid_params_mf():
 def test_factory_accepts_valid_params_gmf():
     """GMF should accept its valid parameters."""
     import warnings
+
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
         model = ModelFactory.create(
@@ -186,6 +191,7 @@ def test_factory_accepts_valid_params_gmf():
 def test_factory_accepts_valid_params_ncf():
     """NCF should accept its valid parameters."""
     import warnings
+
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
         model = ModelFactory.create(
@@ -205,6 +211,7 @@ def test_factory_accepts_valid_params_ncf():
 def test_factory_accepts_valid_params_mf():
     """MatrixFactorization should accept its valid parameters."""
     import warnings
+
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
         model = ModelFactory.create(

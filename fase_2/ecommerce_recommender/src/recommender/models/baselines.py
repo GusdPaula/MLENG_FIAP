@@ -42,7 +42,9 @@ class PopularityRecommender:
         Returns:
             Array com scores de popularidade.
         """
-        scores = np.array([self.item_popularity.get(int(item), self.default_score) for item in items])
+        scores = np.array(
+            [self.item_popularity.get(int(item), self.default_score) for item in items]
+        )
         return scores
 
 
@@ -60,7 +62,9 @@ class LogisticRegressionRecommender:
         rows = np.repeat(np.arange(num_samples), 2)
         cols = np.column_stack([users, self.num_users + items]).ravel()
         data = np.ones(num_samples * 2)
-        return coo_matrix((data, (rows, cols)), shape=(num_samples, self.num_users + self.num_items))
+        return coo_matrix(
+            (data, (rows, cols)), shape=(num_samples, self.num_users + self.num_items)
+        )
 
     def fit(self, users: np.ndarray, items: np.ndarray, labels: np.ndarray):
         """Ajusta o modelo de Logistic Regression nas amostras de treino.

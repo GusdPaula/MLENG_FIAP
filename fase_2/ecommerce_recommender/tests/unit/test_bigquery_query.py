@@ -63,14 +63,18 @@ def test_bigquery_query_extract_table_and_versions(tmp_path, monkeypatch):
     sys.modules["google.cloud"] = cloud_module
     sys.modules["google.cloud.bigquery"] = bigquery_module
 
-    module_path = Path(__file__).resolve().parents[2] / "data_pipeline" / "bigquery_query.py"
+    module_path = (
+        Path(__file__).resolve().parents[2] / "data_pipeline" / "bigquery_query.py"
+    )
     query_module = load_module_from_path("bigquery_query", module_path)
 
     dvc_calls = []
 
     def fake_run(args, cwd, capture_output, text, check):
         dvc_calls.append((args, cwd))
-        return subprocess.CompletedProcess(args=args, returncode=0, stdout="added", stderr="")
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stdout="added", stderr=""
+        )
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
@@ -81,11 +85,15 @@ def test_bigquery_query_extract_table_and_versions(tmp_path, monkeypatch):
         dvc_repo_path=tmp_path,
     )
 
-    result_path = query_client.extract_table("events", destination_name="events_export.csv")
+    result_path = query_client.extract_table(
+        "events", destination_name="events_export.csv"
+    )
 
     assert result_path.exists()
     assert result_path.name == "events_export.csv"
-    assert dvc_calls == [(["dvc", "add", str(result_path.relative_to(tmp_path))], str(tmp_path))]
+    assert dvc_calls == [
+        (["dvc", "add", str(result_path.relative_to(tmp_path))], str(tmp_path))
+    ]
 
     csv_lines = result_path.read_text().splitlines()
     assert csv_lines[0] == "event_id,user_id"
@@ -108,14 +116,18 @@ def test_bigquery_query_skips_existing_file(tmp_path, monkeypatch):
     sys.modules["google.cloud"] = cloud_module
     sys.modules["google.cloud.bigquery"] = bigquery_module
 
-    module_path = Path(__file__).resolve().parents[2] / "data_pipeline" / "bigquery_query.py"
+    module_path = (
+        Path(__file__).resolve().parents[2] / "data_pipeline" / "bigquery_query.py"
+    )
     query_module = load_module_from_path("bigquery_query", module_path)
 
     dvc_calls = []
 
     def fake_run(args, cwd, capture_output, text, check):
         dvc_calls.append((args, cwd))
-        return subprocess.CompletedProcess(args=args, returncode=0, stdout="added", stderr="")
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stdout="added", stderr=""
+        )
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
@@ -130,7 +142,9 @@ def test_bigquery_query_skips_existing_file(tmp_path, monkeypatch):
         dvc_repo_path=tmp_path,
     )
 
-    result_path = query_client.extract_table("events", destination_name="events_export.csv")
+    result_path = query_client.extract_table(
+        "events", destination_name="events_export.csv"
+    )
 
     assert result_path == existing_path
     assert dvc_calls == []

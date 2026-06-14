@@ -14,6 +14,7 @@ To add a new model:
    ``ModelFactory.register("my_model", MyModel)``.
 3. Reference it from config as ``model.type: my_model``.
 """
+
 from __future__ import annotations
 
 from typing import Any, Callable
@@ -38,10 +39,14 @@ class ModelFactory:
     }
 
     @classmethod
-    def register(cls, name: str) -> Callable[[type[BaseRecommenderModel]], type[BaseRecommenderModel]]:
+    def register(
+        cls, name: str
+    ) -> Callable[[type[BaseRecommenderModel]], type[BaseRecommenderModel]]:
         """Class decorator that registers a model under ``name``."""
 
-        def decorator(model_cls: type[BaseRecommenderModel]) -> type[BaseRecommenderModel]:
+        def decorator(
+            model_cls: type[BaseRecommenderModel],
+        ) -> type[BaseRecommenderModel]:
             cls._registry[name] = model_cls
             return model_cls
 
@@ -55,20 +60,18 @@ class ModelFactory:
         if model_type not in cls._registry:
             available = ", ".join(sorted(cls._registry)) or "<empty>"
             raise ValueError(
-                f"Unknown model type '{model_type}'. "
-                f"Available models: {available}."
+                f"Unknown model type '{model_type}'. Available models: {available}."
             )
 
         # Filter hyperparameters to only include those allowed for this model type
         allowed_params = cls.MODEL_PARAM_MAP.get(model_type, set())
-        filtered_params = {
-            k: v for k, v in hyperparams.items() if k in allowed_params
-        }
+        filtered_params = {k: v for k, v in hyperparams.items() if k in allowed_params}
 
         # Warn about unexpected parameters that were filtered out
         unexpected_params = set(hyperparams.keys()) - allowed_params
         if unexpected_params:
             import warnings
+
             warnings.warn(
                 f"Unexpected hyperparameters for model type '{model_type}' "
                 f"were filtered out: {unexpected_params}. "

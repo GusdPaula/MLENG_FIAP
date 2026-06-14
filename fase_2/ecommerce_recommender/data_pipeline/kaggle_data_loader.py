@@ -26,10 +26,14 @@ class KaggleDataLoader:
         """
         downloaded_path = Path(kagglehub.dataset_download(self._dataset_name))
         if not downloaded_path.exists():
-            raise FileNotFoundError(f"Downloaded dataset path not found: {downloaded_path}")
+            raise FileNotFoundError(
+                f"Downloaded dataset path not found: {downloaded_path}"
+            )
         return downloaded_path
 
-    def combine_item_properties(self, download_root: Path, combined_filename: str = "item_properties.csv") -> Path:
+    def combine_item_properties(
+        self, download_root: Path, combined_filename: str = "item_properties.csv"
+    ) -> Path:
         """Combine item properties parts into a single CSV file.
 
         Args:

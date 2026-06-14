@@ -13,11 +13,19 @@ def load_module_from_path(module_name: str, path: Path):
 
 
 def test_data_pipeline_runs_with_prefixed_tables(tmp_path):
-    kaggle_module_path = Path(__file__).resolve().parents[2] / "data_pipeline" / "kaggle_data_loader.py"
-    bigquery_module_path = Path(__file__).resolve().parents[2] / "data_pipeline" / "bigquery_uploader.py"
-    pipeline_module_path = Path(__file__).resolve().parents[2] / "data_pipeline" / "pipeline.py"
+    kaggle_module_path = (
+        Path(__file__).resolve().parents[2] / "data_pipeline" / "kaggle_data_loader.py"
+    )
+    bigquery_module_path = (
+        Path(__file__).resolve().parents[2] / "data_pipeline" / "bigquery_uploader.py"
+    )
+    pipeline_module_path = (
+        Path(__file__).resolve().parents[2] / "data_pipeline" / "pipeline.py"
+    )
 
-    sys.modules["kagglehub"] = types.SimpleNamespace(dataset_download=lambda dataset_name: str(tmp_path))
+    sys.modules["kagglehub"] = types.SimpleNamespace(
+        dataset_download=lambda dataset_name: str(tmp_path)
+    )
 
     load_module_from_path("kaggle_data_loader", kaggle_module_path)
     load_module_from_path("bigquery_uploader", bigquery_module_path)
@@ -50,7 +58,13 @@ def test_data_pipeline_runs_with_prefixed_tables(tmp_path):
 
     results = pipeline.run()
 
-    assert results["testprefix_category_tree"] == "project.dataset.testprefix_category_tree"
+    assert (
+        results["testprefix_category_tree"]
+        == "project.dataset.testprefix_category_tree"
+    )
     assert "testprefix_events" in results
     assert "testprefix_item_properties" in results
-    assert dummy_uploader.uploaded["testprefix_item_properties"].name == "item_properties.csv"
+    assert (
+        dummy_uploader.uploaded["testprefix_item_properties"].name
+        == "item_properties.csv"
+    )

@@ -4,6 +4,7 @@ import argparse
 import json
 import logging
 from pathlib import Path
+
 import yaml
 
 from ..data import DataProcessorContext, load_events
@@ -19,7 +20,9 @@ def run_preprocess_pipeline(config_path: str = "configs/model.yaml") -> None:
     Args:
         config_path: Caminho para o arquivo YAML de configuração do modelo. Padrão é "configs/model.yaml".
     """
-    logger.info("Iniciando estágio de pré-processamento usando a configuração: %s", config_path)
+    logger.info(
+        "Iniciando estágio de pré-processamento usando a configuração: %s", config_path
+    )
 
     with open(config_path) as f:
         cfg = yaml.safe_load(f)["model"]
@@ -32,7 +35,9 @@ def run_preprocess_pipeline(config_path: str = "configs/model.yaml") -> None:
     processor_cfg = cfg.get("processor", "weighted")
     processor_kwargs = cfg.get("processor_kwargs", {}) or {}
     processor = DataProcessorContext(processor_cfg, **processor_kwargs)
-    logger.info("Aplicando a estratégia do processador de dados: %s", processor.strategy_name)
+    logger.info(
+        "Aplicando a estratégia do processador de dados: %s", processor.strategy_name
+    )
 
     interactions, user2idx, item2idx = processor.process(
         events, min_interactions=cfg.get("min_interactions", 1)
@@ -67,7 +72,9 @@ def run_preprocess_pipeline(config_path: str = "configs/model.yaml") -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Executa o pipeline de pré-processamento.")
+    parser = argparse.ArgumentParser(
+        description="Executa o pipeline de pré-processamento."
+    )
     parser.add_argument(
         "--config",
         default="configs/model.yaml",
