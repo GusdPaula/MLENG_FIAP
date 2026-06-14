@@ -170,6 +170,14 @@ resource "aws_iam_policy" "ec2_policy" {
           "secretsmanager:GetSecretValue"
         ]
         Resource = aws_secretsmanager_secret.db_password_secret.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "rds:StopDBInstance",
+          "rds:DescribeDBInstances"
+        ]
+        Resource = aws_db_instance.mlflow_db.arn
       }
     ]
   })
@@ -244,13 +252,52 @@ resource "aws_instance" "mlflow_server" {
     
     # Pull and Run from Docker Hub
     docker pull ${var.dockerhub_username}/mlflow-server:${var.docker_image_tag}
-    docker run -d --restart always -p 5000:5000 \
+    docker run -d --name mlflow-server --restart always -p 5000:5000 \
       ${var.dockerhub_username}/mlflow-server:${var.docker_image_tag} \
       --host 0.0.0.0 \
       --backend-store-uri "$DB_URI" \
       --default-artifact-root "s3://${aws_s3_bucket.mlflow_artifacts.bucket}" \
       --allowed-hosts "*" \
       --cors-allowed-origins "*"
+
+    # Create the idle check script
+    cat <<'INNER_EOF' > /usr/local/bin/mlflow-idle-check.sh
+#!/bin/bash
+
+CONTAINER_NAME="mlflow-server"
+
+# Check if container is running
+if ! docker ps | grep -q "$${CONTAINER_NAME}"; then
+  echo "MLflow container is not running."
+  exit 0
+fi
+
+# Check system uptime (in seconds)
+UPTIME=$$(cat /proc/uptime | awk '{print int($$1)}')
+# 1800 seconds = 30 minutes
+if [ "$${UPTIME}" -lt 1800 ]; then
+  echo "System uptime is less than 30 minutes. Skipping check."
+  exit 0
+fi
+
+# Count HTTP requests in the last 30 minutes, excluding ui-telemetry
+REQUESTS=$$(docker logs --since 30m "$${CONTAINER_NAME}" 2>&1 | grep -E 'HTTP/[0-9.]+" [0-9]{3}' | grep -v 'ui-telemetry' | wc -l)
+
+echo "Total requests (excluding telemetry) in the last 30 minutes: $${REQUESTS}"
+
+if [ "$${REQUESTS}" -eq 0 ]; then
+  echo "No active requests detected in the last 30 minutes. Stopping RDS and EC2..."
+  # Stop RDS
+  aws rds stop-db-instance --db-instance-identifier ${aws_db_instance.mlflow_db.identifier} --region ${var.aws_region}
+  # Shutdown EC2
+  sudo poweroff
+fi
+INNER_EOF
+
+    chmod +x /usr/local/bin/mlflow-idle-check.sh
+
+    # Setup cron job (runs every 5 minutes)
+    (crontab -l 2>/dev/null; echo "*/5 * * * * /usr/local/bin/mlflow-idle-check.sh >> /var/log/mlflow-idle-check.log 2>&1") | crontab -
   EOF
 }
 
