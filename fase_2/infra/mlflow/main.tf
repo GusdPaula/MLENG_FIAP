@@ -228,6 +228,16 @@ resource "aws_instance" "mlflow_server" {
     #!/bin/bash
     set -e
     
+    # Wait for background apt/dpkg locks to be released
+    echo "Waiting for dpkg locks..."
+    for i in {1..60}; do
+      if ! fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; then
+        break
+      fi
+      echo "Another package manager is running, waiting..."
+      sleep 5
+    done
+
     # Install AWS CLI, Docker, and jq
     apt-get update
     apt-get install -y docker.io awscli jq
@@ -297,7 +307,7 @@ INNER_EOF
     chmod +x /usr/local/bin/mlflow-idle-check.sh
 
     # Setup cron job (runs every 5 minutes)
-    (crontab -l 2>/dev/null; echo "*/5 * * * * /usr/local/bin/mlflow-idle-check.sh >> /var/log/mlflow-idle-check.log 2>&1") | crontab -
+    (crontab -l 2>/dev/null || true; echo "*/5 * * * * /usr/local/bin/mlflow-idle-check.sh >> /var/log/mlflow-idle-check.log 2>&1") | crontab -
   EOF
 }
 
