@@ -66,3 +66,33 @@ resource "aws_s3_bucket_policy" "public_read_policy" {
     ]
   })
 }
+
+# Política IAM de Leitura e Escrita para o bucket do DVC
+resource "aws_iam_policy" "dvc_rw_policy" {
+  name        = "DVC-Bucket-ReadWrite-Policy"
+  description = "Politica IAM para permitir leitura e escrita no bucket S3 do DVC"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket",
+          "s3:GetBucketLocation"
+        ]
+        Resource = aws_s3_bucket.dvc_bucket.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ]
+        Resource = "${aws_s3_bucket.dvc_bucket.arn}/*"
+      }
+    ]
+  })
+}
+
