@@ -33,6 +33,10 @@ data "aws_subnets" "default" {
   }
 }
 
+data "aws_ec2_managed_prefix_list" "cloudfront" {
+  name = "com.amazonaws.global.cloudfront.origin-facing"
+}
+
 # --- S3 Bucket for Artifacts ---
 resource "random_string" "bucket_suffix" {
   length  = 8
@@ -68,17 +72,11 @@ resource "aws_security_group" "ec2_sg" {
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 5000
-    to_port     = 5000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description     = "Allow traffic only from CloudFront"
+    from_port       = 5000
+    to_port         = 5000
+    protocol        = "tcp"
+    prefix_list_ids = [data.aws_ec2_managed_prefix_list.cloudfront.id]
   }
 
   egress {
