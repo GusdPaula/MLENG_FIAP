@@ -1,3 +1,48 @@
-# DVC pipeline configuration
-# Track data files and model outputs for versioning
-# Use `dvc experiments run` to run experiments with parameter tracking
+stages:
+  preprocess:
+    cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from recommender.pipelines.preprocess_pipeline import run_preprocess_pipeline; run_preprocess_pipeline()" --config configs/model.yaml
+    wdir: ecommerce_recommender
+    deps:
+      - data/raw/events.csv
+      - configs/model.yaml
+    params:
+      - configs/model.yaml:
+        - model.processor
+        - model.min_interactions
+    outs:
+      - data/processed/interactions.csv
+      - data/processed/user2idx.json
+      - data/processed/item2idx.json
+
+  train:
+    cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from recommender.pipelines.train_pipeline import run_training_pipeline; run_training_pipeline()" --config configs/model.yaml
+    wdir: ecommerce_recommender
+    deps:
+      - data/processed/interactions.csv
+      - data/processed/user2idx.json
+      - data/processed/item2idx.json
+      - configs/model.yaml
+    params:
+      - configs/model.yaml:
+        - model.type
+        - model.seed
+        - model.batch_size
+        - model.learning_rate
+        - model.epochs
+        - model.num_negatives
+        - model.hyperparams
+    outs:
+      - models/model.pt
+
+  evaluate:
+    cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from recommender.pipelines.evaluate_pipeline import run_evaluation_pipeline; run_evaluation_pipeline()" --config configs/model.yaml
+    wdir: ecommerce_recommender
+    deps:
+      - models/model.pt
+      - data/processed/interactions.csv
+      - data/processed/user2idx.json
+      - data/processed/item2idx.json
+      - configs/model.yaml
+    metrics:
+      - reports/metrics.json:
+          cache: false

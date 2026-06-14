@@ -65,23 +65,50 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
     torch.manual_seed(cfg["seed"])
     np.random.seed(cfg["seed"])
 
-    # --- 1. Data: load raw events -------------------------------------
-    raw_path = cfg.get("raw_events_path", "data/raw/events.csv")
-    logger.info("Loading events from %s ...", raw_path)
-    events = load_events(raw_path)
-    logger.info("  Total events: %d", len(events))
+    # --- 1. Dados: carrega eventos processados ou brutos ----------------
+    processed_dir = Path("data/processed")
+    interactions_path = processed_dir / "interactions.csv"
+    user2idx_path = processed_dir / "user2idx.json"
+    item2idx_path = processed_dir / "item2idx.json"
 
-    # --- 2. Data: pick a processing strategy --------------------------
-    processor_cfg = cfg.get("processor", "weighted")
-    processor_kwargs = cfg.get("processor_kwargs", {}) or {}
-    processor = DataProcessorContext(processor_cfg, **processor_kwargs)
-    logger.info("Data processor: %s", processor.strategy_name)
+    import json
+    import pandas as pd
 
-    interactions, user2idx, item2idx = processor.process(
-        events, min_interactions=cfg.get("min_interactions", 1)
-    )
-    num_users = len(user2idx)
-    num_items = len(item2idx)
+    if interactions_path.exists() and user2idx_path.exists() and item2idx_path.exists():
+        logger.info("Dados pré-processados encontrados. Carregando de %s ...", processed_dir)
+        interactions = pd.read_csv(interactions_path)
+        with open(user2idx_path) as f:
+            user2idx = json.load(f)
+        with open(item2idx_path) as f:
+            item2idx = json.load(f)
+        # Convert keys back to integers (JSON keys are always strings)
+        user2idx = {int(k): v for k, v in user2idx.items()}
+        item2idx = {int(k): v for k, v in item2idx.items()}
+        processor_cfg = cfg.get("processor", "weighted")
+        processor_name = processor_cfg
+        num_users = len(user2idx)
+        num_items = len(item2idx)
+        raw_path = cfg.get("raw_events_path", "data/raw/events.csv")
+    else:
+        logger.info("Dados pré-processados não encontrados. Carregando dados brutos...")
+        raw_path = cfg.get("raw_events_path", "data/raw/events.csv")
+        logger.info("Loading events from %s ...", raw_path)
+        events = load_events(raw_path)
+        logger.info("  Total events: %d", len(events))
+
+        # --- 2. Data: pick a processing strategy --------------------------
+        processor_cfg = cfg.get("processor", "weighted")
+        processor_kwargs = cfg.get("processor_kwargs", {}) or {}
+        processor = DataProcessorContext(processor_cfg, **processor_kwargs)
+        logger.info("Data processor: %s", processor.strategy_name)
+
+        interactions, user2idx, item2idx = processor.process(
+            events, min_interactions=cfg.get("min_interactions", 1)
+        )
+        processor_name = processor.strategy_name
+        num_users = len(user2idx)
+        num_items = len(item2idx)
+
     logger.info("  Users: %d, Items: %d", num_users, num_items)
 
     # --- 3. Dataset with negative sampling ----------------------------
@@ -278,7 +305,7 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
         artifact_path = save_checkpoint(
             model=model,
             model_type=model_type,
-            processor_name=processor.strategy_name,
+            processor_name=processor_name,
             user2idx=user2idx,
             item2idx=item2idx,
             config=cfg,
@@ -288,6 +315,12 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
         )
 
         logger.info("\nModelo salvo localmente em %s", artifact_path)
+
+        # Copiar para um caminho fixo para rastreamento no pipeline DVC
+        import shutil
+        dvc_model_path = artifact_dir / "model.pt"
+        shutil.copyfile(artifact_path, dvc_model_path)
+        logger.info("Cópia do modelo salva em %s para rastreamento DVC", dvc_model_path)
 
         # --- 9. Log Metrics and PyTorch Model to MLflow Server -----------
         mlflow_toolkit.log_metrics({
@@ -309,4 +342,12 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
 
 
 if __name__ == "__main__":
-    run_training_pipeline()
+    import argparse
+    parser = argparse.ArgumentParser(description="Run training pipeline.")
+    parser.add_argument(
+        "--config",
+        default="configs/model.yaml",
+        help="Path to the model configuration YAML file.",
+    )
+    args = parser.parse_args()
+    run_training_pipeline(config_path=args.config)
