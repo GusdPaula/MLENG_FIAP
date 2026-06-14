@@ -17,7 +17,7 @@ on:
         description: 'Activate custom domain (Only works AFTER validating the ACM cert in your DNS)'
         type: boolean
         required: true
-        default: false
+        default: true
 
 
 jobs:
