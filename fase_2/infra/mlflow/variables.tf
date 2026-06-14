@@ -34,4 +34,17 @@ variable "docker_image_tag" {
   default     = "latest"
 }
 
+variable "use_custom_domain" {
+  description = "Whether to use custom domain with ACM certificate"
+  type        = bool
+  default     = true
+}
+
+variable "custom_domain_name" {
+  description = "Custom domain name for MLflow"
+  type        = string
+  default     = "mlflow.asgardprint.com.br"
+}
+
+
 

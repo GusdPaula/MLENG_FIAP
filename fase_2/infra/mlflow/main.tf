@@ -254,10 +254,25 @@ resource "aws_instance" "mlflow_server" {
   EOF
 }
 
+# --- ACM Certificate ---
+resource "aws_acm_certificate" "mlflow_cert" {
+  domain_name       = var.custom_domain_name
+  validation_method = "DNS"
+
+  tags = {
+    Name = "${var.project_name}-cert"
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
 # --- CloudFront Distribution ---
 resource "aws_cloudfront_distribution" "mlflow_distribution" {
   enabled = true
   comment = "MLflow Distribution for ${var.project_name}"
+  aliases = var.use_custom_domain ? [var.custom_domain_name] : []
 
   origin {
     domain_name = aws_instance.mlflow_server.public_dns
@@ -299,7 +314,10 @@ resource "aws_cloudfront_distribution" "mlflow_distribution" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    cloudfront_default_certificate = !var.use_custom_domain
+    acm_certificate_arn            = var.use_custom_domain ? aws_acm_certificate.mlflow_cert.arn : null
+    ssl_support_method             = var.use_custom_domain ? "sni-only" : null
+    minimum_protocol_version       = var.use_custom_domain ? "TLSv1.2_2021" : null
   }
 
   tags = {
