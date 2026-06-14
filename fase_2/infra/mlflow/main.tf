@@ -210,6 +210,7 @@ resource "aws_instance" "mlflow_server" {
   vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
   iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
   associate_public_ip_address = true
+  user_data_replace_on_change = true
 
   tags = {
     Name = "${var.project_name}-server"
