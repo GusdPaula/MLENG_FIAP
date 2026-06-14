@@ -6,11 +6,13 @@ on:
       - main
     paths:
       - 'fase_2/infra/mlflow/**'
+      - 'fase_2/Dockerfile.mlflow'
   pull_request:
     branches:
       - main
     paths:
       - 'fase_2/infra/mlflow/**'
+      - 'fase_2/Dockerfile.mlflow'
   workflow_dispatch:
     inputs:
       use_custom_domain:
