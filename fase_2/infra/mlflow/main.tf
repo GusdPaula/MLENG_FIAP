@@ -249,7 +249,8 @@ resource "aws_instance" "mlflow_server" {
       ${var.dockerhub_username}/mlflow-server:${var.docker_image_tag} \
       --host 0.0.0.0 \
       --backend-store-uri "$DB_URI" \
-      --default-artifact-root "s3://${aws_s3_bucket.mlflow_artifacts.bucket}"
+      --default-artifact-root "s3://${aws_s3_bucket.mlflow_artifacts.bucket}" \
+      --allowed-hosts "*"
   EOF
 }
 
