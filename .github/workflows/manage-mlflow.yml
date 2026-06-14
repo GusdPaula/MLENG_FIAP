@@ -1,0 +1,91 @@
+name: Manage MLflow Server
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'start'
+        type: choice
+        options:
+        - start
+        - stop
+
+jobs:
+  manage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Stop MLflow
+        if: ${{ github.event.inputs.action == 'stop' }}
+        run: |
+          echo "Stopping EC2 instance..."
+          INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=mlflow-fiap-server" "Name=instance-state-name,Values=running" --query "Reservations[0].Instances[0].InstanceId" --output text || echo "None")
+          if [ "$INSTANCE_ID" != "None" ] && [ -n "$INSTANCE_ID" ]; then
+            aws ec2 stop-instances --instance-ids $INSTANCE_ID
+          else
+            echo "No running EC2 instance found."
+          fi
+          
+          echo "Stopping RDS instance..."
+          aws rds stop-db-instance --db-instance-identifier mlflow-fiap-db || echo "DB might already be stopped."
+
+      - name: Start MLflow
+        if: ${{ github.event.inputs.action == 'start' }}
+        run: |
+          echo "Starting RDS instance..."
+          aws rds start-db-instance --db-instance-identifier mlflow-fiap-db || echo "DB might already be running."
+          
+          echo "Starting EC2 instance..."
+          INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=mlflow-fiap-server" --query "Reservations[0].Instances[0].InstanceId" --output text)
+          aws ec2 start-instances --instance-ids $INSTANCE_ID
+          
+          echo "Waiting for EC2 to be running..."
+          aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+          NEW_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].PublicDnsName" --output text)
+          if [ -z "$NEW_IP" ] || [ "$NEW_IP" == "None" ]; then
+            NEW_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
+          fi
+          echo "New EC2 DNS/IP: $NEW_IP"
+
+          echo "Updating CloudFront Distribution Origin..."
+          # Find CloudFront Distribution ID by tag
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          DISTRIBUTIONS=$(aws cloudfront list-distributions --query "DistributionList.Items[*].Id" --output text || echo "")
+          DIST_ID=""
+          for ID in $DISTRIBUTIONS; do
+            TAGS=$(aws cloudfront list-tags-for-resource --resource arn:aws:cloudfront:us-east-1:$ACCOUNT_ID:distribution/$ID --query "Tags.Items" --output json 2>/dev/null || echo "[]")
+            HAS_TAG=$(echo $TAGS | jq 'map(select(.Key=="Name" and .Value=="mlflow-fiap-cf")) | length')
+            if [ "$HAS_TAG" -gt "0" ]; then
+              DIST_ID=$ID
+              break
+            fi
+          done
+
+          if [ -n "$DIST_ID" ]; then
+            echo "Found Distribution ID: $DIST_ID"
+            ETAG=$(aws cloudfront get-distribution-config --id $DIST_ID --query 'ETag' --output text)
+            aws cloudfront get-distribution-config --id $DIST_ID --query 'DistributionConfig' --output json > config.json
+            
+            jq --arg new_domain "$NEW_IP" '.Origins.Items[0].DomainName = $new_domain' config.json > new-config.json
+            
+            aws cloudfront update-distribution --id $DIST_ID --if-match $ETAG --distribution-config file://new-config.json > /dev/null
+            
+            echo "Waiting for CloudFront deployment to finish (this may take up to 10 minutes)..."
+            aws cloudfront wait distribution-deployed --id $DIST_ID
+            
+            DOMAIN=$(aws cloudfront get-distribution --id $DIST_ID --query 'Distribution.DomainName' --output text)
+            echo "=========================================="
+            echo "MLflow is accessible at: https://$DOMAIN"
+            echo "=========================================="
+          else
+            echo "Could not find CloudFront distribution with tag Name=mlflow-fiap-cf"
+            echo "To access MLflow directly, go to: http://$NEW_IP:5000"
+          fi

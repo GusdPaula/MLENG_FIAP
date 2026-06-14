@@ -54,3 +54,7 @@ ecommerce_recommender/notebooks/mlflow.db
 ecommerce_recommender/models/mlflow_experiments/
 !ecommerce_recommender/models/mlflow_experiments/*.dvc
 !ecommerce_recommender/models/mlflow_experiments/**/*.dvc
+
+
+
+cola.ipynb
