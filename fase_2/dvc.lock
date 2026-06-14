@@ -30,3 +30,74 @@ stages:
       hash: md5
       md5: b4f4b40095332856220ae42aee883340
       size: 1388405
+  train:
+    cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from 
+      recommender.pipelines.train_pipeline import run_training_pipeline; 
+      run_training_pipeline()" --config configs/model.yaml
+    deps:
+    - path: configs/model.yaml
+      hash: md5
+      md5: 837bf1de6454266ed77a825c6bf1b1c7
+      size: 1370
+    - path: data/processed/interactions.csv
+      hash: md5
+      md5: 5a8a884c02d803186a8ecc698bfbd9b8
+      size: 45550878
+    - path: data/processed/item2idx.json
+      hash: md5
+      md5: bb7dbf8360cb5408a11a472305521f6e
+      size: 1122476
+    - path: data/processed/user2idx.json
+      hash: md5
+      md5: b4f4b40095332856220ae42aee883340
+      size: 1388405
+    params:
+      configs/model.yaml:
+        model.batch_size: 1024
+        model.epochs: 3
+        model.hyperparams:
+          embedding_dim: 64
+          hidden_layers:
+          - 128
+          - 64
+          - 32
+          dropout: 0.2
+        model.learning_rate: 0.001
+        model.num_negatives: 4
+        model.seed: 42
+        model.type: ncf
+    outs:
+    - path: models/model.pt
+      hash: md5
+      md5: d5d4a1936375eba19a24440f0fa99fc4
+      size: 39442773
+  evaluate:
+    cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from 
+      recommender.pipelines.evaluate_pipeline import run_evaluation_pipeline; 
+      run_evaluation_pipeline()" --config configs/model.yaml
+    deps:
+    - path: configs/model.yaml
+      hash: md5
+      md5: 837bf1de6454266ed77a825c6bf1b1c7
+      size: 1370
+    - path: data/processed/interactions.csv
+      hash: md5
+      md5: 5a8a884c02d803186a8ecc698bfbd9b8
+      size: 45550878
+    - path: data/processed/item2idx.json
+      hash: md5
+      md5: bb7dbf8360cb5408a11a472305521f6e
+      size: 1122476
+    - path: data/processed/user2idx.json
+      hash: md5
+      md5: b4f4b40095332856220ae42aee883340
+      size: 1388405
+    - path: models/model.pt
+      hash: md5
+      md5: d5d4a1936375eba19a24440f0fa99fc4
+      size: 39442773
+    outs:
+    - path: reports/metrics.json
+      hash: md5
+      md5: 90f0b8fae7eb3a5ae2ceb1c7b549b1d2
+      size: 606
