@@ -1,0 +1,5 @@
+[core]
+    analytics = false
+    remote = s3-public
+['remote "s3-public"']
+    url = s3://fiap-ml-dvc-bucket-tech-challenger

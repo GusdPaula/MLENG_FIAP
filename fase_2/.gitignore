@@ -14,8 +14,9 @@ poetry.lock
 *.lock
 
 # DVC
-.dvc/
-.cache/
+.dvc/config.local
+.dvc/tmp
+.dvc/cache
 !dvc.lock
 
 # Environment
