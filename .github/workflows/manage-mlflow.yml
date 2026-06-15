@@ -100,43 +100,70 @@ jobs:
           
           echo "Waiting for EC2 to be running..."
           aws ec2 wait instance-running --instance-ids $INSTANCE_ID
-          NEW_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].PublicDnsName" --output text)
-          if [ -z "$NEW_IP" ] || [ "$NEW_IP" == "None" ]; then
+          # Wait up to 60 seconds for PublicDnsName to be available and not empty/None
+          echo "Retrieving Public DNS Name..."
+          for i in {1..12}; do
+            NEW_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].PublicDnsName" --output text)
+            if [ -n "$NEW_IP" ] && [ "$NEW_IP" != "None" ] && [ "$NEW_IP" != "" ]; then
+              break
+            fi
+            echo "Waiting for Public DNS Name to be generated..."
+            sleep 5
+          done
+
+          if [ -z "$NEW_IP" ] || [ "$NEW_IP" == "None" ] || [ "$NEW_IP" == "" ]; then
+            echo "Warning: Public DNS Name not found. Falling back to Public IP..."
             NEW_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
           fi
           echo "New EC2 DNS/IP: $NEW_IP"
 
           echo "Updating CloudFront Distribution Origin..."
-          # Find CloudFront Distribution ID by tag
-          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          DISTRIBUTIONS=$(aws cloudfront list-distributions --query "DistributionList.Items[*].Id" --output text || echo "")
-          DIST_ID=""
-          for ID in $DISTRIBUTIONS; do
-            TAGS=$(aws cloudfront list-tags-for-resource --resource arn:aws:cloudfront:us-east-1:$ACCOUNT_ID:distribution/$ID --query "Tags.Items" --output json 2>/dev/null || echo "[]")
-            HAS_TAG=$(echo $TAGS | jq 'map(select(.Key=="Name" and .Value=="mlflow-fiap-cf")) | length')
-            if [ "$HAS_TAG" -gt "0" ]; then
-              DIST_ID=$ID
-              break
-            fi
-          done
+          # Find CloudFront Distribution ID
+          # 1. Try finding by comment
+          DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Comment=='MLflow Distribution for mlflow-fiap'].Id" --output text 2>/dev/null || echo "")
+          
+          # 2. If not found or empty, fallback to tag search with correct ARN format (no region)
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ] || [ "$DIST_ID" = "" ]; then
+            echo "Searching distribution by tag Name=mlflow-fiap-cf..."
+            ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+            DISTRIBUTIONS=$(aws cloudfront list-distributions --query "DistributionList.Items[*].Id" --output text || echo "")
+            DIST_ID=""
+            for ID in $DISTRIBUTIONS; do
+              TAGS=$(aws cloudfront list-tags-for-resource --resource arn:aws:cloudfront::$ACCOUNT_ID:distribution/$ID --query "Tags.Items" --output json 2>/dev/null || echo "[]")
+              HAS_TAG=$(echo $TAGS | jq 'map(select(.Key=="Name" and .Value=="mlflow-fiap-cf")) | length')
+              if [ "$HAS_TAG" -gt "0" ]; then
+                DIST_ID=$ID
+                break
+              fi
+            done
+          fi
 
-          if [ -n "$DIST_ID" ]; then
+          if [ -n "$DIST_ID" ] && [ "$DIST_ID" != "None" ] && [ "$DIST_ID" != "" ]; then
             echo "Found Distribution ID: $DIST_ID"
             ETAG=$(aws cloudfront get-distribution-config --id $DIST_ID --query 'ETag' --output text)
             aws cloudfront get-distribution-config --id $DIST_ID --query 'DistributionConfig' --output json > config.json
             
-            jq --arg new_domain "$NEW_IP" '.Origins.Items[0].DomainName = $new_domain' config.json > new-config.json
+            CURRENT_ORIGIN_DOMAIN=$(jq -r '.Origins.Items[0].DomainName' config.json)
+            echo "Current CloudFront Origin Domain: $CURRENT_ORIGIN_DOMAIN"
+            echo "New EC2 DNS/IP: $NEW_IP"
             
-            aws cloudfront update-distribution --id $DIST_ID --if-match $ETAG --distribution-config file://new-config.json > /dev/null
-            
-            echo "Waiting for CloudFront deployment to finish (this may take up to 10 minutes)..."
-            aws cloudfront wait distribution-deployed --id $DIST_ID
+            if [ "$CURRENT_ORIGIN_DOMAIN" = "$NEW_IP" ]; then
+              echo "CloudFront Origin is already pointing to the current EC2 DNS. No update needed!"
+            else
+              echo "CloudFront Origin needs update. Updating..."
+              jq --arg new_domain "$NEW_IP" '.Origins.Items[0].DomainName = $new_domain' config.json > new-config.json
+              aws cloudfront update-distribution --id $DIST_ID --if-match $ETAG --distribution-config file://new-config.json > /dev/null
+              
+              echo "Waiting for CloudFront deployment to finish (this may take up to 10 minutes)..."
+              aws cloudfront wait distribution-deployed --id $DIST_ID
+              echo "CloudFront update completed."
+            fi
             
             DOMAIN=$(aws cloudfront get-distribution --id $DIST_ID --query 'Distribution.DomainName' --output text)
             echo "=========================================="
             echo "MLflow is accessible at: https://$DOMAIN"
             echo "=========================================="
           else
-            echo "Could not find CloudFront distribution with tag Name=mlflow-fiap-cf"
+            echo "Could not find CloudFront distribution with comment 'MLflow Distribution for mlflow-fiap' or tag Name=mlflow-fiap-cf"
             echo "To access MLflow directly, go to: http://$NEW_IP:5000"
           fi
