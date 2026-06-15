@@ -49,14 +49,14 @@ jobs:
           MLFLOW_TRACKING_URI: https://mlflow.asgardprint.com.br
         run: |
           cd fase_2
-          # Build arguments string
-          ARGS="--model-name '${{ github.event.inputs.model_name }}'"
+          # Build arguments array
+          ARGS=("--model-name" "${{ github.event.inputs.model_name }}")
           if [ -n "${{ github.event.inputs.version }}" ]; then
-            ARGS="$ARGS --version ${{ github.event.inputs.version }}"
+            ARGS+=("--version" "${{ github.event.inputs.version }}")
           fi
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
-            ARGS="$ARGS --dry-run"
+            ARGS+=("--dry-run")
           fi
           
           # Run the script directly with Python
-          python scripts/promote_model.py $ARGS
+          python scripts/promote_model.py "${ARGS[@]}"
