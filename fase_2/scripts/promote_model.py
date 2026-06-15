@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Script to promote MLflow Model Registry versions between stages (Staging -> Production)."""
+"""Script to promote MLflow Model Registry versions using aliases (staging -> production)."""
 
 import argparse
 import logging
@@ -15,7 +15,7 @@ def main():
     # Load .env file from the current directory or parent directory
     load_dotenv()
     
-    parser = argparse.ArgumentParser(description="Promote MLflow model from Staging to Production.")
+    parser = argparse.ArgumentParser(description="Promote MLflow model from staging alias to production alias.")
     parser.add_argument(
         "--model-name",
         default="ecommerce_recommender",
@@ -24,7 +24,7 @@ def main():
     parser.add_argument(
         "--version",
         default=None,
-        help="Specific version to promote. If not specified, the latest model in Staging will be promoted.",
+        help="Specific version to promote. If not specified, the version with 'staging' alias will be promoted.",
     )
     parser.add_argument(
         "--dry-run",
@@ -54,50 +54,45 @@ def main():
     # 1. Resolve version
     version_to_promote = args.version
     if not version_to_promote:
-        logger.info("No version specified. Searching for the latest model version in 'Staging' stage...")
+        logger.info("No version specified. Searching for the model version with 'staging' alias...")
         try:
-            staging_versions = client.get_latest_versions(args.model_name, stages=["Staging"])
-            if not staging_versions:
-                logger.error("No model versions found in 'Staging' stage for model '%s'. Cannot proceed.", args.model_name)
-                sys.exit(1)
-            latest_staging = staging_versions[0]
-            version_to_promote = latest_staging.version
-            logger.info("Found model version %s in 'Staging' stage.", version_to_promote)
+            staging_version_obj = client.get_model_version_by_alias(args.model_name, "staging")
+            version_to_promote = staging_version_obj.version
+            logger.info("Found model version %s with 'staging' alias.", version_to_promote)
         except Exception as e:
-            logger.error("Failed to fetch latest versions for model '%s': %s", args.model_name, e)
+            logger.error("Failed to find any model version with 'staging' alias for model '%s': %s", args.model_name, e)
             sys.exit(1)
             
     # 2. Get info of the version we are promoting
     try:
         mv_info = client.get_model_version(args.model_name, version_to_promote)
-        logger.info("Target model version %s is currently in stage: %s (Run ID: %s)", 
-                    version_to_promote, mv_info.current_stage, mv_info.run_id)
+        logger.info("Target model version %s has current aliases: %s (Run ID: %s)", 
+                    version_to_promote, mv_info.aliases, mv_info.run_id)
     except Exception as e:
         logger.error("Failed to retrieve details for model version %s of '%s': %s", version_to_promote, args.model_name, e)
         sys.exit(1)
         
     # Check if already in production
-    if mv_info.current_stage == "Production":
-        logger.info("Model version %s is already in 'Production' stage. Nothing to do.", version_to_promote)
+    if "production" in (mv_info.aliases or []):
+        logger.info("Model version %s already has the 'production' alias. Nothing to do.", version_to_promote)
         sys.exit(0)
         
     # 3. Perform Promotion
     if args.dry_run:
-        logger.info("[DRY-RUN] Model version %s of '%s' would be promoted to 'Production' stage (archiving existing versions).",
+        logger.info("[DRY-RUN] Model version %s of '%s' would be assigned the 'production' alias.",
                     version_to_promote, args.model_name)
     else:
-        logger.info("Transitioning model version %s of '%s' to 'Production' stage...", version_to_promote, args.model_name)
+        logger.info("Assigning 'production' alias to model version %s of '%s'...", version_to_promote, args.model_name)
         try:
-            client.transition_model_version_stage(
+            client.set_registered_model_alias(
                 name=args.model_name,
-                version=version_to_promote,
-                stage="Production",
-                archive_existing_versions=True
+                alias="production",
+                version=version_to_promote
             )
-            logger.info("Successfully promoted model version %s of '%s' to 'Production'. Previous production versions archived.",
+            logger.info("Successfully assigned 'production' alias to model version %s of '%s'.",
                         version_to_promote, args.model_name)
         except Exception as e:
-            logger.error("Failed to promote model version %s to Production: %s", version_to_promote, e)
+            logger.error("Failed to assign 'production' alias to model version %s: %s", version_to_promote, e)
             sys.exit(1)
 
 if __name__ == "__main__":

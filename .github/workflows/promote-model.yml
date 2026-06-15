@@ -9,7 +9,7 @@ on:
         default: 'ecommerce_recommender'
         type: string
       version:
-        description: 'Specific version to promote (leave empty to promote latest in Staging)'
+        description: 'Specific version to promote (leave empty to promote version with staging alias)'
         required: false
         type: string
       dry_run:

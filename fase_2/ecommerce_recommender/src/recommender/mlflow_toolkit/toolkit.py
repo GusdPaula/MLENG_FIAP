@@ -247,10 +247,10 @@ class MLflowToolkit:
             logging.getLogger(__name__).warning("Error finding model version for run %s: %s", run_id, e)
         return None
 
-    def promote_model_version_stage(
-        self, model_name: str, version: str, stage: str, archive_existing: bool = True
+    def set_model_version_alias(
+        self, model_name: str, version: str, alias: str
     ) -> None:
-        """Promote a registered model version to a specific stage."""
+        """Assign an alias to a registered model version."""
         if self._is_offline:
             return
 
@@ -258,15 +258,14 @@ class MLflowToolkit:
         from mlflow.tracking import MlflowClient
 
         client = MlflowClient()
-        client.transition_model_version_stage(
+        client.set_registered_model_alias(
             name=model_name,
-            version=version,
-            stage=stage,
-            archive_existing_versions=archive_existing,
+            alias=alias,
+            version=version
         )
 
-    def get_latest_version_in_stage(self, model_name: str, stage: str) -> Any | None:
-        """Retrieve the latest model version currently in a specific stage."""
+    def get_version_by_alias(self, model_name: str, alias: str) -> Any | None:
+        """Retrieve the model version details for a specific alias."""
         if self._is_offline:
             return None
 
@@ -275,25 +274,23 @@ class MLflowToolkit:
 
         client = MlflowClient()
         try:
-            versions = client.get_latest_versions(model_name, stages=[stage])
-            if versions:
-                return versions[0]
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning("Error getting model version in stage %s: %s", stage, e)
-        return None
+            return client.get_model_version_by_alias(model_name, alias)
+        except Exception:
+            # Silence if alias does not exist yet (RESOURCE_DOES_NOT_EXIST)
+            return None
 
     def promote_best_to_staging(
         self, model_name: str, run_id: str, metric_name: str, higher_is_better: bool = True
     ) -> bool:
-        """Compare the metric of the new run against the current model in Staging.
+        """Compare the metric of the new run against the current model with 'staging' alias.
 
-        Promotes the new model to Staging if it is better, or if no model is in Staging.
+        Promotes the new model by assigning the 'staging' alias if it is better,
+        or if no model has the 'staging' alias.
         Returns True if promoted, False otherwise.
         """
         if self._is_offline:
             import logging
-            logging.getLogger(__name__).info("Offline mode active. Skipping promotion to Staging.")
+            logging.getLogger(__name__).info("Offline mode active. Skipping promotion to staging.")
             return False
 
         mlflow = self._require_mlflow()
@@ -310,15 +307,15 @@ class MLflowToolkit:
             )
             return False
 
-        # Get current model version in Staging
-        staging_version_obj = self.get_latest_version_in_stage(model_name, "Staging")
+        # Get current model version with staging alias
+        staging_version_obj = self.get_version_by_alias(model_name, "staging")
 
         import logging
         logger = logging.getLogger(__name__)
 
         if not staging_version_obj:
-            logger.info("No model currently in Staging. Promoting version %s unconditionally.", new_version)
-            self.promote_model_version_stage(model_name, new_version, "Staging")
+            logger.info("No model currently has the 'staging' alias. Assigning 'staging' to version %s unconditionally.", new_version)
+            self.set_model_version_alias(model_name, new_version, "staging")
             return True
 
         # Fetch metrics for both runs to compare
@@ -336,15 +333,15 @@ class MLflowToolkit:
             if staging_metric is None:
                 logger.info("Staging run %s does not have metric %s. Promoting new version %s.",
                             staging_version_obj.run_id, metric_name, new_version)
-                self.promote_model_version_stage(model_name, new_version, "Staging")
+                self.set_model_version_alias(model_name, new_version, "staging")
                 return True
 
             is_better = (new_metric > staging_metric) if higher_is_better else (new_metric < staging_metric)
 
             if is_better:
-                logger.info("New model version %s is better than staging version %s (%s: %s vs %s). Promoting to Staging.",
+                logger.info("New model version %s is better than staging version %s (%s: %s vs %s). Assigning 'staging' alias.",
                             new_version, staging_version_obj.version, metric_name, new_metric, staging_metric)
-                self.promote_model_version_stage(model_name, new_version, "Staging")
+                self.set_model_version_alias(model_name, new_version, "staging")
                 return True
             else:
                 logger.info("New model version %s is NOT better than staging version %s (%s: %s vs %s). Keeping current staging.",
