@@ -81,7 +81,10 @@ resource "aws_iam_policy" "dvc_rw_policy" {
           "s3:ListBucket",
           "s3:GetBucketLocation"
         ]
-        Resource = aws_s3_bucket.dvc_bucket.arn
+        Resource = [
+          aws_s3_bucket.dvc_bucket.arn,
+          var.bucket_name_mlflow_artifacts
+        ]
       },
       {
         Effect = "Allow"
@@ -90,7 +93,10 @@ resource "aws_iam_policy" "dvc_rw_policy" {
           "s3:PutObject",
           "s3:DeleteObject"
         ]
-        Resource = "${aws_s3_bucket.dvc_bucket.arn}/*"
+        Resource = [
+          "${aws_s3_bucket.dvc_bucket.arn}/*",
+          "${var.bucket_name_mlflow_artifacts}/*"
+        ]
       }
     ]
   })

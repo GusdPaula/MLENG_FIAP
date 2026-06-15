@@ -10,6 +10,12 @@ variable "bucket_name" {
   default     = "fiap-ml-dvc-bucket-tech-challenger"
 }
 
+variable "bucket_name_mlflow_artifacts" {
+  type        = string
+  description = "Name of the S3 bucket for MLflow artifacts"
+  default     = "mlflow-artifacts-fiap-rsnnnlwu"
+}
+
 variable "iam_user_name" {
   type        = string
   description = "Nome do usuario IAM para o DVC"
