@@ -226,3 +226,130 @@ class MLflowToolkit:
     def is_offline(self) -> bool:
         """Return True when the toolkit is using the local file store."""
         return self._is_offline
+
+    def get_model_version_by_run_id(self, model_name: str, run_id: str) -> str | None:
+        """Retrieve the registered model version associated with a specific run_id."""
+        if self._is_offline:
+            return None
+
+        mlflow = self._require_mlflow()
+        from mlflow.tracking import MlflowClient
+
+        client = MlflowClient()
+        try:
+            filter_string = f"name='{model_name}'"
+            model_versions = client.search_model_versions(filter_string)
+            for mv in model_versions:
+                if mv.run_id == run_id:
+                    return mv.version
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("Error finding model version for run %s: %s", run_id, e)
+        return None
+
+    def promote_model_version_stage(
+        self, model_name: str, version: str, stage: str, archive_existing: bool = True
+    ) -> None:
+        """Promote a registered model version to a specific stage."""
+        if self._is_offline:
+            return
+
+        mlflow = self._require_mlflow()
+        from mlflow.tracking import MlflowClient
+
+        client = MlflowClient()
+        client.transition_model_version_stage(
+            name=model_name,
+            version=version,
+            stage=stage,
+            archive_existing_versions=archive_existing,
+        )
+
+    def get_latest_version_in_stage(self, model_name: str, stage: str) -> Any | None:
+        """Retrieve the latest model version currently in a specific stage."""
+        if self._is_offline:
+            return None
+
+        mlflow = self._require_mlflow()
+        from mlflow.tracking import MlflowClient
+
+        client = MlflowClient()
+        try:
+            versions = client.get_latest_versions(model_name, stages=[stage])
+            if versions:
+                return versions[0]
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("Error getting model version in stage %s: %s", stage, e)
+        return None
+
+    def promote_best_to_staging(
+        self, model_name: str, run_id: str, metric_name: str, higher_is_better: bool = True
+    ) -> bool:
+        """Compare the metric of the new run against the current model in Staging.
+
+        Promotes the new model to Staging if it is better, or if no model is in Staging.
+        Returns True if promoted, False otherwise.
+        """
+        if self._is_offline:
+            import logging
+            logging.getLogger(__name__).info("Offline mode active. Skipping promotion to Staging.")
+            return False
+
+        mlflow = self._require_mlflow()
+        from mlflow.tracking import MlflowClient
+
+        client = MlflowClient()
+
+        # Get the model version for the new run
+        new_version = self.get_model_version_by_run_id(model_name, run_id)
+        if not new_version:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Could not find a registered model version for run %s. Skipping promotion.", run_id
+            )
+            return False
+
+        # Get current model version in Staging
+        staging_version_obj = self.get_latest_version_in_stage(model_name, "Staging")
+
+        import logging
+        logger = logging.getLogger(__name__)
+
+        if not staging_version_obj:
+            logger.info("No model currently in Staging. Promoting version %s unconditionally.", new_version)
+            self.promote_model_version_stage(model_name, new_version, "Staging")
+            return True
+
+        # Fetch metrics for both runs to compare
+        try:
+            new_run = client.get_run(run_id)
+            staging_run = client.get_run(staging_version_obj.run_id)
+
+            new_metric = new_run.data.metrics.get(metric_name)
+            staging_metric = staging_run.data.metrics.get(metric_name)
+
+            if new_metric is None:
+                logger.warning("New run %s does not have metric %s. Skipping promotion.", run_id, metric_name)
+                return False
+
+            if staging_metric is None:
+                logger.info("Staging run %s does not have metric %s. Promoting new version %s.",
+                            staging_version_obj.run_id, metric_name, new_version)
+                self.promote_model_version_stage(model_name, new_version, "Staging")
+                return True
+
+            is_better = (new_metric > staging_metric) if higher_is_better else (new_metric < staging_metric)
+
+            if is_better:
+                logger.info("New model version %s is better than staging version %s (%s: %s vs %s). Promoting to Staging.",
+                            new_version, staging_version_obj.version, metric_name, new_metric, staging_metric)
+                self.promote_model_version_stage(model_name, new_version, "Staging")
+                return True
+            else:
+                logger.info("New model version %s is NOT better than staging version %s (%s: %s vs %s). Keeping current staging.",
+                            new_version, staging_version_obj.version, metric_name, new_metric, staging_metric)
+                return False
+        except Exception as e:
+            logger.error("Failed to compare metrics and promote model: %s", e)
+            return False

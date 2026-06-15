@@ -1,0 +1,67 @@
+name: Promote MLflow Model to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: 'Name of the registered model in MLflow'
+        required: true
+        default: 'ecommerce_recommender'
+        type: string
+      version:
+        description: 'Specific version to promote (leave empty to promote latest in Staging)'
+        required: false
+        type: string
+      dry_run:
+        description: 'Dry Run (simulate the promotion)'
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  promote:
+    name: Promote Model
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install poetry
+
+      - name: Install dependencies for fase_2
+        run: |
+          cd fase_2
+          poetry install --no-interaction --no-root
+
+      - name: Run Model Promotion Script
+        env:
+          MLFLOW_TRACKING_URI: https://mlflow.asgardprint.com.br
+        run: |
+          cd fase_2
+          # Build arguments string
+          ARGS="--model-name '${{ github.event.inputs.model_name }}'"
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            ARGS="$ARGS --version ${{ github.event.inputs.version }}"
+          fi
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          
+          # Run the script via poetry
+          poetry run python scripts/promote_model.py $ARGS

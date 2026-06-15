@@ -177,7 +177,7 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
     with mlflow_toolkit.start_run(
         run_name=run_name,
         tags={"model_type": model_type, "processor": processor_cfg},
-    ):
+    ) as run:
         # Log MLflow parameters
         mlflow_toolkit.log_params(
             {
@@ -356,6 +356,38 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
             ),
         )
         logger.info("MLflow logging completed successfully.")
+
+        # --- 10. Promote model to Staging if best ------------------------
+        registered_model_name = cfg.get("registered_model_name", "ecommerce_recommender")
+        if registered_model_name and not mlflow_toolkit.is_offline:
+            logger.info("Evaluating model for Staging promotion...")
+            # Default comparison metric is ndcg_at_10
+            monitor_metric = "ndcg_at_10"
+            higher_is_better = True
+
+            if cfg.get("early_stopping", {}).get("enabled"):
+                monitor_val = cfg["early_stopping"].get("monitor", "val_loss")
+                if monitor_val == "ndcg_at_k":
+                    monitor_metric = "ndcg_at_10"
+                elif monitor_val == "auc_roc":
+                    monitor_metric = "final_auc_roc"
+                elif monitor_val == "avg_precision":
+                    monitor_metric = "final_avg_precision"
+                elif monitor_val == "val_loss":
+                    monitor_metric = "final_train_loss"
+                    higher_is_better = False
+
+            logger.info("Using metric '%s' (higher_is_better=%s) for staging comparison.", monitor_metric, higher_is_better)
+            promoted = mlflow_toolkit.promote_best_to_staging(
+                model_name=registered_model_name,
+                run_id=run.info.run_id,
+                metric_name=monitor_metric,
+                higher_is_better=higher_is_better
+            )
+            if promoted:
+                logger.info("Model version successfully evaluated and promoted to Staging stage.")
+            else:
+                logger.info("Model version evaluated but not promoted to Staging.")
 
 
 if __name__ == "__main__":
