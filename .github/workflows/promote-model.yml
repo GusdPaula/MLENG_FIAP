@@ -39,15 +39,10 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install Poetry
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install poetry
-
-      - name: Install dependencies for fase_2
-        run: |
-          cd fase_2
-          poetry install --no-interaction --no-root
+          python -m pip install mlflow python-dotenv
 
       - name: Run Model Promotion Script
         env:
@@ -63,5 +58,5 @@ jobs:
             ARGS="$ARGS --dry-run"
           fi
           
-          # Run the script via poetry
-          poetry run python scripts/promote_model.py $ARGS
+          # Run the script directly with Python
+          python scripts/promote_model.py $ARGS
