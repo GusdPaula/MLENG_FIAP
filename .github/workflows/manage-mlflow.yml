@@ -27,25 +27,76 @@ jobs:
         if: ${{ github.event.inputs.action == 'stop' }}
         run: |
           echo "Stopping EC2 instance..."
-          INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=mlflow-fiap-server" "Name=instance-state-name,Values=running" --query "Reservations[0].Instances[0].InstanceId" --output text || echo "None")
+          INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=mlflow-fiap-server" --query "Reservations[0].Instances[0].InstanceId" --output text 2>/dev/null || echo "None")
           if [ "$INSTANCE_ID" != "None" ] && [ -n "$INSTANCE_ID" ]; then
-            aws ec2 stop-instances --instance-ids $INSTANCE_ID
+            INSTANCE_STATE=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].State.Name" --output text 2>/dev/null || echo "unknown")
+            if [ "$INSTANCE_STATE" = "running" ] || [ "$INSTANCE_STATE" = "pending" ]; then
+              echo "EC2 is $INSTANCE_STATE. Stopping..."
+              aws ec2 stop-instances --instance-ids $INSTANCE_ID
+            else
+              echo "EC2 is not running (State: $INSTANCE_STATE). Skipping stop."
+            fi
           else
-            echo "No running EC2 instance found."
+            echo "No EC2 instance found."
           fi
           
           echo "Stopping RDS instance..."
-          aws rds stop-db-instance --db-instance-identifier mlflow-fiap-db || echo "DB might already be stopped."
+          DB_STATUS=$(aws rds describe-db-instances --db-instance-identifier mlflow-fiap-db --query "DBInstances[0].DBInstanceStatus" --output text 2>/dev/null || echo "None")
+          if [ "$DB_STATUS" = "available" ]; then
+            echo "RDS is available. Stopping..."
+            aws rds stop-db-instance --db-instance-identifier mlflow-fiap-db
+          else
+            echo "RDS is in status: $DB_STATUS. Skipping stop."
+          fi
 
       - name: Start MLflow
         if: ${{ github.event.inputs.action == 'start' }}
         run: |
-          echo "Starting RDS instance..."
-          aws rds start-db-instance --db-instance-identifier mlflow-fiap-db || echo "DB might already be running."
+          echo "Checking RDS instance..."
+          DB_STATUS=$(aws rds describe-db-instances --db-instance-identifier mlflow-fiap-db --query "DBInstances[0].DBInstanceStatus" --output text 2>/dev/null || echo "None")
+          echo "RDS status is: $DB_STATUS"
           
-          echo "Starting EC2 instance..."
-          INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=mlflow-fiap-server" --query "Reservations[0].Instances[0].InstanceId" --output text)
-          aws ec2 start-instances --instance-ids $INSTANCE_ID
+          if [ "$DB_STATUS" = "stopping" ]; then
+            echo "RDS is currently stopping. Waiting for it to stop..."
+            aws rds wait db-instance-stopped --db-instance-identifier mlflow-fiap-db
+            DB_STATUS="stopped"
+          fi
+
+          if [ "$DB_STATUS" = "stopped" ]; then
+            echo "RDS is stopped. Starting..."
+            aws rds start-db-instance --db-instance-identifier mlflow-fiap-db
+            echo "Waiting for RDS to be available..."
+            aws rds wait db-instance-available --db-instance-identifier mlflow-fiap-db
+          elif [ "$DB_STATUS" = "starting" ]; then
+            echo "RDS is starting. Waiting for it to be available..."
+            aws rds wait db-instance-available --db-instance-identifier mlflow-fiap-db
+          elif [ "$DB_STATUS" = "available" ]; then
+            echo "RDS is already available."
+          else
+            echo "RDS status is: $DB_STATUS. Attempting to start and wait..."
+            aws rds start-db-instance --db-instance-identifier mlflow-fiap-db || echo "Could not start RDS database."
+            echo "Waiting for RDS to be available..."
+            aws rds wait db-instance-available --db-instance-identifier mlflow-fiap-db || echo "Wait failed, proceeding anyway."
+          fi
+          
+          echo "RDS is fully available. Proceeding to EC2..."
+          echo "Checking EC2 instance..."
+          INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=mlflow-fiap-server" --query "Reservations[0].Instances[0].InstanceId" --output text 2>/dev/null || echo "None")
+          if [ "$INSTANCE_ID" = "None" ] || [ -z "$INSTANCE_ID" ]; then
+            echo "Error: No EC2 instance found with tag Name=mlflow-fiap-server"
+            exit 1
+          fi
+          
+          INSTANCE_STATE=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].State.Name" --output text 2>/dev/null || echo "unknown")
+          if [ "$INSTANCE_STATE" = "stopped" ]; then
+            echo "EC2 is stopped. Starting..."
+            aws ec2 start-instances --instance-ids $INSTANCE_ID
+          elif [ "$INSTANCE_STATE" = "running" ] || [ "$INSTANCE_STATE" = "pending" ]; then
+            echo "EC2 is already $INSTANCE_STATE."
+          else
+            echo "EC2 state is: $INSTANCE_STATE. Attempting to start anyway..."
+            aws ec2 start-instances --instance-ids $INSTANCE_ID || echo "Could not start EC2 instance."
+          fi
           
           echo "Waiting for EC2 to be running..."
           aws ec2 wait instance-running --instance-ids $INSTANCE_ID

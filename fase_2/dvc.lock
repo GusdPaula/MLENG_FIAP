@@ -37,7 +37,7 @@ stages:
     deps:
     - path: configs/model.yaml
       hash: md5
-      md5: 837bf1de6454266ed77a825c6bf1b1c7
+      md5: 9a1fdd1c5a5e5457485289188ffe5312
       size: 1370
     - path: data/processed/interactions.csv
       hash: md5
@@ -54,7 +54,7 @@ stages:
     params:
       configs/model.yaml:
         model.batch_size: 1024
-        model.epochs: 3
+        model.epochs: 1
         model.hyperparams:
           embedding_dim: 64
           hidden_layers:
@@ -69,7 +69,7 @@ stages:
     outs:
     - path: models/model.pt
       hash: md5
-      md5: d5d4a1936375eba19a24440f0fa99fc4
+      md5: 85605e02cfd558d179e406b78ac210d0
       size: 39442773
   evaluate:
     cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from 
@@ -78,7 +78,7 @@ stages:
     deps:
     - path: configs/model.yaml
       hash: md5
-      md5: 837bf1de6454266ed77a825c6bf1b1c7
+      md5: 9a1fdd1c5a5e5457485289188ffe5312
       size: 1370
     - path: data/processed/interactions.csv
       hash: md5
@@ -94,10 +94,10 @@ stages:
       size: 1388405
     - path: models/model.pt
       hash: md5
-      md5: d5d4a1936375eba19a24440f0fa99fc4
+      md5: 85605e02cfd558d179e406b78ac210d0
       size: 39442773
     outs:
     - path: reports/metrics.json
       hash: md5
-      md5: 90f0b8fae7eb3a5ae2ceb1c7b549b1d2
-      size: 606
+      md5: c985ec89a8b77a0830c10764f2f27be2
+      size: 607
