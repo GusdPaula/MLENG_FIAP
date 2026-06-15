@@ -249,6 +249,7 @@ resource "aws_instance" "mlflow_server" {
       --host 0.0.0.0 \
       --backend-store-uri "$DB_URI" \
       --default-artifact-root "s3://${aws_s3_bucket.mlflow_artifacts.bucket}" \
+      --serve-artifacts \
       --allowed-hosts "*" \
       --cors-allowed-origins "*"
   EOF
