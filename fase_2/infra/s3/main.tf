@@ -67,10 +67,10 @@ resource "aws_s3_bucket_policy" "public_read_policy" {
   })
 }
 
-# Política IAM de Leitura e Escrita para o bucket do DVC
+# Política IAM de Leitura e Escrita para o bucket do DVC e MLflow Artifacts
 resource "aws_iam_policy" "dvc_rw_policy" {
   name        = "DVC-Bucket-ReadWrite-Policy"
-  description = "Politica IAM para permitir leitura e escrita no bucket S3 do DVC"
+  description = "Politica IAM para permitir leitura e escrita no bucket S3 do DVC e no MLflow Artifacts"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -83,7 +83,7 @@ resource "aws_iam_policy" "dvc_rw_policy" {
         ]
         Resource = [
           aws_s3_bucket.dvc_bucket.arn,
-          var.bucket_name_mlflow_artifacts
+          "arn:aws:s3:::${var.bucket_name_mlflow_artifacts}"
         ]
       },
       {
@@ -95,7 +95,7 @@ resource "aws_iam_policy" "dvc_rw_policy" {
         ]
         Resource = [
           "${aws_s3_bucket.dvc_bucket.arn}/*",
-          "${var.bucket_name_mlflow_artifacts}/*"
+          "arn:aws:s3:::${var.bucket_name_mlflow_artifacts}/*"
         ]
       }
     ]
