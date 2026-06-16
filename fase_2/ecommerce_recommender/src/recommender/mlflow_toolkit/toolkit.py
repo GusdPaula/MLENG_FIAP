@@ -28,7 +28,7 @@ class MLflowToolkit:
     _is_offline: bool = False
     _mlflow_module: Any | None = None
 
-    def _require_mlflow(self):
+    def _require_mlflow(self) -> Any:
         if self._mlflow_module is not None:
             return self._mlflow_module
         try:
@@ -232,7 +232,7 @@ class MLflowToolkit:
         if self._is_offline:
             return None
 
-        mlflow = self._require_mlflow()
+        self._require_mlflow()
         from mlflow.tracking import MlflowClient
 
         client = MlflowClient()
@@ -254,7 +254,7 @@ class MLflowToolkit:
         if self._is_offline:
             return
 
-        mlflow = self._require_mlflow()
+        self._require_mlflow()
         from mlflow.tracking import MlflowClient
 
         client = MlflowClient()
@@ -269,14 +269,13 @@ class MLflowToolkit:
         if self._is_offline:
             return None
 
-        mlflow = self._require_mlflow()
+        self._require_mlflow()
         from mlflow.tracking import MlflowClient
 
         client = MlflowClient()
         try:
             return client.get_model_version_by_alias(model_name, alias)
         except Exception:
-            # Silence if alias does not exist yet (RESOURCE_DOES_NOT_EXIST)
             return None
 
     def promote_best_to_staging(
@@ -293,7 +292,7 @@ class MLflowToolkit:
             logging.getLogger(__name__).info("Offline mode active. Skipping promotion to staging.")
             return False
 
-        mlflow = self._require_mlflow()
+        self._require_mlflow()
         from mlflow.tracking import MlflowClient
 
         client = MlflowClient()

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from src.recommender.data.dataset import (
@@ -7,7 +9,7 @@ from src.recommender.data.dataset import (
 )
 
 
-def test_load_events_adds_weight(tmp_path):
+def test_load_events_adds_weight(tmp_path: Path) -> None:
     csv_path = tmp_path / "events.csv"
     df = pd.DataFrame(
         {
@@ -26,7 +28,7 @@ def test_load_events_adds_weight(tmp_path):
     assert result["weight"].tolist() == [1, 2, 3]
 
 
-def test_create_interaction_matrix():
+def test_create_interaction_matrix() -> None:
     events = pd.DataFrame(
         {
             "visitorid": [1, 1, 2, 3],
@@ -43,7 +45,7 @@ def test_create_interaction_matrix():
     assert "item_idx" in result.columns
 
 
-def test_recommender_dataset_size():
+def test_recommender_dataset_size() -> None:
     events = pd.DataFrame(
         {
             "visitorid": [1, 1, 2],
@@ -62,7 +64,7 @@ def test_recommender_dataset_size():
     assert len(dataset) == expected_size
 
 
-def test_recommender_dataset_item_returns_correct_types():
+def test_recommender_dataset_item_returns_correct_types() -> None:
     events = pd.DataFrame(
         {
             "visitorid": [1, 2],

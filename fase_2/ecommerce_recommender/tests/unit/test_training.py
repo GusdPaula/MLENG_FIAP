@@ -6,7 +6,7 @@ from src.recommender.training import EarlyStopping, Trainer
 from torch.utils.data import DataLoader
 
 
-def test_early_stopping_min_mode():
+def test_early_stopping_min_mode() -> None:
     """Test early stopping with min mode (loss)."""
     stopper = EarlyStopping(patience=2, mode="min")
 
@@ -24,7 +24,7 @@ def test_early_stopping_min_mode():
     assert stopper.num_bad_epochs == 2
 
 
-def test_early_stopping_max_mode():
+def test_early_stopping_max_mode() -> None:
     """Test early stopping with max mode (AUC)."""
     stopper = EarlyStopping(patience=2, mode="max")
 
@@ -42,7 +42,7 @@ def test_early_stopping_max_mode():
     assert stopper.num_bad_epochs == 2
 
 
-def test_early_stopping_with_min_delta():
+def test_early_stopping_with_min_delta() -> None:
     """Test early stopping with min_delta."""
     stopper = EarlyStopping(patience=2, mode="min", min_delta=0.1)
 
@@ -60,7 +60,7 @@ def test_early_stopping_with_min_delta():
     assert stopper.num_bad_epochs == 2
 
 
-def test_early_stopping_disabled():
+def test_early_stopping_disabled() -> None:
     """Test early stopping with patience=0."""
     stopper = EarlyStopping(patience=0, mode="min")
 
@@ -70,7 +70,7 @@ def test_early_stopping_disabled():
     assert not stopper(0.7)
 
 
-def test_early_stopping_reset():
+def test_early_stopping_reset() -> None:
     """Test resetting the early stopping state."""
     stopper = EarlyStopping(patience=2, mode="min")
 
@@ -84,7 +84,7 @@ def test_early_stopping_reset():
     assert stopper.best_value == 0.7
 
 
-def test_trainer_train_batch():
+def test_trainer_train_batch() -> None:
     """Test the train_batch method directly."""
     model = NCFModel(num_users=10, num_items=5, embedding_dim=8, hidden_layers=[16])
     trainer = Trainer(model, {"learning_rate": 0.01})
@@ -100,7 +100,7 @@ def test_trainer_train_batch():
     assert loss >= 0
 
 
-def test_trainer_train_epoch():
+def test_trainer_train_epoch() -> None:
     """Test the train_epoch method with DataLoader."""
     model = NCFModel(num_users=10, num_items=5, embedding_dim=8, hidden_layers=[16])
     trainer = Trainer(model, {"learning_rate": 0.01})
@@ -138,7 +138,7 @@ def test_trainer_train_epoch():
     assert loss >= 0
 
 
-def test_trainer_evaluate():
+def test_trainer_evaluate() -> None:
     """Test the evaluate method."""
     model = NCFModel(num_users=10, num_items=5, embedding_dim=8, hidden_layers=[16])
     trainer = Trainer(model, {"learning_rate": 0.01})
@@ -179,7 +179,7 @@ def test_trainer_evaluate():
     assert 0.0 <= metrics["avg_precision"] <= 1.0
 
 
-def test_trainer_fit():
+def test_trainer_fit() -> None:
     """Test the fit method."""
     model = NCFModel(num_users=10, num_items=5, embedding_dim=8, hidden_layers=[16])
     trainer = Trainer(model, {"learning_rate": 0.01})
@@ -221,7 +221,7 @@ def test_trainer_fit():
     assert all(hasattr(result, "eval_metrics") for result in history)
 
 
-def test_trainer_fit_with_early_stopping():
+def test_trainer_fit_with_early_stopping() -> None:
     """Test the fit_with_early_stopping method."""
     model = NCFModel(num_users=10, num_items=5, embedding_dim=8, hidden_layers=[16])
     trainer = Trainer(model, {"learning_rate": 0.01})
@@ -267,7 +267,7 @@ def test_trainer_fit_with_early_stopping():
     assert best["value"] is None or best["value"] >= 0
 
 
-def test_trainer_fit_with_early_stopping_enabled():
+def test_trainer_fit_with_early_stopping_enabled() -> None:
     """Test the fit_with_early_stopping method with early stopping enabled."""
     model = NCFModel(num_users=10, num_items=5, embedding_dim=8, hidden_layers=[16])
     trainer = Trainer(model, {"learning_rate": 0.01})

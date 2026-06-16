@@ -4,7 +4,7 @@ from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
 
-def load_module_from_path(module_name: str, path: Path):
+def load_module_from_path(module_name: str, path: Path) -> types.ModuleType:
     spec = spec_from_file_location(module_name, str(path))
     module = module_from_spec(spec)
     sys.modules[module_name] = module
@@ -12,7 +12,7 @@ def load_module_from_path(module_name: str, path: Path):
     return module
 
 
-def test_data_pipeline_runs_with_prefixed_tables(tmp_path):
+def test_data_pipeline_runs_with_prefixed_tables(tmp_path: Path) -> None:
     kaggle_module_path = (
         Path(__file__).resolve().parents[2] / "data_pipeline" / "kaggle_data_loader.py"
     )

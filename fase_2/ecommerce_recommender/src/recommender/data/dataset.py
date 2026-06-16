@@ -79,7 +79,7 @@ class BatchCollator:
     * Inspect or log the batch shape from the training loop.
     """
 
-    def __init__(self, device: str | torch.device = "cpu"):
+    def __init__(self, device: str | torch.device = "cpu") -> None:
         self.device = torch.device(device)
 
     def __call__(
@@ -157,7 +157,7 @@ class RecommenderDataset(Dataset):
         num_negatives: int = 4,
         streaming: bool = False,
         seed: int | None = None,
-    ):
+    ) -> None:
         self.interactions = interactions[["user_idx", "item_idx"]].values
         self.num_items = num_items
         self.num_negatives = num_negatives

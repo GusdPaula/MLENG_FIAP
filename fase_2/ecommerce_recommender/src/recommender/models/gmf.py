@@ -23,7 +23,7 @@ class GMFModel(BaseRecommenderModel):
         embedding_dim: int = 64,
         projection_dim: int | None = None,
         dropout: float = 0.0,
-    ):
+    ) -> None:
         """Initialize the GMF model.
 
         Args:

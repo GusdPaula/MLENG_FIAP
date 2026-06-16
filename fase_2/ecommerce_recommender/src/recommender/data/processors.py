@@ -125,7 +125,7 @@ class WeightedEventProcessor(DataProcessor):
         "transaction": 3.0,
     }
 
-    def __init__(self, weights: dict[str, float] | None = None):
+    def __init__(self, weights: dict[str, float] | None = None) -> None:
         """Initialize the weighted event processor.
 
         Args:
@@ -165,7 +165,7 @@ class BinaryInteractionProcessor(DataProcessor):
 
     POSITIVE_EVENTS: tuple[str, ...] = ("addtocart", "transaction")
 
-    def __init__(self, positive_events: tuple[str, ...] | None = None):
+    def __init__(self, positive_events: tuple[str, ...] | None = None) -> None:
         """Initialize the binary interaction processor.
 
         Args:
@@ -238,7 +238,7 @@ class DataProcessorContext:
 
     def __init__(
         self, strategy: str | DataProcessor = "weighted", **strategy_kwargs: Any
-    ):
+    ) -> None:
         """Initialize the data processor context with a strategy.
 
         Args:

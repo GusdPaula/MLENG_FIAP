@@ -1,6 +1,7 @@
 """Unit tests for MLflow callbacks module."""
 
 from dataclasses import dataclass
+from typing import Any
 
 from src.recommender.mlflow_toolkit.callbacks import create_mlflow_logger
 
@@ -12,21 +13,21 @@ class MockEpochResult:
     epoch: int
     train_loss: float
     learning_rate: float
-    eval_metrics: dict
+    eval_metrics: dict[str, float]
 
 
 class MockMLflowToolkit:
     """Mock MLflow toolkit for testing."""
 
-    def __init__(self):
-        self.logged_metrics = []
+    def __init__(self) -> None:
+        self.logged_metrics: list[tuple[dict[str, Any], int]] = []
 
-    def log_metrics(self, metrics: dict, step: int):
+    def log_metrics(self, metrics: dict[str, Any], step: int) -> None:
         """Mock log metrics method."""
         self.logged_metrics.append((metrics, step))
 
 
-def test_create_mlflow_logger_basic():
+def test_create_mlflow_logger_basic() -> None:
     """Test basic MLflow logger creation and execution."""
     mlflow_toolkit = MockMLflowToolkit()
     logger = create_mlflow_logger(mlflow_toolkit)
@@ -49,7 +50,7 @@ def test_create_mlflow_logger_basic():
     assert logged_metrics["ndcg_at_10"] == 0.75
 
 
-def test_create_mlflow_logger_empty_metrics():
+def test_create_mlflow_logger_empty_metrics() -> None:
     """Test MLflow logger with empty evaluation metrics."""
     mlflow_toolkit = MockMLflowToolkit()
     logger = create_mlflow_logger(mlflow_toolkit)
@@ -71,7 +72,7 @@ def test_create_mlflow_logger_empty_metrics():
     assert len(logged_metrics) == 2  # Only train_loss and learning_rate
 
 
-def test_create_mlflow_logger_multiple_epochs():
+def test_create_mlflow_logger_multiple_epochs() -> None:
     """Test MLflow logger logging multiple epochs."""
     mlflow_toolkit = MockMLflowToolkit()
     logger = create_mlflow_logger(mlflow_toolkit)
@@ -91,7 +92,7 @@ def test_create_mlflow_logger_multiple_epochs():
         assert logged_metrics["train_loss"] == 0.5 / i
 
 
-def test_create_mlflow_logger_metric_types():
+def test_create_mlflow_logger_metric_types() -> None:
     """Test that metrics are converted to float."""
     mlflow_toolkit = MockMLflowToolkit()
     logger = create_mlflow_logger(mlflow_toolkit)
