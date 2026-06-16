@@ -136,6 +136,13 @@ resource "aws_iam_policy" "dvc_readonly_policy" {
       {
         Effect = "Allow"
         Action = [
+          "s3:ListAllMyBuckets"
+        ]
+        Resource = "arn:aws:s3:::*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "s3:ListBucket",
           "s3:GetBucketLocation"
         ]
