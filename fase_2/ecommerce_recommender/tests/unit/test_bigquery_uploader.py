@@ -4,8 +4,6 @@ from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from typing import Any
 
-import pytest
-
 
 def load_module_from_path(module_name: str, path: Path) -> types.ModuleType:
     spec = spec_from_file_location(module_name, str(path))
