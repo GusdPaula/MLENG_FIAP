@@ -75,8 +75,8 @@ def run_evaluation_pipeline(config_path: str = "configs/model.yaml") -> None:
     Args:
         config_path: Caminho para o arquivo YAML de configuração do modelo. Padrão é "configs/model.yaml".
     """
-    from dotenv import load_dotenv
-    load_dotenv()
+    from ..config import get_settings
+    get_settings()  # validates and loads .env into the process
 
     logger.info("Iniciando estágio de avaliação usando a configuração: %s", config_path)
 
