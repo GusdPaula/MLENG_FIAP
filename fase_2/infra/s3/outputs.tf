@@ -27,3 +27,18 @@ output "dvc_user_arn" {
   value       = aws_iam_user.dvc_user.arn
   description = "ARN do usuário IAM criado"
 }
+
+output "dvc_readonly_policy_arn" {
+  value       = aws_iam_policy.dvc_readonly_policy.arn
+  description = "ARN da política IAM de somente leitura para o bucket do DVC"
+}
+
+output "dvc_readonly_user_name" {
+  value       = aws_iam_user.dvc_readonly_user.name
+  description = "Nome do usuário IAM de somente leitura"
+}
+
+output "dvc_readonly_user_arn" {
+  value       = aws_iam_user.dvc_readonly_user.arn
+  description = "ARN do usuário IAM de somente leitura"
+}

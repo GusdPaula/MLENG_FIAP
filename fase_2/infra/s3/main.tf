@@ -125,4 +125,51 @@ resource "aws_iam_user_policy_attachment" "signin_dev_attach" {
   policy_arn = "arn:aws:iam::aws:policy/SignInLocalDevelopmentAccess"
 }
 
+# Política IAM de somente leitura para o bucket do DVC
+resource "aws_iam_policy" "dvc_readonly_policy" {
+  name        = "DVC-Bucket-ReadOnly-Policy"
+  description = "Politica IAM de somente leitura para listar e obter objetos do bucket S3 do DVC"
 
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket",
+          "s3:GetBucketLocation"
+        ]
+        Resource = aws_s3_bucket.dvc_bucket.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject"
+        ]
+        Resource = "${aws_s3_bucket.dvc_bucket.arn}/*"
+      }
+    ]
+  })
+}
+
+# Usuário IAM de somente leitura para o DVC
+resource "aws_iam_user" "dvc_readonly_user" {
+  name = "${var.iam_user_name}-readonly"
+
+  tags = {
+    Name        = "DVC ReadOnly User"
+    Environment = "MLOps"
+  }
+}
+
+# Anexa a política de somente leitura ao usuário IAM readonly
+resource "aws_iam_user_policy_attachment" "dvc_readonly_attach" {
+  user       = aws_iam_user.dvc_readonly_user.name
+  policy_arn = aws_iam_policy.dvc_readonly_policy.arn
+}
+
+# Anexa a política gerenciada AWS SignInLocalDevelopmentAccess ao usuário readonly
+resource "aws_iam_user_policy_attachment" "readonly_signin_dev_attach" {
+  user       = aws_iam_user.dvc_readonly_user.name
+  policy_arn = "arn:aws:iam::aws:policy/SignInLocalDevelopmentAccess"
+}
