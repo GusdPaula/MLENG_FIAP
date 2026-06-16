@@ -9,11 +9,11 @@ from sklearn.linear_model import LogisticRegression
 class PopularityRecommender:
     """Recomendador baseline que pontua itens puramente com base em sua popularidade no conjunto de treino."""
 
-    def __init__(self):
-        self.item_popularity = {}
-        self.default_score = 0.0
+    def __init__(self) -> None:
+        self.item_popularity: dict[int, float] = {}
+        self.default_score: float = 0.0
 
-    def fit(self, interactions: pd.DataFrame):
+    def fit(self, interactions: pd.DataFrame) -> None:
         """Ajusta o modelo de popularidade nas interações de treino.
 
         Args:
@@ -51,7 +51,7 @@ class PopularityRecommender:
 class LogisticRegressionRecommender:
     """Recomendador baseline que usa Logistic Regression sobre matrizes esparsas one-hot de usuário e item."""
 
-    def __init__(self, num_users: int, num_items: int):
+    def __init__(self, num_users: int, num_items: int) -> None:
         self.num_users = num_users
         self.num_items = num_items
         self.model = LogisticRegression(max_iter=100, C=1.0, solver="liblinear")
@@ -66,7 +66,7 @@ class LogisticRegressionRecommender:
             (data, (rows, cols)), shape=(num_samples, self.num_users + self.num_items)
         )
 
-    def fit(self, users: np.ndarray, items: np.ndarray, labels: np.ndarray):
+    def fit(self, users: np.ndarray, items: np.ndarray, labels: np.ndarray) -> None:
         """Ajusta o modelo de Logistic Regression nas amostras de treino.
 
         Args:

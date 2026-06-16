@@ -23,7 +23,7 @@ class NCFModel(BaseRecommenderModel):
         embedding_dim: int = 64,
         hidden_layers: list[int] | tuple[int, ...] = (128, 64, 32),
         dropout: float = 0.2,
-    ):
+    ) -> None:
         """Initialize the NCF model.
 
         Args:

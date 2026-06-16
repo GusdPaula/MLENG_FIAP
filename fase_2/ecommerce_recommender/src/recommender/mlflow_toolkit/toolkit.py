@@ -28,7 +28,7 @@ class MLflowToolkit:
     _is_offline: bool = False
     _mlflow_module: Any | None = None
 
-    def _require_mlflow(self):
+    def _require_mlflow(self) -> Any:
         if self._mlflow_module is not None:
             return self._mlflow_module
         try:

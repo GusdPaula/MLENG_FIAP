@@ -32,7 +32,7 @@ def _sample_events() -> pd.DataFrame:
     )
 
 
-def test_weighted_processor_assigns_weights():
+def test_weighted_processor_assigns_weights() -> None:
     df = _sample_events()
     interactions, user2idx, item2idx = WeightedEventProcessor().process(df)
 
@@ -43,7 +43,7 @@ def test_weighted_processor_assigns_weights():
     assert len(interactions) == len(df)
 
 
-def test_binary_processor_keeps_only_positive_events():
+def test_binary_processor_keeps_only_positive_events() -> None:
     df = _sample_events()
     interactions, _, _ = BinaryInteractionProcessor().process(df)
 
@@ -54,7 +54,7 @@ def test_binary_processor_keeps_only_positive_events():
     assert (interactions["weight"] == 1.0).all()
 
 
-def test_implicit_processor_assigns_unit_weight():
+def test_implicit_processor_assigns_unit_weight() -> None:
     df = _sample_events()
     interactions, _, _ = ImplicitFeedbackProcessor().process(df)
 
@@ -62,7 +62,7 @@ def test_implicit_processor_assigns_unit_weight():
     assert (interactions["weight"] == 1.0).all()
 
 
-def test_min_interactions_filters_cold_users():
+def test_min_interactions_filters_cold_users() -> None:
     df = _sample_events()
     interactions, _, _ = WeightedEventProcessor().process(df, min_interactions=3)
     assert len(interactions) == 1
@@ -70,7 +70,7 @@ def test_min_interactions_filters_cold_users():
     assert interactions["itemid"].nunique() == 1
 
 
-def test_context_picks_strategy_by_name():
+def test_context_picks_strategy_by_name() -> None:
     df = _sample_events()
 
     weighted = DataProcessorContext("weighted")
@@ -86,7 +86,7 @@ def test_context_picks_strategy_by_name():
     assert len(i_int) == len(df)
 
 
-def test_context_accepts_instance():
+def test_context_accepts_instance() -> None:
     df = _sample_events()
     ctx = DataProcessorContext(WeightedEventProcessor(weights={"view": 5.0}))
     interactions, _, _ = ctx.process(df)
@@ -94,18 +94,18 @@ def test_context_accepts_instance():
     assert (interactions.loc[interactions["event"] == "view", "weight"] == 5.0).all()
 
 
-def test_context_unknown_strategy_raises():
+def test_context_unknown_strategy_raises() -> None:
     with pytest.raises(ValueError, match="Unknown data processor strategy"):
         DataProcessorContext("not_a_real_strategy")
 
 
-def test_context_strategy_name_reflects_choice():
+def test_context_strategy_name_reflects_choice() -> None:
     assert DataProcessorContext("binary").strategy_name == "binary"
     assert DataProcessorContext("weighted").strategy_name == "weighted"
     assert DataProcessorContext("implicit").strategy_name == "implicit"
 
 
-def test_index_columns_are_dense_int64():
+def test_index_columns_are_dense_int64() -> None:
     df = _sample_events()
     interactions, _, _ = WeightedEventProcessor().process(df)
     assert interactions["user_idx"].dtype == np.int64

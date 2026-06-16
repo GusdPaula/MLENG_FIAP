@@ -4,7 +4,7 @@ from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
 
-def load_module_from_path(module_name: str, path: Path):
+def load_module_from_path(module_name: str, path: Path) -> types.ModuleType:
     spec = spec_from_file_location(module_name, str(path))
     module = module_from_spec(spec)
     sys.modules[module_name] = module
@@ -12,7 +12,7 @@ def load_module_from_path(module_name: str, path: Path):
     return module
 
 
-def test_kaggle_data_loader_download_and_combine(tmp_path):
+def test_kaggle_data_loader_download_and_combine(tmp_path: Path) -> None:
     fake_root = tmp_path / "dataset"
     fake_root.mkdir()
 
@@ -43,7 +43,7 @@ def test_kaggle_data_loader_download_and_combine(tmp_path):
     assert len(csv_text) == 3
 
 
-def test_kaggle_data_loader_collect_files(tmp_path):
+def test_kaggle_data_loader_collect_files(tmp_path: Path) -> None:
     fake_root = tmp_path / "dataset"
     fake_root.mkdir()
     (fake_root / "category_tree.csv").write_text("category_id,parent_id\n")

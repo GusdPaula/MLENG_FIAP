@@ -24,7 +24,7 @@ class MatrixFactorizationModel(BaseRecommenderModel):
         num_items: int,
         embedding_dim: int = 64,
         global_bias: float = 0.0,
-    ):
+    ) -> None:
         """Initialize the Matrix Factorization model.
 
         Args:

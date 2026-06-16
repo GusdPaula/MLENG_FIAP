@@ -8,7 +8,7 @@ from src.recommender.models import ModelFactory
 from src.recommender.training.checkpoint import save_checkpoint
 
 
-def test_save_checkpoint_basic():
+def test_save_checkpoint_basic() -> None:
     """Test basic checkpoint saving."""
     model = ModelFactory.create(
         "gmf",
@@ -42,7 +42,7 @@ def test_save_checkpoint_basic():
         assert "gmf" in checkpoint_path.name
 
 
-def test_save_checkpoint_with_early_stopping_info():
+def test_save_checkpoint_with_early_stopping_info() -> None:
     """Test checkpoint saving with early stopping information."""
     model = ModelFactory.create(
         "ncf",
@@ -88,7 +88,7 @@ def test_save_checkpoint_with_early_stopping_info():
         assert "early_stopping" in checkpoint
 
 
-def test_save_checkpoint_creates_directory():
+def test_save_checkpoint_creates_directory() -> None:
     """Test that save_checkpoint works with nested directories."""
     model = ModelFactory.create(
         "matrix_factorization",
