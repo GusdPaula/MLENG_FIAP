@@ -2,12 +2,8 @@ line-length = 88
 target-version = "py312"
 exclude = ["ecommerce_recommender/notebooks"]
 
-[lint.pep8-naming]
-ignore-names = ["X"]
-
-[lint]
 select = ["E", "F", "I", "N", "T", "B", "C"]
-ignore = ["E501", "N999", "C901"]
+ignore = ["E501", "N999", "C901", "B008"]
 
-[lint.per-file-ignores]
-"ecommerce_recommender/src/recommender/training/trainer.py" = ["C901"]
+[pep8-naming]
+ignore-names = ["X"]

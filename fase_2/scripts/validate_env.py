@@ -34,9 +34,9 @@ def main():
     print(f"{BOLD}{BLUE}==============================================={RESET}")
     print(f"{BOLD}{BLUE}      MLENG FIAP - PHASE 2 ENV VALIDATOR       {RESET}")
     print(f"{BOLD}{BLUE}==============================================={RESET}")
-    
+
     has_errors = False
-    
+
     # 1. Check Python Version
     print_header("1. Python Version Check")
     req_major, req_minor = 3, 12
@@ -61,7 +61,7 @@ def main():
         ("boto3", "boto3"),
         ("yaml", "pyyaml")
     ]
-    
+
     imported_packages = {}
     for mod_name, pkg_name in required_packages:
         try:
@@ -78,7 +78,7 @@ def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     fase2_dir = os.path.dirname(script_dir)
     env_path = os.path.join(fase2_dir, ".env")
-    
+
     if os.path.exists(env_path):
         print_success(f"Found .env file at {env_path}")
         if "dotenv" in imported_packages:
@@ -94,7 +94,7 @@ def main():
         "AWS_REGION",
         "AWS_PROFILE"
     ]
-    
+
     env_vars = {}
     for var in required_vars:
         val = os.getenv(var)
@@ -110,7 +110,7 @@ def main():
         print_header("4. PyTorch Hardware Acceleration Check")
         torch_mod = imported_packages["torch"]
         print(f"  PyTorch Version: {torch_mod.__version__}")
-        
+
         if torch_mod.cuda.is_available():
             print_success("CUDA (NVIDIA GPU) is available!")
             print(f"    Device Name: {torch_mod.cuda.get_device_name(0)}")
@@ -127,7 +127,7 @@ def main():
         try:
             # Simple GET request using urllib with a timeout of 5 seconds
             req = urllib.request.Request(
-                uri, 
+                uri,
                 headers={'User-Agent': 'Mozilla/5.0'}
             )
             with urllib.request.urlopen(req, timeout=5) as response:
@@ -144,7 +144,7 @@ def main():
         print_header("6. AWS S3 Connectivity Check")
         profile = env_vars.get("AWS_PROFILE")
         region = env_vars.get("AWS_REGION") or env_vars.get("AWS_DEFAULT_REGION")
-        
+
         try:
             # Set up session
             session = None
@@ -152,11 +152,11 @@ def main():
                 session = imported_packages["boto3"].Session(profile_name=profile, region_name=region)
             else:
                 session = imported_packages["boto3"].Session(region_name=region)
-                
+
             sts = session.client('sts')
             caller = sts.get_caller_identity()
             print_success(f"AWS Credentials verified! Account: {caller.get('Account')}, User/Role: {caller.get('Arn').split('/')[-1]}")
-            
+
             # Try listing S3 buckets as a basic read check
             s3 = session.client('s3')
             buckets = s3.list_buckets()

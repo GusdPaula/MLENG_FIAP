@@ -1,8 +1,8 @@
 schema: '2.0'
 stages:
   preprocess:
-    cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from 
-      recommender.pipelines.preprocess_pipeline import run_preprocess_pipeline; 
+    cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from
+      recommender.pipelines.preprocess_pipeline import run_preprocess_pipeline;
       run_preprocess_pipeline()" --config configs/model.yaml
     deps:
     - path: configs/model.yaml
@@ -31,8 +31,8 @@ stages:
       md5: b4f4b40095332856220ae42aee883340
       size: 1388405
   train:
-    cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from 
-      recommender.pipelines.train_pipeline import run_training_pipeline; 
+    cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from
+      recommender.pipelines.train_pipeline import run_training_pipeline;
       run_training_pipeline()" --config configs/model.yaml
     deps:
     - path: configs/model.yaml
@@ -72,8 +72,8 @@ stages:
       md5: 85605e02cfd558d179e406b78ac210d0
       size: 39442773
   evaluate:
-    cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from 
-      recommender.pipelines.evaluate_pipeline import run_evaluation_pipeline; 
+    cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from
+      recommender.pipelines.evaluate_pipeline import run_evaluation_pipeline;
       run_evaluation_pipeline()" --config configs/model.yaml
     deps:
     - path: configs/model.yaml
