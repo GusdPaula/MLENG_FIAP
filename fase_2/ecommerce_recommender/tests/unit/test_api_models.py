@@ -4,7 +4,6 @@ Tests Pydantic models for request/response validation.
 """
 
 import pytest
-from pydantic import ValidationError
 from api.models.schemas import (
     BatchPredictionRequest,
     BatchPredictionResponse,
@@ -12,6 +11,7 @@ from api.models.schemas import (
     PredictionResponse,
     RecommendationResponse,
 )
+from pydantic import ValidationError
 
 
 class TestPredictionRequest:

@@ -8,8 +8,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
-from fastapi.testclient import TestClient
 from api.controllers.routes import app
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture

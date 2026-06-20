@@ -13,8 +13,8 @@ from typing import Any, Callable
 
 import torch
 
-from .base_predictor import BasePredictor
 from ..exceptions import PredictorNotFoundError
+from .base_predictor import BasePredictor
 from .predictors import BatchPredictor, SingleUserPredictor, TopKRecommendationPredictor
 
 logger = logging.getLogger(__name__)

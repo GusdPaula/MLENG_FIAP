@@ -6,13 +6,13 @@ Tests the PredictorFactory for creating predictor instances.
 import pytest
 import torch
 from api.domain.base_predictor import BasePredictor
-from api.exceptions import PredictorNotFoundError
 from api.domain.predictor_factory import PredictorFactory
 from api.domain.predictors import (
     BatchPredictor,
     SingleUserPredictor,
     TopKRecommendationPredictor,
 )
+from api.exceptions import PredictorNotFoundError
 from torch import nn
 
 

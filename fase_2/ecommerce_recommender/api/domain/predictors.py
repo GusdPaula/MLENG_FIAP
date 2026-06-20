@@ -11,9 +11,13 @@ import logging
 
 import torch
 
-from .base_predictor import BasePredictor
 from ..exceptions import InvalidInputError
-from ..models.schemas import PredictionRequest, PredictionResponse, RecommendationResponse
+from ..models.schemas import (
+    PredictionRequest,
+    PredictionResponse,
+    RecommendationResponse,
+)
+from .base_predictor import BasePredictor
 
 logger = logging.getLogger(__name__)
 

@@ -3,15 +3,15 @@
 This module contains service classes that orchestrate business operations.
 """
 
-from .prediction_service import PredictionService
 from .monitoring_service import (
-    MonitoringService,
-    MonitoringMetrics,
-    ShiftDetectionResult,
     BaseShiftDetector,
     DataShiftDetector,
     ModelPerformanceMonitor,
+    MonitoringMetrics,
+    MonitoringService,
+    ShiftDetectionResult,
 )
+from .prediction_service import PredictionService
 
 __all__ = [
     "PredictionService",

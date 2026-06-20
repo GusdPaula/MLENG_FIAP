@@ -2,8 +2,13 @@ line-length = 88
 target-version = "py312"
 exclude = ["ecommerce_recommender/notebooks"]
 
+[lint]
 select = ["E", "F", "I", "N", "T", "B", "C"]
 ignore = ["E501", "N999", "C901", "B008"]
+per-file-ignores = {
+    "ecommerce_recommender/models/assign_champion_alias.py" = ["T201"],
+    "ecommerce_recommender/models/register_models_mlflow.py" = ["T201"],
+}
 
-[pep8-naming]
+[lint.pep8-naming]
 ignore-names = ["X"]

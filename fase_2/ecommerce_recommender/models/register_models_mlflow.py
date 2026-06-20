@@ -4,8 +4,9 @@ This script loops through all model files in models/mlflow_experiments/
 and registers them in the MLflow model registry.
 """
 
-import mlflow
 from pathlib import Path
+
+import mlflow
 
 # Configure MLflow tracking URI
 MLFLOW_TRACKING_URI = "http://localhost:5001"

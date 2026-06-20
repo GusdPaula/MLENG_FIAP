@@ -22,8 +22,8 @@ from .models.schemas import (
     PredictionResponse,
     RecommendationResponse,
 )
-from .services.prediction_service import PredictionService
 from .services.monitoring_service import MonitoringService
+from .services.prediction_service import PredictionService
 
 __all__ = [
     # FastAPI app

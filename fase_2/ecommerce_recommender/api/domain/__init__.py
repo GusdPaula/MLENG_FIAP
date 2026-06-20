@@ -6,9 +6,9 @@ This module contains the predictor interfaces and implementations.
 from .base_predictor import BasePredictor
 from .predictor_factory import PredictorFactory
 from .predictors import (
+    BatchPredictor,
     SingleUserPredictor,
     TopKRecommendationPredictor,
-    BatchPredictor,
 )
 
 __all__ = [

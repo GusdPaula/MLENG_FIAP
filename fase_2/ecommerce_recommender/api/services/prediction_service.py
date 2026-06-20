@@ -9,15 +9,14 @@ by depending on abstractions (BasePredictor) rather than concrete implementation
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
 from typing import Any
 
 import torch
 
 from ..domain.base_predictor import BasePredictor
-from ..exceptions import ModelLoadError
 from ..domain.predictor_factory import PredictorFactory
+from ..exceptions import ModelLoadError
 from ..models.schemas import (
     BatchPredictionResponse,
     PredictionRequest,
@@ -201,7 +200,7 @@ class PredictionService:
                 import os
                 pt_files = [f for f in os.listdir(artifacts_dir) if f.endswith('.pt')]
                 if not pt_files:
-                    raise Exception("No .pt file found in artifacts")
+                    raise Exception("No .pt file found in artifacts") from None
 
                 model_path = os.path.join(artifacts_dir, pt_files[0])
                 checkpoint = torch.load(model_path, map_location=self.device)

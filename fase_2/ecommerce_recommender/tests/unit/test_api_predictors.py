@@ -5,12 +5,12 @@ Tests predictor implementations for the prediction API.
 
 import pytest
 from api.domain.base_predictor import BasePredictor
-from api.exceptions import InvalidInputError
 from api.domain.predictors import (
     BatchPredictor,
     SingleUserPredictor,
     TopKRecommendationPredictor,
 )
+from api.exceptions import InvalidInputError
 from torch import nn
 
 
