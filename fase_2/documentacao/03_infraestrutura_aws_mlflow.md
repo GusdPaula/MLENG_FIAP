@@ -278,13 +278,13 @@ sequenceDiagram
 
     DEV->>GH: Push em fase_2/infra/mlflow/** ou Dockerfile.mlflow
     GH->>GH: Checkout + Setup Terraform + AWS Credentials
-    
+
     alt Dockerfile.mlflow mudou
         GH->>DH: docker build + push (mlflow-server:sha + :latest)
     end
-    
+
     GH->>TF: terraform init + plan
-    
+
     alt Branch main (push ou dispatch)
         GH->>TF: terraform apply -auto-approve
         TF->>AWS: Cria/Atualiza EC2, RDS, CloudFront, S3, IAM, ACM
@@ -301,7 +301,7 @@ O domínio `mlflow.asgardprint.com.br` utiliza um certificado SSL gerenciado pel
 ```mermaid
 graph LR
     ACM["🔒 ACM Certificate<br/>mlflow.asgardprint.com.br"] -- "Validação DNS" --> CNAME1["CNAME de Validação<br/>_xxx.mlflow.asgardprint.com.br<br/>→ _yyy.acm-validations.aws"]
-    
+
     DNS["🌍 DNS Panel<br/>asgardprint.com.br"] -- "CNAME de Acesso" --> CNAME2["mlflow.asgardprint.com.br<br/>→ d*.cloudfront.net"]
 
     CF["🌐 CloudFront"] -- "Usa certificado" --> ACM

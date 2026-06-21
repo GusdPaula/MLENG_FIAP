@@ -32,4 +32,3 @@ output "acm_validation_record_value" {
   description = "CNAME record value for ACM certificate validation"
   value       = try(tolist(aws_acm_certificate.mlflow_cert.domain_validation_options)[0].resource_record_value, "")
 }
-

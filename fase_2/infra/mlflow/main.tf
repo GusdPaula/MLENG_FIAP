@@ -219,7 +219,7 @@ resource "aws_instance" "mlflow_server" {
   user_data = <<-EOF
     #!/bin/bash
     set -e
-    
+
     # Install AWS CLI, Docker, and jq
     apt-get update
     apt-get install -y docker.io awscli jq
@@ -238,10 +238,10 @@ resource "aws_instance" "mlflow_server" {
       echo "Failed to retrieve database password from Secrets Manager"
       exit 1
     fi
-    
+
     # Construct DB URI
     DB_URI="postgresql://mlflow_user:$${DB_PASSWORD}@${aws_db_instance.mlflow_db.endpoint}/mlflow"
-    
+
     # Pull and Run from Docker Hub
     docker pull ${var.dockerhub_username}/mlflow-server:${var.docker_image_tag}
     docker run -d --restart always -p 5000:5000 \

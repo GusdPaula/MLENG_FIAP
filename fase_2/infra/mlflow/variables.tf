@@ -45,6 +45,3 @@ variable "custom_domain_name" {
   type        = string
   default     = "mlflow.asgardprint.com.br"
 }
-
-
-
