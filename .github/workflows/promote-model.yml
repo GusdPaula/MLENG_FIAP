@@ -22,7 +22,7 @@ jobs:
   promote:
     name: Promote Model
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -57,6 +57,6 @@ jobs:
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
             ARGS+=("--dry-run")
           fi
-          
+
           # Run the script directly with Python
           python scripts/promote_model.py "${ARGS[@]}"

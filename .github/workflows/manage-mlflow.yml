@@ -39,7 +39,7 @@ jobs:
           else
             echo "No EC2 instance found."
           fi
-          
+
           echo "Stopping RDS instance..."
           DB_STATUS=$(aws rds describe-db-instances --db-instance-identifier mlflow-fiap-db --query "DBInstances[0].DBInstanceStatus" --output text 2>/dev/null || echo "None")
           if [ "$DB_STATUS" = "available" ]; then
@@ -55,7 +55,7 @@ jobs:
           echo "Checking RDS instance..."
           DB_STATUS=$(aws rds describe-db-instances --db-instance-identifier mlflow-fiap-db --query "DBInstances[0].DBInstanceStatus" --output text 2>/dev/null || echo "None")
           echo "RDS status is: $DB_STATUS"
-          
+
           if [ "$DB_STATUS" = "stopping" ]; then
             echo "RDS is currently stopping. Waiting for it to stop..."
             aws rds wait db-instance-stopped --db-instance-identifier mlflow-fiap-db
@@ -78,7 +78,7 @@ jobs:
             echo "Waiting for RDS to be available..."
             aws rds wait db-instance-available --db-instance-identifier mlflow-fiap-db || echo "Wait failed, proceeding anyway."
           fi
-          
+
           echo "RDS is fully available. Proceeding to EC2..."
           echo "Checking EC2 instance..."
           INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=mlflow-fiap-server" --query "Reservations[0].Instances[0].InstanceId" --output text 2>/dev/null || echo "None")
@@ -86,7 +86,7 @@ jobs:
             echo "Error: No EC2 instance found with tag Name=mlflow-fiap-server"
             exit 1
           fi
-          
+
           INSTANCE_STATE=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].State.Name" --output text 2>/dev/null || echo "unknown")
           if [ "$INSTANCE_STATE" = "stopped" ]; then
             echo "EC2 is stopped. Starting..."
@@ -97,7 +97,7 @@ jobs:
             echo "EC2 state is: $INSTANCE_STATE. Attempting to start anyway..."
             aws ec2 start-instances --instance-ids $INSTANCE_ID || echo "Could not start EC2 instance."
           fi
-          
+
           echo "Waiting for EC2 to be running..."
           aws ec2 wait instance-running --instance-ids $INSTANCE_ID
           # Wait up to 60 seconds for PublicDnsName to be available and not empty/None
@@ -121,7 +121,7 @@ jobs:
           # Find CloudFront Distribution ID
           # 1. Try finding by comment
           DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Comment=='MLflow Distribution for mlflow-fiap'].Id" --output text 2>/dev/null || echo "")
-          
+
           # 2. If not found or empty, fallback to tag search with correct ARN format (no region)
           if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ] || [ "$DIST_ID" = "" ]; then
             echo "Searching distribution by tag Name=mlflow-fiap-cf..."
@@ -142,23 +142,23 @@ jobs:
             echo "Found Distribution ID: $DIST_ID"
             ETAG=$(aws cloudfront get-distribution-config --id $DIST_ID --query 'ETag' --output text)
             aws cloudfront get-distribution-config --id $DIST_ID --query 'DistributionConfig' --output json > config.json
-            
+
             CURRENT_ORIGIN_DOMAIN=$(jq -r '.Origins.Items[0].DomainName' config.json)
             echo "Current CloudFront Origin Domain: $CURRENT_ORIGIN_DOMAIN"
             echo "New EC2 DNS/IP: $NEW_IP"
-            
+
             if [ "$CURRENT_ORIGIN_DOMAIN" = "$NEW_IP" ]; then
               echo "CloudFront Origin is already pointing to the current EC2 DNS. No update needed!"
             else
               echo "CloudFront Origin needs update. Updating..."
               jq --arg new_domain "$NEW_IP" '.Origins.Items[0].DomainName = $new_domain' config.json > new-config.json
               aws cloudfront update-distribution --id $DIST_ID --if-match $ETAG --distribution-config file://new-config.json > /dev/null
-              
+
               echo "Waiting for CloudFront deployment to finish (this may take up to 10 minutes)..."
               aws cloudfront wait distribution-deployed --id $DIST_ID
               echo "CloudFront update completed."
             fi
-            
+
             DOMAIN=$(aws cloudfront get-distribution --id $DIST_ID --query 'Distribution.DomainName' --output text)
             echo "=========================================="
             echo "MLflow is accessible at: https://$DOMAIN"

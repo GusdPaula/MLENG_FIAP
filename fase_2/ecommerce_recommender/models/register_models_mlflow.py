@@ -4,16 +4,17 @@ This script loops through all model files in models/mlflow_experiments/
 and registers them in the MLflow model registry.
 """
 
+import os
 from pathlib import Path
 
 import mlflow
 
 # Configure MLflow tracking URI
-MLFLOW_TRACKING_URI = "http://localhost:5001"
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
-# Path to local models
-MODELS_DIR = Path("models/mlflow_experiments")
+# Path to local models (works both locally and in Docker)
+MODELS_DIR = Path(__file__).parent.parent / "models" / "mlflow_experiments"
 
 # List of model files to register
 MODEL_FILES = [
@@ -29,7 +30,7 @@ MODEL_FILES = [
 ]
 
 def register_model(model_file: str) -> None:
-    """Register a single model in MLflow model registry as an artifact.
+    """Register a single model in MLflow model registry.
 
     Args:
         model_file: Name of the model file.
@@ -44,16 +45,20 @@ def register_model(model_file: str) -> None:
     print(f"📦 Registering model: {model_name}")
 
     try:
+        import torch
+
+        # Load the checkpoint to get model metadata
+        checkpoint = torch.load(model_path, map_location="cpu")
+        model_type = checkpoint.get("model_type", "unknown")
+
         # Start a new MLflow run
         with mlflow.start_run(run_name=f"register_{model_name}"):
-            # Log the model as an artifact
+            # Log the checkpoint file as an artifact
             mlflow.log_artifact(str(model_path), artifact_path=model_name)
 
             # Log model metadata
-            import torch
-            checkpoint = torch.load(model_path, map_location="cpu")
-            model_type = checkpoint.get("model_type", "unknown")
             mlflow.log_param("model_type", model_type)
+            mlflow.log_param("model_file", model_file)
 
             # Get the run info
             run_id = mlflow.active_run().info.run_id

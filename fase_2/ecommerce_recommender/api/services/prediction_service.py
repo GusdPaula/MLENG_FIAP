@@ -45,7 +45,7 @@ class PredictionService:
         shift_threshold: float = 0.05,
         drift_threshold: float = 2.0,
         monitoring_window_size: int = 1000,
-        mlflow_tracking_uri: str | None = None,
+        mlflow_tracking_uris: list[str] | None = None,
         mlflow_model_name: str | None = None,
         mlflow_model_version: str | None = None,
         mlflow_model_alias: str | None = None,
@@ -60,7 +60,7 @@ class PredictionService:
             shift_threshold: P-value threshold for data shift detection. Defaults to 0.05.
             drift_threshold: Z-score threshold for performance drift detection. Defaults to 2.0.
             monitoring_window_size: Number of predictions to keep in memory for monitoring. Defaults to 1000.
-            mlflow_tracking_uri: MLflow tracking URI for remote model loading.
+            mlflow_tracking_uris: List of MLflow tracking URIs for remote model loading (tried in order).
             mlflow_model_name: MLflow model name for remote model loading.
             mlflow_model_version: MLflow model version for remote model loading.
             mlflow_model_alias: MLflow model alias (e.g., "champion") for remote model loading.
@@ -75,7 +75,7 @@ class PredictionService:
         self._model_metadata: dict[str, Any] = {}
         self.enable_monitoring = enable_monitoring
         self._monitoring_service: MonitoringService | None = None
-        self.mlflow_tracking_uri = mlflow_tracking_uri
+        self.mlflow_tracking_uris = mlflow_tracking_uris or []
         self.mlflow_model_name = mlflow_model_name
         self.mlflow_model_version = mlflow_model_version
         self.mlflow_model_alias = mlflow_model_alias
@@ -101,30 +101,41 @@ class PredictionService:
     def _load_model(self) -> None:
         """Load the model and create the predictor instance.
 
-        Tries to load from MLflow first if configured, otherwise falls back to local path.
+        Tries to load from MLflow URIs in order, then falls back to local path.
 
         Raises:
             ModelLoadError: If the model cannot be loaded.
         """
-        # Try loading from MLflow first if configured
-        if self.mlflow_tracking_uri and (self.mlflow_model_name or self.mlflow_model_alias):
-            logger.info(
-                "Attempting to load model from MLflow: URI=%s, Model=%s, Version=%s, Alias=%s",
-                self.mlflow_tracking_uri,
-                self.mlflow_model_name,
-                self.mlflow_model_version,
-                self.mlflow_model_alias,
-            )
-            try:
-                checkpoint = self._load_from_mlflow()
-                logger.info("Successfully loaded model from MLflow")
-                self._initialize_from_checkpoint(checkpoint)
-                return
-            except Exception as e:
-                logger.warning(
-                    "Failed to load model from MLflow: %s. Falling back to local path.",
-                    e
+        # Try loading from MLflow URIs in order if configured
+        if self.mlflow_tracking_uris and (self.mlflow_model_name or self.mlflow_model_alias):
+            for uri in self.mlflow_tracking_uris:
+                logger.info(
+                    "Attempting to load model from MLflow: URI=%s, Model=%s, Version=%s, Alias=%s",
+                    uri,
+                    self.mlflow_model_name,
+                    self.mlflow_model_version,
+                    self.mlflow_model_alias,
                 )
+                try:
+                    # Quick connectivity check before attempting MLflow operations
+                    if not self._check_mlflow_connectivity(uri):
+                        logger.warning(
+                            "MLflow server at %s is not reachable. Trying next source.",
+                            uri
+                        )
+                        continue
+
+                    checkpoint = self._load_from_mlflow(uri)
+                    logger.info("Successfully loaded model from MLflow: %s", uri)
+                    self._initialize_from_checkpoint(checkpoint)
+                    return
+                except Exception as e:
+                    logger.warning(
+                        "Failed to load model from MLflow (%s): %s. Trying next source.",
+                        uri,
+                        e
+                    )
+                    continue
 
         # Fall back to local path
         logger.info("Loading model from local path: %s", self.model_path)
@@ -142,8 +153,70 @@ class PredictionService:
             logger.error("Failed to load model from local path: %s", e)
             raise ModelLoadError(f"Failed to load model: {e}") from e
 
-    def _load_from_mlflow(self) -> dict[str, Any]:
+    def _check_mlflow_connectivity(self, uri: str) -> bool:
+        """Check if MLflow server is reachable.
+
+        Args:
+            uri: The MLflow tracking URI to check.
+
+        Returns:
+            True if reachable, False otherwise.
+        """
+        import urllib.request
+        import urllib.error
+        import socket
+
+        try:
+            # For remote servers, do a quick connectivity check
+            if uri.startswith("https://"):
+                # Extract host and port from URI
+                host = uri.replace("https://", "").split(":")[0].split("/")[0]
+                port = 443
+
+                # Quick socket connection check with short timeout
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(3)  # 3 second timeout
+                result = sock.connect_ex((host, port))
+                sock.close()
+
+                if result != 0:
+                    logger.debug("Socket connection failed for %s:%d (error code: %d)", host, port, result)
+                    return False
+
+            # Try a simple HTTP GET request to the health endpoint
+            try:
+                health_url = f"{uri}/health"
+                request = urllib.request.Request(health_url, method='GET')
+                request.add_header('User-Agent', 'MLflow-Connectivity-Check')
+
+                with urllib.request.urlopen(request, timeout=3) as response:
+                    if response.status == 200:
+                        logger.info("MLflow server at %s is reachable", uri)
+                        return True
+            except urllib.error.HTTPError as e:
+                # 404 is acceptable - server is up but no health endpoint
+                if e.code == 404:
+                    logger.info("MLflow server at %s is reachable (no health endpoint)", uri)
+                    return True
+                logger.debug("HTTP error checking %s: %s", health_url, e)
+                return False
+            except urllib.error.URLError as e:
+                logger.debug("URL error checking %s: %s", health_url, e)
+                return False
+            except Exception as e:
+                logger.debug("Exception checking %s: %s", health_url, e)
+                return False
+
+            return True
+        except Exception as e:
+            logger.debug("Connectivity check failed for %s: %s", uri, e)
+            return False
+
+    def _load_from_mlflow(self, tracking_uri: str) -> dict[str, Any]:
         """Load model checkpoint from MLflow.
+
+        Args:
+            tracking_uri: The MLflow tracking URI to use.
 
         Returns:
             Model checkpoint dictionary.
@@ -152,9 +225,12 @@ class PredictionService:
             Exception: If MLflow loading fails.
         """
         import mlflow
+        import os
+        from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 
-        # Set MLflow tracking URI
-        mlflow.set_tracking_uri(self.mlflow_tracking_uri)
+        # Set MLflow tracking URI with timeout
+        os.environ['MLFLOW_TRACKING_REQUEST_TIMEOUT'] = '10'  # 10 second timeout
+        mlflow.set_tracking_uri(tracking_uri)
 
         # Build model URI based on alias, version, or name
         if self.mlflow_model_alias:
@@ -167,43 +243,47 @@ class PredictionService:
 
         logger.info("Loading model from MLflow URI: %s", model_uri)
 
-        # Download model to temporary location
-        import tempfile
-        with tempfile.TemporaryDirectory() as temp_dir:
-            try:
-                # Try PyTorch model loading first
-                model_path = mlflow.pytorch.load_model(model_uri, dst_path=temp_dir)
-                checkpoint = torch.load(model_path, map_location=self.device)
-            except Exception:
-                # Fallback to artifact downloading
-                logger.info("PyTorch model loading failed, trying artifact download")
-                client = mlflow.tracking.MlflowClient()
+        # Use thread-based timeout for MLflow operations
+        def load_model_with_timeout():
+            # Download model to temporary location
+            import tempfile
+            with tempfile.TemporaryDirectory() as temp_dir:
+                try:
+                    # Try PyTorch model loading first
+                    model_path = mlflow.pytorch.load_model(model_uri, dst_path=temp_dir)
+                    checkpoint = torch.load(model_path, map_location=self.device)
+                except Exception:
+                    # Fallback to artifact downloading
+                    logger.info("PyTorch model loading failed, trying artifact download")
+                    client = mlflow.tracking.MlflowClient()
 
-                # Get the model version info
-                if self.mlflow_model_alias:
-                    # Get model name from alias
-                    model_name = self._find_model_name_by_alias(self.mlflow_model_alias)
-                    model_version = client.get_model_version_by_alias(model_name, self.mlflow_model_alias)
-                elif self.mlflow_model_version:
-                    model_version = client.get_model_version(self.mlflow_model_name, self.mlflow_model_version)
-                else:
-                    model_version = client.get_latest_versions(self.mlflow_model_name)[0]
+                    # Get the model version info
+                    if self.mlflow_model_alias:
+                        # Get model name from alias
+                        model_name = self._find_model_name_by_alias(self.mlflow_model_alias)
+                        model_version = client.get_model_version_by_alias(model_name, self.mlflow_model_alias)
+                    elif self.mlflow_model_version:
+                        model_version = client.get_model_version(self.mlflow_model_name, self.mlflow_model_version)
+                    else:
+                        model_version = client.get_latest_versions(self.mlflow_model_name)[0]
 
-                # Download artifacts
-                artifacts_dir = client.download_artifacts(
-                    model_version.run_id,
-                    model_name if self.mlflow_model_alias else self.mlflow_model_name,
-                    temp_dir
-                )
+                    # Download artifacts - need to include the model file name in the path
+                    artifact_path = f"{model_name if self.mlflow_model_alias else self.mlflow_model_name}/{model_name if self.mlflow_model_alias else self.mlflow_model_name}.pt"
+                    artifacts_dir = client.download_artifacts(
+                        model_version.run_id,
+                        artifact_path,
+                        temp_dir
+                    )
 
-                # Find the .pt file
-                import os
-                pt_files = [f for f in os.listdir(artifacts_dir) if f.endswith('.pt')]
-                if not pt_files:
-                    raise Exception("No .pt file found in artifacts") from None
+                    checkpoint = torch.load(artifacts_dir, map_location=self.device)
+            return checkpoint
 
-                model_path = os.path.join(artifacts_dir, pt_files[0])
-                checkpoint = torch.load(model_path, map_location=self.device)
+        try:
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(load_model_with_timeout)
+                checkpoint = future.result(timeout=30)  # 30 second timeout
+        except FutureTimeoutError:
+            raise TimeoutError(f"MLflow operation timed out for {tracking_uri}")
 
         return checkpoint
 

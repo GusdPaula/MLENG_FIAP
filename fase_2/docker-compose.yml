@@ -53,9 +53,32 @@ services:
       - ./ecommerce_recommender/data:/app/ecommerce_recommender/data
       - ./ecommerce_recommender/models:/app/ecommerce_recommender/models
       - ./ecommerce_recommender/configs:/app/ecommerce_recommender/configs
+      - mlflow_artifacts:/mlflow-artifacts
     depends_on:
       mlflow:
         condition: service_healthy
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: recommendation_api
+    ports:
+      - "8000:8000"
+    environment:
+      - MLFLOW_TRACKING_URIS=${MLFLOW_TRACKING_URIS:-https://mlflow.asgardprint.com.br,http://mlflow:5000}
+      - MODEL_PATH=ecommerce_recommender/models/mlflow_experiments/gmf_binary.pt
+      - API_KEY=${API_KEY}
+      - MLFLOW_MODEL_NAME=${MLFLOW_MODEL_NAME:-}
+      - MLFLOW_MODEL_VERSION=${MLFLOW_MODEL_VERSION:-}
+      - MLFLOW_MODEL_ALIAS=${MLFLOW_MODEL_ALIAS:-champion}
+    volumes:
+      - ./ecommerce_recommender/models:/app/ecommerce_recommender/models
+      - mlflow_artifacts:/mlflow-artifacts
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   postgres_data:

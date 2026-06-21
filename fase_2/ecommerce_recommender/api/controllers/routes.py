@@ -12,9 +12,12 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from ..exceptions import (
     InvalidInputError,
@@ -39,16 +42,44 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# Rate limiting configuration
+limiter = Limiter(key_func=get_remote_address)
+RATE_LIMIT = os.getenv("RATE_LIMIT", "100/minute")
+
+# IP whitelisting configuration
+ALLOWED_IPS = os.getenv("ALLOWED_IPS", "").split(",") if os.getenv("ALLOWED_IPS") else []
+
 # API Key configuration
-API_KEY = os.getenv("API_KEY", "default-api-key-change-in-production")
+API_KEY = os.getenv("API_KEY")
+if not API_KEY:
+    raise ValueError("API_KEY environment variable must be set")
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 # Model configuration
 MODEL_PATH = os.getenv("MODEL_PATH", "ecommerce_recommender/models/mlflow_experiments/gmf_binary.pt")
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
+MLFLOW_TRACKING_URIS = os.getenv("MLFLOW_TRACKING_URIS", "").split(",") if os.getenv("MLFLOW_TRACKING_URIS") else []
 MLFLOW_MODEL_NAME = os.getenv("MLFLOW_MODEL_NAME")
 MLFLOW_MODEL_VERSION = os.getenv("MLFLOW_MODEL_VERSION")
 MLFLOW_MODEL_ALIAS = os.getenv("MLFLOW_MODEL_ALIAS", "champion")
+
+
+async def verify_ip_whitelist(request) -> None:
+    """Verify that the request comes from an allowed IP address.
+
+    Args:
+        request: The FastAPI request object.
+
+    Raises:
+        HTTPException: If IP is not in whitelist.
+    """
+    if ALLOWED_IPS:
+        client_ip = request.client.host
+        if client_ip not in ALLOWED_IPS:
+            logger.warning(f"Access denied from IP: {client_ip}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied from this IP address",
+            )
 
 
 async def verify_api_key(api_key: str = Depends(api_key_header)) -> str:
@@ -110,7 +141,7 @@ async def lifespan(app: FastAPI):
             predictor_type="top_k",
             device="cpu",
             enable_monitoring=True,
-            mlflow_tracking_uri=MLFLOW_TRACKING_URI,
+            mlflow_tracking_uris=MLFLOW_TRACKING_URIS,
             mlflow_model_name=MLFLOW_MODEL_NAME,
             mlflow_model_version=MLFLOW_MODEL_VERSION,
             mlflow_model_alias=MLFLOW_MODEL_ALIAS,
@@ -134,14 +165,16 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, lambda request, exc: JSONResponse(
+    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+    content={"detail": "Rate limit exceeded. Please try again later."}
+))
 
 
 @app.get("/health")
-async def health_check(api_key: str = Depends(verify_api_key)) -> dict[str, Any]:
-    """Health check endpoint.
-
-    Args:
-        api_key: Verified API key.
+async def health_check() -> dict[str, Any]:
+    """Health check endpoint (no authentication required for monitoring).
 
     Returns:
         Dictionary with service health status.
@@ -153,7 +186,11 @@ async def health_check(api_key: str = Depends(verify_api_key)) -> dict[str, Any]
 
 
 @app.get("/model/info")
-async def get_model_info(api_key: str = Depends(verify_api_key)) -> dict[str, Any]:
+@limiter.limit(RATE_LIMIT)
+async def get_model_info(
+    request: Request,
+    api_key: str = Depends(verify_api_key)
+) -> dict[str, Any]:
     """Get information about the loaded model.
 
     Args:
@@ -183,11 +220,17 @@ async def get_model_info(api_key: str = Depends(verify_api_key)) -> dict[str, An
 
 
 @app.post("/predict", response_model=PredictionResponse)
-async def predict(request: PredictionRequest, api_key: str = Depends(verify_api_key)) -> PredictionResponse:
+@limiter.limit(RATE_LIMIT)
+async def predict(
+    request: Request,
+    prediction_request: PredictionRequest,
+    api_key: str = Depends(verify_api_key)
+) -> PredictionResponse:
     """Generate predictions for a single user.
 
     Args:
-        request: The prediction request.
+        request: The FastAPI request object.
+        prediction_request: The prediction request.
         api_key: Verified API key.
 
     Returns:
@@ -202,7 +245,7 @@ async def predict(request: PredictionRequest, api_key: str = Depends(verify_api_
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Prediction service not initialized",
             )
-        response = prediction_service.predict(request)
+        response = prediction_service.predict(prediction_request)
         return response
     except InvalidInputError as e:
         logger.warning(f"Invalid input: {e}")
@@ -219,7 +262,11 @@ async def predict(request: PredictionRequest, api_key: str = Depends(verify_api_
 
 
 @app.post("/predict/batch", response_model=BatchPredictionResponse)
-async def predict_batch(requests: BatchPredictionRequest) -> BatchPredictionResponse:
+@limiter.limit(RATE_LIMIT)
+async def predict_batch(
+    request: Request,
+    batch_request: BatchPredictionRequest
+) -> BatchPredictionResponse:
     """Generate predictions for multiple users.
 
     Args:
@@ -243,9 +290,9 @@ async def predict_batch(requests: BatchPredictionRequest) -> BatchPredictionResp
             PredictionRequest(
                 user_id=user_id,
                 item_ids=item_ids,
-                k=requests.k,
+                k=batch_request.k,
             )
-            for user_id, item_ids in requests.user_item_pairs
+            for user_id, item_ids in batch_request.user_item_pairs
         ]
 
         response = prediction_service.predict_batch(prediction_requests)
@@ -265,7 +312,12 @@ async def predict_batch(requests: BatchPredictionRequest) -> BatchPredictionResp
 
 
 @app.get("/recommend/{user_id}", response_model=RecommendationResponse)
-async def recommend(user_id: int, k: int = 10) -> RecommendationResponse:
+@limiter.limit(RATE_LIMIT)
+async def recommend(
+    request: Request,
+    user_id: int,
+    k: int = 10
+) -> RecommendationResponse:
     """Generate top-k recommendations for a user.
 
     Args:
@@ -302,7 +354,11 @@ async def recommend(user_id: int, k: int = 10) -> RecommendationResponse:
 
 
 @app.post("/monitoring/baselines")
-async def set_monitoring_baselines(api_key: str = Depends(verify_api_key)) -> dict[str, str]:
+@limiter.limit(RATE_LIMIT)
+async def set_monitoring_baselines(
+    request: Request,
+    api_key: str = Depends(verify_api_key)
+) -> dict[str, str]:
     """Set monitoring baselines based on current prediction history.
 
     Args:
@@ -371,7 +427,11 @@ async def check_shifts() -> dict[str, Any]:
 
 
 @app.get("/monitoring/summary")
-async def get_monitoring_summary(api_key: str = Depends(verify_api_key)) -> dict[str, Any]:
+@limiter.limit(RATE_LIMIT)
+async def get_monitoring_summary(
+    request: Request,
+    api_key: str = Depends(verify_api_key)
+) -> dict[str, Any]:
     """Get monitoring status summary.
 
     Args:
