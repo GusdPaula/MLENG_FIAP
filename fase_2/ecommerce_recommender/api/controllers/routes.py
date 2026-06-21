@@ -51,8 +51,6 @@ ALLOWED_IPS = os.getenv("ALLOWED_IPS", "").split(",") if os.getenv("ALLOWED_IPS"
 
 # API Key configuration
 API_KEY = os.getenv("API_KEY")
-if not API_KEY:
-    raise ValueError("API_KEY environment variable must be set")
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 # Model configuration
