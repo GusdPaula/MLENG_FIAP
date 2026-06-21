@@ -162,9 +162,9 @@ class PredictionService:
         Returns:
             True if reachable, False otherwise.
         """
-        import urllib.request
-        import urllib.error
         import socket
+        import urllib.error
+        import urllib.request
 
         try:
             # For remote servers, do a quick connectivity check
@@ -224,9 +224,11 @@ class PredictionService:
         Raises:
             Exception: If MLflow loading fails.
         """
-        import mlflow
         import os
-        from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+        from concurrent.futures import ThreadPoolExecutor
+        from concurrent.futures import TimeoutError as FutureTimeoutError
+
+        import mlflow
 
         # Set MLflow tracking URI with timeout
         os.environ['MLFLOW_TRACKING_REQUEST_TIMEOUT'] = '10'  # 10 second timeout
@@ -283,7 +285,7 @@ class PredictionService:
                 future = executor.submit(load_model_with_timeout)
                 checkpoint = future.result(timeout=30)  # 30 second timeout
         except FutureTimeoutError:
-            raise TimeoutError(f"MLflow operation timed out for {tracking_uri}")
+            raise TimeoutError(f"MLflow operation timed out for {tracking_uri}") from None
 
         return checkpoint
 
