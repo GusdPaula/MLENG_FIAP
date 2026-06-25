@@ -46,8 +46,8 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
     Args:
         config_path: Path to the model configuration YAML file. Defaults to "configs/model.yaml".
     """
-    from dotenv import load_dotenv
-    load_dotenv()
+    from ..config import get_settings
+    get_settings()  # validates and loads .env into the process
 
     with open(config_path) as f:
         cfg = yaml.safe_load(f)["model"]
