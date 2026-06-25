@@ -12,6 +12,9 @@ All experiments track the following metrics:
 2. **Average Precision** (AP)
 3. **Hit Rate@K** (HR@K)
 4. **NDCG@K** (Normalized Discounted Cumulative Gain at K)
+5. **Precision@K** (Prec@K)
+6. **Recall@K** (Rec@K)
+7. **MRR@K** (Mean Reciprocal Rank at K)
 
 ## Metric Interpretation
 
@@ -99,6 +102,74 @@ All experiments track the following metrics:
 - More computationally expensive than HR@K
 - Requires defining what constitutes "relevant" (usually binary)
 
+### Precision@K (Prec@K)
+
+**Definition:** Proportion of recommended items in the top-K that are actually relevant to the user.
+
+**Range:** 0.0 to 1.0 (higher is better)
+
+**Formula:** `Precision@K = |relevant items in top-K| / K`
+
+**Interpretation:**
+- Measures the "quality" of the recommendation list
+- Answers: "Of the K items I recommended, how many were good?"
+- Complementary to Recall@K — high precision means few bad recommendations
+
+**When to use:**
+- When showing irrelevant items has a cost (e.g., limited screen space)
+- For evaluating the density of relevant items in the recommendation list
+
+**Limitations:**
+- Doesn't account for position within top-K
+- Penalizes models equally for irrelevant items at position 1 vs position K
+
+### Recall@K (Rec@K)
+
+**Definition:** Proportion of all relevant items for a user that appear in the top-K recommendations.
+
+**Range:** 0.0 to 1.0 (higher is better)
+
+**Formula:** `Recall@K = |relevant items in top-K| / |all relevant items for user|`
+
+**Interpretation:**
+- Measures the "coverage" of relevant items
+- Answers: "Of all items the user likes, how many did I find?"
+- High recall means the model is good at finding all relevant items
+
+**When to use:**
+- When missing a relevant item is costly
+- For understanding how well the model covers user interests
+- When users have multiple items of interest
+
+**Limitations:**
+- Can be misleading when users have very few relevant items
+- Doesn't account for position within top-K
+
+### MRR@K (Mean Reciprocal Rank at K)
+
+**Definition:** Average of the reciprocal rank of the first relevant item in the top-K list across all users.
+
+**Range:** 0.0 to 1.0 (higher is better)
+
+**Formula:** `MRR = (1/|Users|) * Σ (1 / rank_of_first_relevant_item)`
+
+**Interpretation:**
+- Measures how quickly the model places a relevant item at the top
+- MRR=1.0 means the first item is always relevant
+- MRR=0.5 means the first relevant item is typically at position 2
+- Particularly important when users look at the first few items only
+
+**When to use:**
+- When the first relevant item matters most (e.g., search results, single-item recommendations)
+- For evaluating "time to first relevant item"
+- When user patience is limited
+
+**Limitations:**
+- Only considers the first relevant item, ignores subsequent ones
+- May not capture full recommendation quality for users with many relevant items
+
+---
+
 ## Why Multiple Metrics Are Necessary
 
 ### AUC ≠ Good Recommender
@@ -118,13 +189,16 @@ Each metric provides different information:
 - **Average Precision:** Precision-recall tradeoff
 - **Hit Rate@K:** User-focused recommendation success
 - **NDCG@K:** Ranking quality with position awareness
+- **Precision@K:** Quality/density of recommendations
+- **Recall@K:** Coverage of user interests
+- **MRR@K:** Speed to first relevant result
 
 **Best practice:** Use all metrics together to get a complete picture of model performance. Don't optimize for a single metric.
 
 ## Current Implementation
 
 In our experiments:
-- All four metrics are tracked and logged to MLflow
+- All seven metrics are tracked and logged to MLflow
 - Early stopping can be configured to monitor either AUC-ROC or NDCG@10
 - NDCG@10 is used for early stopping by default (better for ranking tasks)
 - Metrics are computed at the end of training on the validation set
@@ -132,7 +206,7 @@ In our experiments:
 ## Metric Calculation
 
 - **AUC-ROC and AP:** Computed during training on the validation set using sklearn functions
-- **Hit Rate@K and NDCG@K:** Computed at the end of training using sampled evaluation for efficiency
+- **Hit Rate@K, NDCG@K, Precision@K, Recall@K, MRR@K:** Computed at the end of training using sampled evaluation for efficiency
 - K=10 is used for ranking metrics (configurable via `ranking_k` parameter)
 
 ## References

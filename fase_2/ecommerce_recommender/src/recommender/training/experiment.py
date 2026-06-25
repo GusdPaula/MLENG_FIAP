@@ -68,6 +68,9 @@ class ExperimentResult(TypedDict):
         avg_precision: Average precision score.
         hit_rate_at_k: Hit rate at K.
         ndcg_at_k: NDCG at K.
+        precision_at_k: Precision at K.
+        recall_at_k: Recall at K.
+        mrr_at_k: Mean Reciprocal Rank at K.
         best_epoch: Best epoch number.
         epochs_run: Total epochs run.
     """
@@ -81,6 +84,9 @@ class ExperimentResult(TypedDict):
     avg_precision: float
     hit_rate_at_k: float
     ndcg_at_k: float
+    precision_at_k: float
+    recall_at_k: float
+    mrr_at_k: float
     best_epoch: int
     epochs_run: int
 
@@ -214,13 +220,14 @@ def train_one_experiment(
     )
 
     # Compute ranking metrics
-    hr, ndcg = compute_ranking_metrics(
+    ranking_k = config.get("ranking_k", 10)
+    ranking = compute_ranking_metrics(
         model=model,
         val_dataset=val_dataset,
         dataset=dataset,
         num_items=num_items,
         device=device,
-        k=config.get("ranking_k", 10),
+        k=ranking_k,
         sample_limit=config.get("ranking_sample_limit", 10000),
         positive_limit=config.get("ranking_positive_limit", 1000),
     )
@@ -230,8 +237,7 @@ def train_one_experiment(
         "loss": best_loss,
         "auc_roc": float(best_metrics["auc_roc"]),
         "avg_precision": float(best_metrics["avg_precision"]),
-        "hit_rate_at_10": float(hr),
-        "ndcg_at_10": float(ndcg),
+        **ranking.to_dict(ranking_k),
     }
 
     early_stopping_info = {
@@ -260,8 +266,7 @@ def train_one_experiment(
             "final_train_loss": best_loss,
             "final_auc_roc": float(best_metrics["auc_roc"]),
             "final_avg_precision": float(best_metrics["avg_precision"]),
-            "hit_rate_at_10": float(hr),
-            "ndcg_at_10": float(ndcg),
+            **ranking.to_dict(ranking_k),
         }
     )
 
@@ -274,8 +279,11 @@ def train_one_experiment(
         "train_loss": best_loss,
         "auc_roc": float(best_metrics["auc_roc"]),
         "avg_precision": float(best_metrics["avg_precision"]),
-        "hit_rate_at_k": float(hr),
-        "ndcg_at_k": float(ndcg),
+        "hit_rate_at_k": ranking.hit_rate,
+        "ndcg_at_k": ranking.ndcg,
+        "precision_at_k": ranking.precision,
+        "recall_at_k": ranking.recall,
+        "mrr_at_k": ranking.mrr,
         "best_epoch": best["epoch"],
         "epochs_run": len(history),
     }

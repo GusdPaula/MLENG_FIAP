@@ -4,7 +4,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 from src.recommender.data import RecommenderDataset
-from src.recommender.training.evaluator import compute_ranking_metrics
+from src.recommender.training.evaluator import RankingMetrics, compute_ranking_metrics
 from torch.utils.data import Subset
 
 
@@ -29,7 +29,6 @@ def test_compute_ranking_metrics_basic() -> None:
     """Test basic ranking metrics computation."""
     model = MockModel(num_users=10, num_items=5)
 
-    # Create simple dataset with proper format
     interactions = pd.DataFrame(
         {
             "user_idx": [0, 1, 2, 0, 1],
@@ -38,11 +37,10 @@ def test_compute_ranking_metrics_basic() -> None:
     )
     dataset = RecommenderDataset(interactions, num_items=5, num_negatives=2)
 
-    # Create validation subset
-    val_indices = [0, 1, 2]  # positive samples
+    val_indices = [0, 1, 2]
     val_dataset = Subset(dataset, val_indices)
 
-    hr, ndcg = compute_ranking_metrics(
+    result = compute_ranking_metrics(
         model=model,
         val_dataset=val_dataset,
         dataset=dataset,
@@ -53,10 +51,12 @@ def test_compute_ranking_metrics_basic() -> None:
         positive_limit=5,
     )
 
-    assert 0 <= hr <= 1
-    assert 0 <= ndcg <= 1
-    assert isinstance(hr, float)
-    assert isinstance(ndcg, float)
+    assert isinstance(result, RankingMetrics)
+    assert 0 <= result.hit_rate <= 1
+    assert 0 <= result.ndcg <= 1
+    assert 0 <= result.precision <= 1
+    assert 0 <= result.recall <= 1
+    assert 0 <= result.mrr <= 1
 
 
 def test_compute_ranking_metrics_k_parameter() -> None:
@@ -66,7 +66,7 @@ def test_compute_ranking_metrics_k_parameter() -> None:
     dataset = RecommenderDataset(interactions, num_items=5, num_negatives=2)
     val_dataset = Subset(dataset, [0, 1])
 
-    hr_k3, ndcg_k3 = compute_ranking_metrics(
+    result_k3 = compute_ranking_metrics(
         model=model,
         val_dataset=val_dataset,
         dataset=dataset,
@@ -77,7 +77,7 @@ def test_compute_ranking_metrics_k_parameter() -> None:
         positive_limit=5,
     )
 
-    hr_k5, ndcg_k5 = compute_ranking_metrics(
+    result_k5 = compute_ranking_metrics(
         model=model,
         val_dataset=val_dataset,
         dataset=dataset,
@@ -88,10 +88,10 @@ def test_compute_ranking_metrics_k_parameter() -> None:
         positive_limit=5,
     )
 
-    assert 0 <= hr_k3 <= 1
-    assert 0 <= hr_k5 <= 1
-    assert 0 <= ndcg_k3 <= 1
-    assert 0 <= ndcg_k5 <= 1
+    assert 0 <= result_k3.hit_rate <= 1
+    assert 0 <= result_k5.hit_rate <= 1
+    assert 0 <= result_k3.ndcg <= 1
+    assert 0 <= result_k5.ndcg <= 1
 
 
 def test_compute_ranking_metrics_sample_limits() -> None:
@@ -101,16 +101,35 @@ def test_compute_ranking_metrics_sample_limits() -> None:
     dataset = RecommenderDataset(interactions, num_items=5, num_negatives=2)
     val_dataset = Subset(dataset, [0, 1, 2])
 
-    hr, ndcg = compute_ranking_metrics(
+    result = compute_ranking_metrics(
         model=model,
         val_dataset=val_dataset,
         dataset=dataset,
         num_items=5,
         device="cpu",
         k=3,
-        sample_limit=2,  # Limit to 2 samples
+        sample_limit=2,
         positive_limit=2,
     )
 
-    assert 0 <= hr <= 1
-    assert 0 <= ndcg <= 1
+    assert 0 <= result.hit_rate <= 1
+    assert 0 <= result.ndcg <= 1
+    assert 0 <= result.precision <= 1
+    assert 0 <= result.recall <= 1
+    assert 0 <= result.mrr <= 1
+
+
+def test_ranking_metrics_to_dict() -> None:
+    """Test RankingMetrics.to_dict output."""
+    metrics = RankingMetrics(
+        hit_rate=0.5, ndcg=0.3, precision=0.2, recall=0.4, mrr=0.6
+    )
+    d = metrics.to_dict(k=10)
+
+    assert d == {
+        "hit_rate@10": 0.5,
+        "ndcg@10": 0.3,
+        "precision@10": 0.2,
+        "recall@10": 0.4,
+        "mrr@10": 0.6,
+    }

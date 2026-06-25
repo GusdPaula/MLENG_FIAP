@@ -4,6 +4,7 @@ import argparse
 import json
 import logging
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -25,16 +26,40 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 
+@dataclass(slots=True)
+class BaselineRankingMetrics:
+    """Container for baseline ranking metrics."""
+
+    hit_rate: float
+    ndcg: float
+    precision: float
+    recall: float
+    mrr: float
+
+    def to_dict(self, k: int = 10) -> dict[str, float]:
+        """Return metrics as a dictionary."""
+        return {
+            f"hit_rate@{k}": self.hit_rate,
+            f"ndcg@{k}": self.ndcg,
+            f"precision@{k}": self.precision,
+            f"recall@{k}": self.recall,
+            f"mrr@{k}": self.mrr,
+        }
+
+
 def compute_baseline_ranking_metrics(
     predict_fn: Callable[[np.ndarray, np.ndarray], np.ndarray],
     test_interactions: np.ndarray,
     num_items: int,
     k: int = 10,
-) -> tuple[float, float]:
-    """Calcula Hit Rate@K e NDCG@K para a função de predição de um modelo baseline."""
+) -> BaselineRankingMetrics:
+    """Calcula métricas de ranking para a função de predição de um modelo baseline."""
     hits = 0
     total = 0
-    ndcg_scores = []
+    ndcg_scores: list[float] = []
+    precision_scores: list[float] = []
+    recall_scores: list[float] = []
+    rr_scores: list[float] = []
 
     users_items: dict[int, list[int]] = {}
     for user, item in test_interactions:
@@ -44,30 +69,37 @@ def compute_baseline_ranking_metrics(
         user_arr = np.full(num_items, user_idx, dtype=np.int64)
         item_arr = np.arange(num_items, dtype=np.int64)
 
-        # Prediz scores para todos os itens do catálogo
         scores = predict_fn(user_arr, item_arr)
-
-        # Obtém os top-K itens
         top_k_indices = np.argsort(scores)[::-1][:k]
         top_k_set = set(top_k_indices)
 
-        for item in true_items:
-            if item in top_k_set:
-                hits += 1
-            total += 1
+        user_hits = sum(1 for item in true_items if item in top_k_set)
+        hits += user_hits
+        total += len(true_items)
 
+        precision_scores.append(user_hits / k)
+        recall_scores.append(user_hits / len(true_items))
+
+        rr = 0.0
         dcg = 0.0
         for rank, item_id in enumerate(top_k_indices):
             if item_id in true_items:
                 dcg += 1.0 / np.log2(rank + 2)
+                if rr == 0.0:
+                    rr = 1.0 / (rank + 1)
+        rr_scores.append(rr)
 
         ideal_dcg = sum(1.0 / np.log2(i + 2) for i in range(min(len(true_items), k)))
         ndcg = dcg / ideal_dcg if ideal_dcg > 0 else 0.0
         ndcg_scores.append(ndcg)
 
-    hr = hits / total if total > 0 else 0.0
-    ndcg_val = float(np.mean(ndcg_scores)) if ndcg_scores else 0.0
-    return hr, ndcg_val
+    return BaselineRankingMetrics(
+        hit_rate=hits / total if total > 0 else 0.0,
+        ndcg=float(np.mean(ndcg_scores)) if ndcg_scores else 0.0,
+        precision=float(np.mean(precision_scores)) if precision_scores else 0.0,
+        recall=float(np.mean(recall_scores)) if recall_scores else 0.0,
+        mrr=float(np.mean(rr_scores)) if rr_scores else 0.0,
+    )
 
 
 def run_evaluation_pipeline(config_path: str = "configs/model.yaml") -> None:
@@ -158,7 +190,7 @@ def run_evaluation_pipeline(config_path: str = "configs/model.yaml") -> None:
     pytorch_auc = pytorch_eval["auc_roc"]
     pytorch_ap = pytorch_eval["avg_precision"]
 
-    pytorch_hr, pytorch_ndcg = compute_ranking_metrics(
+    pytorch_ranking = compute_ranking_metrics(
         model=model,
         val_dataset=val_dataset,
         dataset=dataset,
@@ -204,7 +236,7 @@ def run_evaluation_pipeline(config_path: str = "configs/model.yaml") -> None:
 
     pop_auc = float(roc_auc_score(val_labels, pop_preds))
     pop_ap = float(average_precision_score(val_labels, pop_preds))
-    pop_hr, pop_ndcg = compute_baseline_ranking_metrics(
+    pop_ranking = compute_baseline_ranking_metrics(
         pop_recommender.predict, positive_only_val, num_items, k=10
     )
 
@@ -218,43 +250,49 @@ def run_evaluation_pipeline(config_path: str = "configs/model.yaml") -> None:
 
     lr_auc = float(roc_auc_score(val_labels, lr_preds))
     lr_ap = float(average_precision_score(val_labels, lr_preds))
-    lr_hr, lr_ndcg = compute_baseline_ranking_metrics(
+    lr_ranking = compute_baseline_ranking_metrics(
         lr_recommender.predict, positive_only_val, num_items, k=10
     )
 
     # --- Registra os resultados no terminal ------------------------------------------
-    logger.info("\n" + "=" * 80)
+    header = (
+        f"{'Modelo':<30} | {'AUC-ROC':<8} | {'Avg Prec':<8} | "
+        f"{'HR@10':<8} | {'NDCG@10':<8} | {'Prec@10':<8} | {'Rec@10':<8} | {'MRR@10':<8}"
+    )
+    logger.info("\n" + "=" * 100)
     logger.info("TABELA COMPARATIVA (Conjunto de Validação)")
-    logger.info("=" * 80)
+    logger.info("=" * 100)
+    logger.info(header)
+    logger.info("-" * 100)
+    model_label = f"PyTorch ({checkpoint['model_type'].upper()})"
     logger.info(
-        f"{'Modelo':<30} | {'AUC-ROC':<10} | {'Avg Prec':<10} | {'Hit Rate@10':<12} | {'NDCG@10':<10}"
-    )
-    logger.info("-" * 80)
-    logger.info(
-        f"{f'Modelo PyTorch ({checkpoint["model_type"].upper()})':<30} | {pytorch_auc:<10.4f} | {pytorch_ap:<10.4f} | {pytorch_hr:<12.4f} | {pytorch_ndcg:<10.4f}"
-    )
-    logger.info(
-        f"{'Recomendador Popularidade':<30} | {pop_auc:<10.4f} | {pop_ap:<10.4f} | {pop_hr:<12.4f} | {pop_ndcg:<10.4f}"
+        f"{model_label:<30} | {pytorch_auc:<8.4f} | {pytorch_ap:<8.4f} | "
+        f"{pytorch_ranking.hit_rate:<8.4f} | {pytorch_ranking.ndcg:<8.4f} | "
+        f"{pytorch_ranking.precision:<8.4f} | {pytorch_ranking.recall:<8.4f} | {pytorch_ranking.mrr:<8.4f}"
     )
     logger.info(
-        f"{'Regressão Logística':<30} | {lr_auc:<10.4f} | {lr_ap:<10.4f} | {lr_hr:<12.4f} | {lr_ndcg:<10.4f}"
+        f"{'Popularidade':<30} | {pop_auc:<8.4f} | {pop_ap:<8.4f} | "
+        f"{pop_ranking.hit_rate:<8.4f} | {pop_ranking.ndcg:<8.4f} | "
+        f"{pop_ranking.precision:<8.4f} | {pop_ranking.recall:<8.4f} | {pop_ranking.mrr:<8.4f}"
     )
-    logger.info("=" * 80)
+    logger.info(
+        f"{'Regressão Logística':<30} | {lr_auc:<8.4f} | {lr_ap:<8.4f} | "
+        f"{lr_ranking.hit_rate:<8.4f} | {lr_ranking.ndcg:<8.4f} | "
+        f"{lr_ranking.precision:<8.4f} | {lr_ranking.recall:<8.4f} | {lr_ranking.mrr:<8.4f}"
+    )
+    logger.info("=" * 100)
 
     # --- Grava o arquivo metrics.json -------------------------------------------
     metrics_dict = {
         "pytorch_auc_roc": pytorch_auc,
         "pytorch_avg_precision": pytorch_ap,
-        "pytorch_hit_rate_at_10": pytorch_hr,
-        "pytorch_ndcg_at_10": pytorch_ndcg,
+        **{f"pytorch_{k}": v for k, v in pytorch_ranking.to_dict(10).items()},
         "popularity_auc_roc": pop_auc,
         "popularity_avg_precision": pop_ap,
-        "popularity_hit_rate_at_10": pop_hr,
-        "popularity_ndcg_at_10": pop_ndcg,
+        **{f"popularity_{k}": v for k, v in pop_ranking.to_dict(10).items()},
         "logistic_regression_auc_roc": lr_auc,
         "logistic_regression_avg_precision": lr_ap,
-        "logistic_regression_hit_rate_at_10": lr_hr,
-        "logistic_regression_ndcg_at_10": lr_ndcg,
+        **{f"logistic_regression_{k}": v for k, v in lr_ranking.to_dict(10).items()},
     }
 
     reports_dir = Path("reports")
@@ -287,8 +325,7 @@ def run_evaluation_pipeline(config_path: str = "configs/model.yaml") -> None:
                 {
                     "final_auc_roc": pop_auc,
                     "final_avg_precision": pop_ap,
-                    "hit_rate_at_10": pop_hr,
-                    "ndcg_at_10": pop_ndcg,
+                    **pop_ranking.to_dict(10),
                 }
             )
 
@@ -299,8 +336,7 @@ def run_evaluation_pipeline(config_path: str = "configs/model.yaml") -> None:
                 {
                     "final_auc_roc": lr_auc,
                     "final_avg_precision": lr_ap,
-                    "hit_rate_at_10": lr_hr,
-                    "ndcg_at_10": lr_ndcg,
+                    **lr_ranking.to_dict(10),
                 }
             )
         logger.info("Métricas dos baselines registradas com sucesso no MLflow Server.")

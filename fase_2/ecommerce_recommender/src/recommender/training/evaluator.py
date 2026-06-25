@@ -1,15 +1,38 @@
 """Ranking metrics evaluation for recommender models."""
 
+from __future__ import annotations
+
 import logging
-from typing import Tuple
+from dataclasses import dataclass
 
 import numpy as np
 import torch
 import torch.nn as nn
 
-from .metrics import hit_rate_at_k, ndcg_at_k
+from .metrics import hit_rate_at_k, mrr, ndcg_at_k, precision_at_k, recall_at_k
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(slots=True)
+class RankingMetrics:
+    """Container for all ranking metrics."""
+
+    hit_rate: float
+    ndcg: float
+    precision: float
+    recall: float
+    mrr: float
+
+    def to_dict(self, k: int = 10) -> dict[str, float]:
+        """Return metrics as a dictionary suitable for MLflow logging."""
+        return {
+            f"hit_rate@{k}": self.hit_rate,
+            f"ndcg@{k}": self.ndcg,
+            f"precision@{k}": self.precision,
+            f"recall@{k}": self.recall,
+            f"mrr@{k}": self.mrr,
+        }
 
 
 def compute_ranking_metrics(
@@ -21,8 +44,8 @@ def compute_ranking_metrics(
     k: int = 10,
     sample_limit: int = 10000,
     positive_limit: int = 1000,
-) -> Tuple[float, float]:
-    """Compute ranking metrics (Hit Rate@K and NDCG@K) on validation set.
+) -> RankingMetrics:
+    """Compute ranking metrics on validation set.
 
     Args:
         model: Trained recommender model.
@@ -35,7 +58,7 @@ def compute_ranking_metrics(
         positive_limit: Maximum number of positive samples for ranking metrics. Defaults to 1000.
 
     Returns:
-        Tuple of (hit_rate_at_k, ndcg_at_k) scores.
+        RankingMetrics with all computed scores.
     """
     logger.info("Computing ranking metrics on validation set")
 
@@ -46,23 +69,23 @@ def compute_ranking_metrics(
     )
 
     positive_only = val_samples[val_samples[:, 2] == 1.0][:, :2].astype(np.int64)
+    limited = positive_only[:positive_limit]
 
-    hr = hit_rate_at_k(
-        model,
-        positive_only[:positive_limit],
-        num_items,
-        k=k,
-        device=device,
+    hr = hit_rate_at_k(model, limited, num_items, k=k, device=device)
+    ndcg = ndcg_at_k(model, limited, num_items, k=k, device=device)
+    prec = precision_at_k(model, limited, num_items, k=k, device=device)
+    rec = recall_at_k(model, limited, num_items, k=k, device=device)
+    mean_rr = mrr(model, limited, num_items, k=k, device=device)
+
+    logger.info(
+        f"Hit Rate@{k}: {hr:.4f}, NDCG@{k}: {ndcg:.4f}, "
+        f"Precision@{k}: {prec:.4f}, Recall@{k}: {rec:.4f}, MRR@{k}: {mean_rr:.4f}"
     )
 
-    ndcg = ndcg_at_k(
-        model,
-        positive_only[:positive_limit],
-        num_items,
-        k=k,
-        device=device,
+    return RankingMetrics(
+        hit_rate=hr,
+        ndcg=ndcg,
+        precision=prec,
+        recall=rec,
+        mrr=mean_rr,
     )
-
-    logger.info(f"Hit Rate@{k}: {hr:.4f}, NDCG@{k}: {ndcg:.4f}")
-
-    return hr, ndcg
