@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, TypedDict
 
+import pandas as pd
 import torch
 from torch.utils.data import DataLoader, random_split
 
@@ -143,6 +144,33 @@ def train_one_experiment(
         generator=torch.Generator().manual_seed(seed),
     )
 
+    # Log validation dataset to MLflow (sample only for performance)
+    logger.info(f"Logging validation dataset sample for {processor_name}...")
+    # Create reverse lookup dictionaries for O(1) mapping
+    idx2user = {v: k for k, v in user2idx.items()}
+    idx2item = {v: k for k, v in item2idx.items()}
+
+    # Sample up to 10000 validation samples for logging
+    sample_size = min(10000, len(val_dataset))
+    val_samples = []
+    for i in range(sample_size):
+        user_idx, item_idx, label = val_dataset[i]
+        # Map back to original user/item IDs using reverse lookup
+        user_id = idx2user[user_idx]
+        item_id = idx2item[item_idx]
+        val_samples.append([user_id, item_id, label])
+
+    val_interactions = pd.DataFrame(
+        val_samples, columns=["user_id", "item_id", "label"]
+    )
+    mlflow_toolkit.log_dataset(
+        val_interactions,
+        name=f"{processor_name}_val_interactions_sample",
+        source=str(processed_path),
+        context="validation",
+    )
+    logger.info(f"✅ Logged validation dataset sample: {sample_size} rows")
+
     # Create data loaders
     train_loader = DataLoader(
         train_dataset,
@@ -240,6 +268,7 @@ def train_one_experiment(
         "epochs_run": len(history),
     }
 
+    logger.info(f"Saving model checkpoint to {artifact_dir}...")
     checkpoint_path = save_checkpoint(
         model=model,
         model_type=model_type,
@@ -251,9 +280,28 @@ def train_one_experiment(
         early_stopping_info=early_stopping_info,
         artifact_dir=artifact_dir,
     )
+    logger.info(f"✅ Saved checkpoint: {checkpoint_path.name}")
 
-    # Log artifact and final metrics to MLflow
-    mlflow_toolkit.log_artifact(checkpoint_path)
+    # Register model in MLflow Model Registry
+    # Use the MLflowToolkit's log_pytorch_model method
+    model_name = f"{model_type}_{processor_name}"
+    logger.info(f"Registering model '{model_name}' in MLflow Model Registry...")
+    try:
+        mlflow_toolkit.log_pytorch_model(
+            model=model,
+            artifact_path="model",
+            registered_model_name=model_name,
+            serialization_format="pickle",  # Use pickle for compatibility
+        )
+        logger.info(f"✅ Registered model in MLflow Model Registry: {model_name}")
+    except Exception as e:
+        logger.warning(
+            f"Failed to register model in Model Registry, logging as artifact instead: {e}"
+        )
+        # Fallback to logging as artifact
+        logger.info("Logging model as artifact instead...")
+        mlflow_toolkit.log_artifact(checkpoint_path)
+        logger.info(f"✅ Logged model as artifact: {checkpoint_path.name}")
 
     mlflow_toolkit.log_metrics(
         {

@@ -1,0 +1,119 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "cloudwatch-logs",
+        "uid": "cloudwatch-logs"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch-logs",
+            "uid": "cloudwatch-logs"
+          },
+          "editorMode": "code",
+          "expr": "fields @timestamp, @message | filter @logStream like /dvc-logs/ | sort @timestamp desc | limit 100",
+          "queryType": "cloudWatchLogs",
+          "refId": "A"
+        }
+      ],
+      "title": "Recent DVC Logs",
+      "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch-logs",
+        "uid": "cloudwatch-logs"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
+      "id": 2,
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch-logs",
+            "uid": "cloudwatch-logs"
+          },
+          "editorMode": "code",
+          "expr": "fields @timestamp, @message | filter @logStream like /dvc-logs/ | filter @message like /pipeline|run|stage/ | stats count()",
+          "queryType": "cloudWatchLogs",
+          "refId": "A"
+        }
+      ],
+      "title": "DVC Pipeline Runs (Last Hour)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch-logs",
+        "uid": "cloudwatch-logs"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      },
+      "id": 3,
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch-logs",
+            "uid": "cloudwatch-logs"
+          },
+          "editorMode": "code",
+          "expr": "fields @timestamp, @message | filter @logStream like /dvc-pipeline/ | filter @message like /ERROR|error|FAIL|fail/ | stats count()",
+          "queryType": "cloudWatchLogs",
+          "refId": "A"
+        }
+      ],
+      "title": "DVC Errors (Last Hour)",
+      "type": "stat"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 27,
+  "style": "dark",
+  "tags": ["dvc", "logs", "cloudwatch"],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "DVC Logs",
+  "uid": "dvc-logs",
+  "version": 1
+}

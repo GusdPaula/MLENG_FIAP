@@ -65,6 +65,7 @@ class TestSingleUserPredictor:
 
         # Test with valid user and items using new API
         from api.models.schemas import PredictionRequest
+
         request = PredictionRequest(user_id=5, item_ids=[1, 2, 3])
         result = predictor.predict(request)
 
@@ -82,6 +83,7 @@ class TestSingleUserPredictor:
 
         # Test with invalid user
         from api.models.schemas import PredictionRequest
+
         with pytest.raises(InvalidInputError):
             request = PredictionRequest(user_id=999, item_ids=[1, 2, 3])
             predictor.predict(request)
@@ -96,6 +98,7 @@ class TestSingleUserPredictor:
 
         # Test with invalid item
         from api.models.schemas import PredictionRequest
+
         with pytest.raises(InvalidInputError):
             request = PredictionRequest(user_id=5, item_ids=[999])
             predictor.predict(request)
@@ -110,6 +113,7 @@ class TestSingleUserPredictor:
 
         # Test with empty item list
         from api.models.schemas import PredictionRequest
+
         with pytest.raises(InvalidInputError):
             request = PredictionRequest(user_id=5, item_ids=[])
             predictor.predict(request)

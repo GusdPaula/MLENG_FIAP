@@ -3,7 +3,7 @@ model:
   seed: 42
   batch_size: 1024
   learning_rate: 0.001
-  epochs: 10
+  epochs: 1
   show_progress: true
   num_negatives: 4
   min_interactions: 5
@@ -30,7 +30,7 @@ model:
   # Note: "ndcg_at_k" uses sampling for efficiency during training.
   early_stopping:
     enabled: true
-    monitor: ndcg_at_k
+    monitor: auc_roc
     mode: max
     patience: 3
     min_delta: 0.0
@@ -40,3 +40,6 @@ model:
     embedding_dim: 64
     hidden_layers: [128, 64, 32]
     dropout: 0.2
+
+  # MLflow model registration
+  registered_model_name: ecommerce_recommender

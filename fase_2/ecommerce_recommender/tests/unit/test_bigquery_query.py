@@ -51,7 +51,9 @@ class DummyClient:
         return DummyQueryJob(DummyQueryResult(schema, rows))
 
 
-def test_bigquery_query_extract_table_and_versions(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_bigquery_query_extract_table_and_versions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     google_module = types.ModuleType("google")
     cloud_module = types.ModuleType("google.cloud")
     bigquery_module = types.ModuleType("google.cloud.bigquery")
@@ -104,7 +106,9 @@ def test_bigquery_query_extract_table_and_versions(tmp_path: Path, monkeypatch: 
     assert csv_lines[2] == "2,101"
 
 
-def test_bigquery_query_skips_existing_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_bigquery_query_skips_existing_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     google_module = types.ModuleType("google")
     cloud_module = types.ModuleType("google.cloud")
     bigquery_module = types.ModuleType("google.cloud.bigquery")

@@ -24,7 +24,9 @@ def api_config():
     return {
         "base_url": os.getenv("API_BASE_URL", "http://localhost:8000"),
         "api_key": os.getenv("API_KEY", "default-api-key-change-in-production"),
-        "headers": {"X-API-Key": os.getenv("API_KEY", "default-api-key-change-in-production")},
+        "headers": {
+            "X-API-Key": os.getenv("API_KEY", "default-api-key-change-in-production")
+        },
         # Test data for gmf_binary model
         "test_user_id": 138131,
         "test_item_ids": [430292, 277119, 183411, 457231, 259078],
@@ -49,7 +51,9 @@ class TestHealthEndpoint:
 
     def test_health_check_with_service(self, client, mock_prediction_service):
         """Test health check with prediction service initialized."""
-        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+        with patch(
+            "api.controllers.routes.prediction_service", mock_prediction_service
+        ):
             response = client.get(
                 "/health", headers={"X-API-Key": "default-api-key-change-in-production"}
             )
@@ -76,9 +80,7 @@ class TestHealthEndpoint:
 
     def test_health_check_invalid_api_key(self, client):
         """Test health check with invalid API key."""
-        response = client.get(
-            "/health", headers={"X-API-Key": "invalid-key"}
-        )
+        response = client.get("/health", headers={"X-API-Key": "invalid-key"})
         assert response.status_code == 403
 
 
@@ -91,7 +93,7 @@ class TestHealthEndpointRealAPI:
             response = requests.get(
                 f"{api_config['base_url']}/health",
                 headers=api_config["headers"],
-                timeout=5
+                timeout=5,
             )
             assert response.status_code == 200
             data = response.json()
@@ -103,10 +105,7 @@ class TestHealthEndpointRealAPI:
     def test_health_check_missing_api_key_real_api(self, api_config):
         """Test health check without API key against real API."""
         try:
-            response = requests.get(
-                f"{api_config['base_url']}/health",
-                timeout=5
-            )
+            response = requests.get(f"{api_config['base_url']}/health", timeout=5)
             assert response.status_code == 401
         except requests.exceptions.ConnectionError:
             pytest.skip("API service not running")
@@ -117,7 +116,7 @@ class TestHealthEndpointRealAPI:
             response = requests.get(
                 f"{api_config['base_url']}/health",
                 headers={"X-API-Key": "invalid-key"},
-                timeout=5
+                timeout=5,
             )
             assert response.status_code == 403
         except requests.exceptions.ConnectionError:
@@ -132,17 +131,24 @@ class TestModelInfoEndpoint:
         mock_prediction_service.model_path = "test_model.pt"
         mock_prediction_service.predictor_type = "single_user"
         mock_prediction_service.device = "cpu"
-        mock_prediction_service._model_metadata = {"model_type": "ncf", "num_users": 100, "num_items": 50}
+        mock_prediction_service._model_metadata = {
+            "model_type": "ncf",
+            "num_users": 100,
+            "num_items": 50,
+        }
         mock_prediction_service.get_model_info.return_value = {
             "model_path": "test_model.pt",
             "predictor_type": "single_user",
             "device": "cpu",
-            "metadata": {"model_type": "ncf", "num_users": 100, "num_items": 50}
+            "metadata": {"model_type": "ncf", "num_users": 100, "num_items": 50},
         }
 
-        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+        with patch(
+            "api.controllers.routes.prediction_service", mock_prediction_service
+        ):
             response = client.get(
-                "/model/info", headers={"X-API-Key": "default-api-key-change-in-production"}
+                "/model/info",
+                headers={"X-API-Key": "default-api-key-change-in-production"},
             )
             assert response.status_code == 200
             data = response.json()
@@ -165,7 +171,7 @@ class TestModelInfoEndpointRealAPI:
             response = requests.get(
                 f"{api_config['base_url']}/model/info",
                 headers=api_config["headers"],
-                timeout=5
+                timeout=5,
             )
             assert response.status_code == 200
             data = response.json()
@@ -184,12 +190,15 @@ class TestPredictEndpoint:
         """Test prediction with valid request."""
         # Mock the predict method
         from api.models.schemas import PredictionResponse
+
         mock_prediction_service.predict.return_value = PredictionResponse(
             user_id=123,
             item_scores={"1": 0.95, "2": 0.87, "3": 0.72},
         )
 
-        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+        with patch(
+            "api.controllers.routes.prediction_service", mock_prediction_service
+        ):
             response = client.post(
                 "/predict",
                 headers={"X-API-Key": "default-api-key-change-in-production"},
@@ -226,7 +235,7 @@ class TestPredictEndpointRealAPI:
                     "user_id": api_config["test_user_id"],
                     "item_ids": api_config["test_item_ids"],
                 },
-                timeout=10
+                timeout=10,
             )
             assert response.status_code == 200
             data = response.json()
@@ -246,7 +255,7 @@ class TestPredictEndpointRealAPI:
                     "user_id": api_config["test_user_id"],
                     "k": 5,
                 },
-                timeout=10
+                timeout=10,
             )
             assert response.status_code == 200
             data = response.json()
@@ -265,7 +274,7 @@ class TestPredictEndpointRealAPI:
                     "user_id": 99999,
                     "item_ids": [99999],
                 },
-                timeout=10
+                timeout=10,
             )
             assert response.status_code == 400
         except requests.exceptions.ConnectionError:
@@ -281,7 +290,7 @@ class TestPredictEndpointRealAPI:
                     "user_id": api_config["test_user_id"],
                     "item_ids": [],
                 },
-                timeout=10
+                timeout=10,
             )
             assert response.status_code == 400
         except requests.exceptions.ConnectionError:
@@ -294,6 +303,7 @@ class TestBatchPredictEndpoint:
     def test_batch_predict_valid_request(self, client, mock_prediction_service):
         """Test batch prediction with valid request."""
         from api.models.schemas import BatchPredictionResponse, PredictionResponse
+
         mock_prediction_service.predict_batch.return_value = BatchPredictionResponse(
             predictions=[
                 PredictionResponse(user_id=123, item_scores={"1": 0.95}),
@@ -302,7 +312,9 @@ class TestBatchPredictEndpoint:
             metadata={"num_requests": 2},
         )
 
-        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+        with patch(
+            "api.controllers.routes.prediction_service", mock_prediction_service
+        ):
             response = client.post(
                 "/predict/batch",
                 headers={"X-API-Key": "default-api-key-change-in-production"},
@@ -336,7 +348,7 @@ class TestBatchPredictEndpointRealAPI:
                     ],
                     "k": None,
                 },
-                timeout=10
+                timeout=10,
             )
             assert response.status_code == 200
             data = response.json()
@@ -353,13 +365,16 @@ class TestRecommendEndpoint:
     def test_recommend_valid_request(self, client, mock_prediction_service):
         """Test recommendation with valid request."""
         from api.models.schemas import RecommendationResponse
+
         mock_prediction_service.recommend.return_value = RecommendationResponse(
             user_id=123,
             recommendations=[[1, 0.95], [2, 0.87], [3, 0.72]],
             metadata={"k": 10},
         )
 
-        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+        with patch(
+            "api.controllers.routes.prediction_service", mock_prediction_service
+        ):
             response = client.get(
                 "/recommend/123?k=10",
                 headers={"X-API-Key": "default-api-key-change-in-production"},
@@ -385,7 +400,7 @@ class TestRecommendEndpointRealAPI:
             response = requests.get(
                 f"{api_config['base_url']}/recommend/{api_config['test_user_id']}?k=10",
                 headers=api_config["headers"],
-                timeout=10
+                timeout=10,
             )
             assert response.status_code == 200
             data = response.json()
@@ -402,7 +417,7 @@ class TestRecommendEndpointRealAPI:
             response = requests.get(
                 f"{api_config['base_url']}/recommend/{api_config['test_user_id']}?k=5",
                 headers=api_config["headers"],
-                timeout=10
+                timeout=10,
             )
             assert response.status_code == 200
             data = response.json()
@@ -420,7 +435,9 @@ class TestMonitoringEndpoints:
         """Test setting monitoring baselines."""
         mock_prediction_service.set_monitoring_baselines.return_value = None
 
-        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+        with patch(
+            "api.controllers.routes.prediction_service", mock_prediction_service
+        ):
             response = client.post(
                 "/monitoring/baselines",
                 headers={"X-API-Key": "default-api-key-change-in-production"},
@@ -432,6 +449,7 @@ class TestMonitoringEndpoints:
     def test_check_shifts(self, client, mock_prediction_service):
         """Test checking for data/model shifts."""
         from api.services.monitoring_service import ShiftDetectionResult
+
         mock_prediction_service.check_shifts.return_value = {
             "data_shift": ShiftDetectionResult(
                 has_shift=False,
@@ -451,7 +469,9 @@ class TestMonitoringEndpoints:
             ),
         }
 
-        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+        with patch(
+            "api.controllers.routes.prediction_service", mock_prediction_service
+        ):
             response = client.get(
                 "/monitoring/check",
                 headers={"X-API-Key": "default-api-key-change-in-production"},
@@ -468,7 +488,9 @@ class TestMonitoringEndpoints:
             "baselines_set": True,
         }
 
-        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+        with patch(
+            "api.controllers.routes.prediction_service", mock_prediction_service
+        ):
             response = client.get(
                 "/monitoring/summary",
                 headers={"X-API-Key": "default-api-key-change-in-production"},
@@ -493,14 +515,14 @@ class TestMonitoringEndpointsRealAPI:
                         "user_id": api_config["test_user_id"],
                         "item_ids": api_config["test_item_ids"][:3],
                     },
-                    timeout=10
+                    timeout=10,
                 )
 
             # Set baselines
             response = requests.post(
                 f"{api_config['base_url']}/monitoring/baselines",
                 headers=api_config["headers"],
-                timeout=5
+                timeout=5,
             )
             assert response.status_code == 200
 
@@ -513,14 +535,14 @@ class TestMonitoringEndpointsRealAPI:
                         "user_id": api_config["test_user_id_2"],
                         "item_ids": api_config["test_item_ids_2"][:3],
                     },
-                    timeout=10
+                    timeout=10,
                 )
 
             # Check shifts
             response = requests.get(
                 f"{api_config['base_url']}/monitoring/check",
                 headers=api_config["headers"],
-                timeout=5
+                timeout=5,
             )
             assert response.status_code == 200
             data = response.json()
@@ -530,7 +552,7 @@ class TestMonitoringEndpointsRealAPI:
             response = requests.get(
                 f"{api_config['base_url']}/monitoring/summary",
                 headers=api_config["headers"],
-                timeout=5
+                timeout=5,
             )
             assert response.status_code == 200
             data = response.json()
@@ -550,14 +572,14 @@ class TestMonitoringEndpointsRealAPI:
                         "user_id": api_config["test_user_id"],
                         "item_ids": api_config["test_item_ids"][:3],
                     },
-                    timeout=10
+                    timeout=10,
                 )
 
             # Set baselines
             response = requests.post(
                 f"{api_config['base_url']}/monitoring/baselines",
                 headers=api_config["headers"],
-                timeout=5
+                timeout=5,
             )
             assert response.status_code == 200
             data = response.json()
@@ -571,7 +593,7 @@ class TestMonitoringEndpointsRealAPI:
             response = requests.get(
                 f"{api_config['base_url']}/monitoring/check",
                 headers=api_config["headers"],
-                timeout=5
+                timeout=5,
             )
             assert response.status_code == 200
             data = response.json()
@@ -586,7 +608,7 @@ class TestMonitoringEndpointsRealAPI:
             response = requests.get(
                 f"{api_config['base_url']}/monitoring/summary",
                 headers=api_config["headers"],
-                timeout=5
+                timeout=5,
             )
             assert response.status_code == 200
             data = response.json()
@@ -602,9 +624,14 @@ class TestErrorHandling:
     def test_prediction_error_handling(self, client, mock_prediction_service):
         """Test that prediction errors are handled correctly."""
         from api.exceptions import InvalidInputError
-        mock_prediction_service.predict.side_effect = InvalidInputError("Invalid user ID")
 
-        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+        mock_prediction_service.predict.side_effect = InvalidInputError(
+            "Invalid user ID"
+        )
+
+        with patch(
+            "api.controllers.routes.prediction_service", mock_prediction_service
+        ):
             response = client.post(
                 "/predict",
                 headers={"X-API-Key": "default-api-key-change-in-production"},
@@ -617,9 +644,12 @@ class TestErrorHandling:
     def test_model_load_error_handling(self, client, mock_prediction_service):
         """Test that model load errors are handled correctly."""
         from api.exceptions import ModelLoadError
+
         mock_prediction_service.predict.side_effect = ModelLoadError("Model not loaded")
 
-        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+        with patch(
+            "api.controllers.routes.prediction_service", mock_prediction_service
+        ):
             response = client.post(
                 "/predict",
                 headers={"X-API-Key": "default-api-key-change-in-production"},
@@ -638,7 +668,7 @@ class TestCompleteFlowRealAPI:
             response = requests.get(
                 f"{api_config['base_url']}/health",
                 headers=api_config["headers"],
-                timeout=5
+                timeout=5,
             )
             assert response.status_code == 200
             assert response.json()["status"] in ["healthy", "unhealthy"]
@@ -647,7 +677,7 @@ class TestCompleteFlowRealAPI:
             response = requests.get(
                 f"{api_config['base_url']}/model/info",
                 headers=api_config["headers"],
-                timeout=5
+                timeout=5,
             )
             assert response.status_code == 200
             assert "model_path" in response.json()
@@ -660,7 +690,7 @@ class TestCompleteFlowRealAPI:
                     "user_id": api_config["test_user_id"],
                     "item_ids": api_config["test_item_ids"],
                 },
-                timeout=10
+                timeout=10,
             )
             assert response.status_code == 200
             assert response.json()["user_id"] == api_config["test_user_id"]
@@ -669,7 +699,7 @@ class TestCompleteFlowRealAPI:
             response = requests.get(
                 f"{api_config['base_url']}/recommend/{api_config['test_user_id']}?k=10",
                 headers=api_config["headers"],
-                timeout=10
+                timeout=10,
             )
             assert response.status_code == 200
             assert response.json()["user_id"] == api_config["test_user_id"]
@@ -678,7 +708,7 @@ class TestCompleteFlowRealAPI:
             response = requests.get(
                 f"{api_config['base_url']}/monitoring/check",
                 headers=api_config["headers"],
-                timeout=5
+                timeout=5,
             )
             assert response.status_code == 200
         except requests.exceptions.ConnectionError:
@@ -688,17 +718,14 @@ class TestCompleteFlowRealAPI:
         """Test Cenário 3: Teste de Erros from API_TESTING.md."""
         try:
             # 1. Missing API key
-            response = requests.get(
-                f"{api_config['base_url']}/health",
-                timeout=5
-            )
+            response = requests.get(f"{api_config['base_url']}/health", timeout=5)
             assert response.status_code == 401
 
             # 2. Invalid API key
             response = requests.get(
                 f"{api_config['base_url']}/health",
                 headers={"X-API-Key": "wrong-key"},
-                timeout=5
+                timeout=5,
             )
             assert response.status_code == 403
 
@@ -707,7 +734,7 @@ class TestCompleteFlowRealAPI:
                 f"{api_config['base_url']}/predict",
                 headers=api_config["headers"],
                 json={"user_id": 99999, "item_ids": [99999]},
-                timeout=10
+                timeout=10,
             )
             assert response.status_code == 400
 
@@ -716,7 +743,7 @@ class TestCompleteFlowRealAPI:
                 f"{api_config['base_url']}/predict",
                 headers=api_config["headers"],
                 json={"user_id": api_config["test_user_id"], "item_ids": []},
-                timeout=10
+                timeout=10,
             )
             assert response.status_code == 400
         except requests.exceptions.ConnectionError:

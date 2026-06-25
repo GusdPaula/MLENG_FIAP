@@ -166,7 +166,9 @@ def test_setup_and_experiment_creation(monkeypatch: pytest.MonkeyPatch) -> None:
     assert calls["create_experiment"] == ["demo-experiment"]
 
 
-def test_logging_helpers_and_model_registration(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_logging_helpers_and_model_registration(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
     calls = _install_dummy_mlflow(monkeypatch)
     toolkit = MLflowToolkit(experiment_name="demo-experiment")
 

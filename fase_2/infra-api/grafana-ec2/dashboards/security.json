@@ -1,0 +1,111 @@
+{
+  "dashboard": {
+    "title": "Security Dashboard",
+    "uid": "security-dashboard",
+    "tags": ["security", "audit"],
+    "timezone": "browser",
+    "refresh": "1m",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Failed Authentication Attempts",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(failed_auth_attempts[5m])",
+            "legendFormat": "Failed Auth/min"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "API Key Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(api_key_requests[5m])",
+            "legendFormat": "Requests/min"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Rate Limiting Events",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(rate_limit_exceeded[5m])",
+            "legendFormat": "Rate Limit/min"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "VPC Flow Log Anomalies",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(vpc_flow_anomalies[5m])",
+            "legendFormat": "Anomalies/min"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "S3 Access Patterns",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(s3_get_requests[5m])",
+            "legendFormat": "GET Requests"
+          },
+          {
+            "expr": "rate(s3_put_requests[5m])",
+            "legendFormat": "PUT Requests"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "Security Group Changes",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "security_group_changes_total",
+            "legendFormat": "Changes"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 16}
+      },
+      {
+        "id": 7,
+        "title": "ECR Image Scan Results",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "ecr_image_vulnerabilities",
+            "legendFormat": "Vulnerabilities"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
+      },
+      {
+        "id": 8,
+        "title": "Unusual Access Patterns",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(unusual_access_events[5m])",
+            "legendFormat": "Unusual Events/min"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
+      }
+    ]
+  }
+}

@@ -80,15 +80,21 @@ class PredictorFactory:
 
         if predictor_type not in cls._registry:
             available = ", ".join(sorted(cls._registry)) or "<empty>"
-            logger.error("Unknown predictor type '%s'. Available: %s", predictor_type, available)
+            logger.error(
+                "Unknown predictor type '%s'. Available: %s", predictor_type, available
+            )
             raise PredictorNotFoundError(
                 f"Unknown predictor type '{predictor_type}'. "
                 f"Available predictors: {available}."
             )
 
         predictor_cls = cls._registry[predictor_type]
-        predictor = predictor_cls(model=model, user2idx=user2idx, item2idx=item2idx, **kwargs)
-        logger.debug("Successfully created predictor instance of type '%s'", predictor_type)
+        predictor = predictor_cls(
+            model=model, user2idx=user2idx, item2idx=item2idx, **kwargs
+        )
+        logger.debug(
+            "Successfully created predictor instance of type '%s'", predictor_type
+        )
         return predictor
 
     @classmethod

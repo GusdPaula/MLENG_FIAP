@@ -1,0 +1,107 @@
+{
+  "dashboard": {
+    "title": "MLflow Dashboard",
+    "uid": "mlflow-dashboard",
+    "tags": ["mlflow", "infrastructure"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "RDS CPU Utilization",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "aws_rds_cpuutilization_average",
+            "legendFormat": "CPU %"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "RDS Database Connections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "aws_rds_database_connections",
+            "legendFormat": "Connections"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "RDS Free Storage Space",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "aws_rds_free_storage_space_average",
+            "legendFormat": "Free Storage GB"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "RDS Read Latency",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "aws_rds_read_latency",
+            "legendFormat": "Read Latency ms"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "RDS Write Latency",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "aws_rds_write_latency",
+            "legendFormat": "Write Latency ms"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "EC2 CPU Utilization",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "aws_ec2_cpuutilization_average",
+            "legendFormat": "CPU %"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+      },
+      {
+        "id": 7,
+        "title": "MLflow Server Health",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"mlflow\"}",
+            "legendFormat": "Status"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 24}
+      },
+      {
+        "id": 8,
+        "title": "Active Experiments",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "mlflow_experiments_active_total",
+            "legendFormat": "Experiments"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 24}
+      }
+    ]
+  }
+}

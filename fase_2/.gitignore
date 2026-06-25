@@ -20,6 +20,9 @@ env/
 # Environment
 .env
 
+# AWS
+aws/
+
 # MLflow
 mlruns/
 
@@ -49,6 +52,15 @@ ecommerce_recommender/data/processed/mlflow_experiments/
 reports/
 ecommerce_recommender/mlflow.db
 ecommerce_recommender/notebooks/mlflow.db
+ecommerce_recommender/models/*.pt
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!example.tfvars
+.terraform.lock.hcl
 
 # MLflow experiments - use DVC for tracking data files, unignore .dvc files
 ecommerce_recommender/models/mlflow_experiments/
@@ -58,3 +70,6 @@ ecommerce_recommender/models/mlflow_experiments/
 
 
 cola.ipynb
+
+# Deployment documentation with credentials
+DEPLOYMENT_GUIDE.md

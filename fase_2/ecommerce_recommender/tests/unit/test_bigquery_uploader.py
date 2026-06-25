@@ -40,7 +40,9 @@ class DummyClient:
     def create_dataset(self, dataset_ref: Any, exists_ok: bool = True) -> None:
         self.created_datasets.append(dataset_ref)
 
-    def load_table_from_file(self, source_file: Any, table_ref: Any, job_config: Any = None) -> DummyLoadJob:
+    def load_table_from_file(
+        self, source_file: Any, table_ref: Any, job_config: Any = None
+    ) -> DummyLoadJob:
         self.loaded_files.append((source_file, table_ref, job_config))
         return DummyLoadJob()
 

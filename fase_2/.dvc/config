@@ -1,7 +1,6 @@
 [core]
     analytics = false
-    remote = s3-public
+    remote = s3-infra
     autostage = true
-['remote "s3-public"']
-    url = s3://fiap-ml-dvc-bucket-tech-challenger
-    profile = aws
+['remote "s3-infra"']
+    url = s3://fiap-ml-dvc-bucket-tech-challenger-3z9kyqs3

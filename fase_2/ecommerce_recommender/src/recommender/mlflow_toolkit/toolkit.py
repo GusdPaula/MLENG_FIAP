@@ -67,6 +67,16 @@ class MLflowToolkit:
             self.allow_offline_fallback if allow_fallback is None else allow_fallback
         )
 
+        # Skip MLflow setup if tracking_uri is None or empty
+        if not self.tracking_uri:
+            import logging
+
+            logging.getLogger(__name__).info(
+                "MLflow tracking URI not configured. Skipping MLflow setup."
+            )
+            self._is_offline = True
+            return self.experiment_name
+
         try:
             self._apply_tracking_uri(mlflow, self.tracking_uri)
             if self.registry_uri:
@@ -74,9 +84,14 @@ class MLflowToolkit:
             if self.experiment_name:
                 mlflow.set_experiment(self.experiment_name)
             self._is_offline = False
-        except Exception:
+        except Exception as e:
             if not allow_fallback:
                 raise
+            import logging
+
+            logging.getLogger(__name__).warning(
+                f"MLflow setup failed ({type(e).__name__}): {e}. Falling back to offline mode."
+            )
             self._apply_tracking_uri(mlflow, self._offline_tracking_uri())
             if self.experiment_name:
                 mlflow.set_experiment(self.experiment_name)
@@ -205,21 +220,34 @@ class MLflowToolkit:
         registered_model_name: str | None = None,
         input_example: Any | None = None,
         signature: Any | None = None,
+        serialization_format: str = "pickle",
     ) -> str:
         """Log a PyTorch model and optionally register it."""
         mlflow = self._require_mlflow()
+        import inspect
+
         import torch  # local import to avoid hard dependency at module load time
 
         if not isinstance(model, torch.nn.Module):
             raise TypeError("model must be a torch.nn.Module instance")
 
-        mlflow.pytorch.log_model(
-            pytorch_model=model,
-            artifact_path=artifact_path,
-            registered_model_name=registered_model_name,
-            input_example=input_example,
-            signature=signature,
-        )
+        # Check if mlflow.pytorch.log_model accepts 'name' parameter (MLflow 2.x+)
+        log_model_sig = inspect.signature(mlflow.pytorch.log_model)
+        kwargs = {
+            "pytorch_model": model,
+            "registered_model_name": registered_model_name,
+            "input_example": input_example,
+            "signature": signature,
+            "serialization_format": serialization_format,
+        }
+
+        # Use 'name' if available (MLflow 2.x+), otherwise use 'artifact_path' (MLflow 1.x)
+        if "name" in log_model_sig.parameters:
+            kwargs["name"] = artifact_path
+        else:
+            kwargs["artifact_path"] = artifact_path
+
+        mlflow.pytorch.log_model(**kwargs)
         return artifact_path
 
     @property
@@ -244,7 +272,10 @@ class MLflowToolkit:
                     return mv.version
         except Exception as e:
             import logging
-            logging.getLogger(__name__).warning("Error finding model version for run %s: %s", run_id, e)
+
+            logging.getLogger(__name__).warning(
+                "Error finding model version for run %s: %s", run_id, e
+            )
         return None
 
     def set_model_version_alias(
@@ -258,11 +289,7 @@ class MLflowToolkit:
         from mlflow.tracking import MlflowClient
 
         client = MlflowClient()
-        client.set_registered_model_alias(
-            name=model_name,
-            alias=alias,
-            version=version
-        )
+        client.set_registered_model_alias(name=model_name, alias=alias, version=version)
 
     def get_version_by_alias(self, model_name: str, alias: str) -> Any | None:
         """Retrieve the model version details for a specific alias."""
@@ -279,7 +306,11 @@ class MLflowToolkit:
             return None
 
     def promote_best_to_staging(
-        self, model_name: str, run_id: str, metric_name: str, higher_is_better: bool = True
+        self,
+        model_name: str,
+        run_id: str,
+        metric_name: str,
+        higher_is_better: bool = True,
     ) -> bool:
         """Compare the metric of the new run against the current model with 'staging' alias.
 
@@ -289,7 +320,10 @@ class MLflowToolkit:
         """
         if self._is_offline:
             import logging
-            logging.getLogger(__name__).info("Offline mode active. Skipping promotion to staging.")
+
+            logging.getLogger(__name__).info(
+                "Offline mode active. Skipping promotion to staging."
+            )
             return False
 
         self._require_mlflow()
@@ -301,8 +335,10 @@ class MLflowToolkit:
         new_version = self.get_model_version_by_run_id(model_name, run_id)
         if not new_version:
             import logging
+
             logging.getLogger(__name__).warning(
-                "Could not find a registered model version for run %s. Skipping promotion.", run_id
+                "Could not find a registered model version for run %s. Skipping promotion.",
+                run_id,
             )
             return False
 
@@ -310,10 +346,14 @@ class MLflowToolkit:
         staging_version_obj = self.get_version_by_alias(model_name, "staging")
 
         import logging
+
         logger = logging.getLogger(__name__)
 
         if not staging_version_obj:
-            logger.info("No model currently has the 'staging' alias. Assigning 'staging' to version %s unconditionally.", new_version)
+            logger.info(
+                "No model currently has the 'staging' alias. Assigning 'staging' to version %s unconditionally.",
+                new_version,
+            )
             self.set_model_version_alias(model_name, new_version, "staging")
             return True
 
@@ -326,25 +366,49 @@ class MLflowToolkit:
             staging_metric = staging_run.data.metrics.get(metric_name)
 
             if new_metric is None:
-                logger.warning("New run %s does not have metric %s. Skipping promotion.", run_id, metric_name)
+                logger.warning(
+                    "New run %s does not have metric %s. Skipping promotion.",
+                    run_id,
+                    metric_name,
+                )
                 return False
 
             if staging_metric is None:
-                logger.info("Staging run %s does not have metric %s. Promoting new version %s.",
-                            staging_version_obj.run_id, metric_name, new_version)
+                logger.info(
+                    "Staging run %s does not have metric %s. Promoting new version %s.",
+                    staging_version_obj.run_id,
+                    metric_name,
+                    new_version,
+                )
                 self.set_model_version_alias(model_name, new_version, "staging")
                 return True
 
-            is_better = (new_metric > staging_metric) if higher_is_better else (new_metric < staging_metric)
+            is_better = (
+                (new_metric > staging_metric)
+                if higher_is_better
+                else (new_metric < staging_metric)
+            )
 
             if is_better:
-                logger.info("New model version %s is better than staging version %s (%s: %s vs %s). Assigning 'staging' alias.",
-                            new_version, staging_version_obj.version, metric_name, new_metric, staging_metric)
+                logger.info(
+                    "New model version %s is better than staging version %s (%s: %s vs %s). Assigning 'staging' alias.",
+                    new_version,
+                    staging_version_obj.version,
+                    metric_name,
+                    new_metric,
+                    staging_metric,
+                )
                 self.set_model_version_alias(model_name, new_version, "staging")
                 return True
             else:
-                logger.info("New model version %s is NOT better than staging version %s (%s: %s vs %s). Keeping current staging.",
-                            new_version, staging_version_obj.version, metric_name, new_metric, staging_metric)
+                logger.info(
+                    "New model version %s is NOT better than staging version %s (%s: %s vs %s). Keeping current staging.",
+                    new_version,
+                    staging_version_obj.version,
+                    metric_name,
+                    new_metric,
+                    staging_metric,
+                )
                 return False
         except Exception as e:
             logger.error("Failed to compare metrics and promote model: %s", e)

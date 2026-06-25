@@ -3,7 +3,6 @@
 Tests the PredictionService for model loading and prediction orchestration.
 """
 
-
 import pytest
 import torch
 from api.exceptions import InvalidInputError, ModelLoadError
@@ -65,6 +64,7 @@ class TestPredictionService:
 
         def mock_predictor_create(predictor_type, model, user2idx, item2idx, **kwargs):
             from api.domain.predictors import SingleUserPredictor
+
             return SingleUserPredictor(model, user2idx, item2idx)
 
         ModelFactory.create = mock_model_create
@@ -130,6 +130,7 @@ class TestPredictionService:
 
         def mock_predictor_create(predictor_type, model, user2idx, item2idx, **kwargs):
             from api.domain.predictors import SingleUserPredictor
+
             return SingleUserPredictor(model, user2idx, item2idx)
 
         ModelFactory.create = mock_model_create
@@ -185,6 +186,7 @@ class TestPredictionService:
 
         def mock_predictor_create(predictor_type, model, user2idx, item2idx, **kwargs):
             from api.domain.predictors import SingleUserPredictor
+
             return SingleUserPredictor(model, user2idx, item2idx)
 
         ModelFactory.create = mock_model_create
@@ -238,6 +240,7 @@ class TestPredictionService:
 
         def mock_predictor_create(predictor_type, model, user2idx, item2idx, **kwargs):
             from api.domain.predictors import BatchPredictor
+
             return BatchPredictor(model, user2idx, item2idx)
 
         ModelFactory.create = mock_model_create
@@ -297,6 +300,7 @@ class TestPredictionService:
 
         def mock_predictor_create(predictor_type, model, user2idx, item2idx, **kwargs):
             from api.domain.predictors import TopKRecommendationPredictor
+
             return TopKRecommendationPredictor(model, user2idx, item2idx)
 
         ModelFactory.create = mock_model_create
@@ -351,6 +355,7 @@ class TestPredictionService:
 
         def mock_predictor_create(predictor_type, model, user2idx, item2idx, **kwargs):
             from api.domain.predictors import SingleUserPredictor
+
             return SingleUserPredictor(model, user2idx, item2idx)
 
         ModelFactory.create = mock_model_create

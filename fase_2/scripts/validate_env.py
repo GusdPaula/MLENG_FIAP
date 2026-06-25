@@ -5,10 +5,10 @@ This script checks Python version, required packages, local environment variable
 PyTorch GPU capabilities, MLflow server reachability, and AWS credentials.
 """
 
-import sys
 import os
-import urllib.request
+import sys
 import urllib.error
+import urllib.request
 
 # ANSI Escape Sequences for premium console outputs
 GREEN = "\033[92m"
@@ -18,17 +18,22 @@ BLUE = "\033[94m"
 BOLD = "\033[1m"
 RESET = "\033[0m"
 
+
 def print_header(title):
     print(f"\n{BOLD}{BLUE}=== {title} ==={RESET}")
+
 
 def print_success(message):
     print(f"  {GREEN}✔{RESET} {message}")
 
+
 def print_failure(message):
     print(f"  {RED}✘{RESET} {message}")
 
+
 def print_warning(message):
     print(f"  {YELLOW}⚠{RESET} {message}")
+
 
 def main():
     print(f"{BOLD}{BLUE}==============================================={RESET}")
@@ -43,10 +48,14 @@ def main():
     cur_major, cur_minor = sys.version_info.major, sys.version_info.minor
     print(f"  Running Python {sys.version.split()[0]}")
     if (cur_major, cur_minor) < (req_major, req_minor):
-        print_failure(f"Python version must be >= {req_major}.{req_minor}. Found {cur_major}.{cur_minor}")
+        print_failure(
+            f"Python version must be >= {req_major}.{req_minor}. Found {cur_major}.{cur_minor}"
+        )
         has_errors = True
     else:
-        print_success(f"Python version satisfies requirements (>= {req_major}.{req_minor})")
+        print_success(
+            f"Python version satisfies requirements (>= {req_major}.{req_minor})"
+        )
 
     # 2. Check Package Imports
     print_header("2. Package Dependency Check")
@@ -59,7 +68,7 @@ def main():
         ("mlflow", "mlflow"),
         ("dvc", "dvc"),
         ("boto3", "boto3"),
-        ("yaml", "pyyaml")
+        ("yaml", "pyyaml"),
     ]
 
     imported_packages = {}
@@ -85,14 +94,16 @@ def main():
             imported_packages["dotenv"].load_dotenv(env_path)
             print_success("Loaded environment variables from .env")
     else:
-        print_warning(f"No .env file found at {env_path}. Checking system environment variables.")
+        print_warning(
+            f"No .env file found at {env_path}. Checking system environment variables."
+        )
 
     # Check specific variables
     required_vars = [
         "MLFLOW_TRACKING_URI",
         "AWS_DEFAULT_REGION",
         "AWS_REGION",
-        "AWS_PROFILE"
+        "AWS_PROFILE",
     ]
 
     env_vars = {}
@@ -114,7 +125,9 @@ def main():
         if torch_mod.cuda.is_available():
             print_success("CUDA (NVIDIA GPU) is available!")
             print(f"    Device Name: {torch_mod.cuda.get_device_name(0)}")
-        elif hasattr(torch_mod.backends, "mps") and torch_mod.backends.mps.is_available():
+        elif (
+            hasattr(torch_mod.backends, "mps") and torch_mod.backends.mps.is_available()
+        ):
             print_success("MPS (Apple Silicon GPU) is available!")
         else:
             print_warning("No GPU acceleration found. PyTorch will run on CPU.")
@@ -126,18 +139,19 @@ def main():
         print(f"  Pinging MLflow tracking server: {uri} ...")
         try:
             # Simple GET request using urllib with a timeout of 5 seconds
-            req = urllib.request.Request(
-                uri,
-                headers={'User-Agent': 'Mozilla/5.0'}
-            )
+            req = urllib.request.Request(uri, headers={"User-Agent": "Mozilla/5.0"})
             with urllib.request.urlopen(req, timeout=5) as response:
                 status_code = response.getcode()
                 if status_code in (200, 301, 302):
-                    print_success(f"Connection to MLflow server successful! (Status: {status_code})")
+                    print_success(
+                        f"Connection to MLflow server successful! (Status: {status_code})"
+                    )
                 else:
                     print_warning(f"MLflow server returned status code: {status_code}")
         except Exception as e:
-            print_warning(f"Could not reach MLflow tracking server at {uri}. Details: {e}")
+            print_warning(
+                f"Could not reach MLflow tracking server at {uri}. Details: {e}"
+            )
 
     # 6. Check AWS / S3 Connectivity
     if "boto3" in imported_packages:
@@ -149,22 +163,30 @@ def main():
             # Set up session
             session = None
             if profile:
-                session = imported_packages["boto3"].Session(profile_name=profile, region_name=region)
+                session = imported_packages["boto3"].Session(
+                    profile_name=profile, region_name=region
+                )
             else:
                 session = imported_packages["boto3"].Session(region_name=region)
 
-            sts = session.client('sts')
+            sts = session.client("sts")
             caller = sts.get_caller_identity()
-            print_success(f"AWS Credentials verified! Account: {caller.get('Account')}, User/Role: {caller.get('Arn').split('/')[-1]}")
+            print_success(
+                f"AWS Credentials verified! Account: {caller.get('Account')}, User/Role: {caller.get('Arn').split('/')[-1]}"
+            )
 
             # Try listing S3 buckets as a basic read check
-            s3 = session.client('s3')
+            s3 = session.client("s3")
             buckets = s3.list_buckets()
-            bucket_names = [b['Name'] for b in buckets.get('Buckets', [])]
-            print_success(f"Successfully connected to S3. Account has {len(bucket_names)} buckets.")
+            bucket_names = [b["Name"] for b in buckets.get("Buckets", [])]
+            print_success(
+                f"Successfully connected to S3. Account has {len(bucket_names)} buckets."
+            )
         except Exception as e:
             print_warning(f"Could not verify AWS/S3 connection. Details: {e}")
-            print(f"    Please ensure AWS CLI is configured and profile '{profile}' is set up.")
+            print(
+                f"    Please ensure AWS CLI is configured and profile '{profile}' is set up."
+            )
 
     print(f"\n{BOLD}{BLUE}==============================================={RESET}")
     if has_errors:
@@ -175,6 +197,7 @@ def main():
         print(f"{BOLD}{GREEN}  ENV VALIDATION SUCCESSFUL! Everything is ready.{RESET}")
         print(f"{BOLD}{BLUE}==============================================={RESET}")
         sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

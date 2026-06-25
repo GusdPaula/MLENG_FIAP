@@ -1,0 +1,111 @@
+{
+  "dashboard": {
+    "title": "Model Performance Dashboard",
+    "uid": "model-performance",
+    "tags": ["ml", "performance", "drift"],
+    "timezone": "browser",
+    "refresh": "1m",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Prediction Drift Score",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "prediction_drift_score",
+            "legendFormat": "Drift Score"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Data Shift Detection",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "data_shift_detected",
+            "legendFormat": "Shift Detected"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Prediction Latency",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(prediction_duration_seconds_bucket[5m]))",
+            "legendFormat": "p95 Latency"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(prediction_duration_seconds_bucket[5m]))",
+            "legendFormat": "p50 Latency"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "Predictions per Second",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(predictions_total[5m])",
+            "legendFormat": "Predictions/sec"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "Drift Alerts",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(drift_alerts_total[5m])",
+            "legendFormat": "Alerts/min"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "Model Version",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "model_version",
+            "legendFormat": "Version"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 16}
+      },
+      {
+        "id": 7,
+        "title": "User Activity",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "user_activity_count",
+            "legendFormat": "Activity"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
+      },
+      {
+        "id": 8,
+        "title": "Item Popularity",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "topk(10, item_popularity_score)",
+            "legendFormat": "Top Items"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
+      }
+    ]
+  }
+}

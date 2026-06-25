@@ -15,15 +15,18 @@ echo "deb https://packages.grafana.com/oss/deb stable main" | tee -a /etc/apt/so
 apt-get update -y
 apt-get install -y grafana
 
-# Configure Grafana for anonymous access with admin password
-cat > /etc/grafana/grafana.ini << 'EOF'
+# Generate random admin password
+GRAFANA_ADMIN_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
+
+# Configure Grafana for anonymous access with random admin password
+cat > /etc/grafana/grafana.ini << EOF
 [server]
 http_addr = 0.0.0.0
 http_port = 3000
 
 [security]
 admin_user = admin
-admin_password = GrafanaAdmin123!
+admin_password = ${GRAFANA_ADMIN_PASSWORD}
 allow_embedding = true
 cookie_secure = true
 cookie_samesite = lax

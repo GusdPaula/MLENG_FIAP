@@ -27,7 +27,9 @@ class BasePredictor(ABC):
     but closed for modification (Open/Closed Principle).
     """
 
-    def __init__(self, model: torch.nn.Module, user2idx: dict[int, int], item2idx: dict[int, int]):
+    def __init__(
+        self, model: torch.nn.Module, user2idx: dict[int, int], item2idx: dict[int, int]
+    ):
         """Initialize the base predictor.
 
         Args:
@@ -63,7 +65,9 @@ class BasePredictor(ABC):
         """
 
     @abstractmethod
-    def predict_batch(self, requests: list[PredictionRequest]) -> list[PredictionResponse]:
+    def predict_batch(
+        self, requests: list[PredictionRequest]
+    ) -> list[PredictionResponse]:
         """Generate predictions for multiple users.
 
         Args:
@@ -132,6 +136,8 @@ class BasePredictor(ABC):
         for item_id in item_ids:
             if item_id not in self.item2idx:
                 logger.error("Item ID %d not found in training data", item_id)
-                raise InvalidInputError(f"Item ID {item_id} not found in training data.")
+                raise InvalidInputError(
+                    f"Item ID {item_id} not found in training data."
+                )
             indices.append(self.item2idx[item_id])
         return indices

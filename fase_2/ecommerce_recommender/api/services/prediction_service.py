@@ -107,7 +107,9 @@ class PredictionService:
             ModelLoadError: If the model cannot be loaded.
         """
         # Try loading from MLflow URIs in order if configured
-        if self.mlflow_tracking_uris and (self.mlflow_model_name or self.mlflow_model_alias):
+        if self.mlflow_tracking_uris and (
+            self.mlflow_model_name or self.mlflow_model_alias
+        ):
             for uri in self.mlflow_tracking_uris:
                 logger.info(
                     "Attempting to load model from MLflow: URI=%s, Model=%s, Version=%s, Alias=%s",
@@ -121,7 +123,7 @@ class PredictionService:
                     if not self._check_mlflow_connectivity(uri):
                         logger.warning(
                             "MLflow server at %s is not reachable. Trying next source.",
-                            uri
+                            uri,
                         )
                         continue
 
@@ -133,7 +135,7 @@ class PredictionService:
                     logger.warning(
                         "Failed to load model from MLflow (%s): %s. Trying next source.",
                         uri,
-                        e
+                        e,
                     )
                     continue
 
@@ -180,14 +182,19 @@ class PredictionService:
                 sock.close()
 
                 if result != 0:
-                    logger.debug("Socket connection failed for %s:%d (error code: %d)", host, port, result)
+                    logger.debug(
+                        "Socket connection failed for %s:%d (error code: %d)",
+                        host,
+                        port,
+                        result,
+                    )
                     return False
 
             # Try a simple HTTP GET request to the health endpoint
             try:
                 health_url = f"{uri}/health"
-                request = urllib.request.Request(health_url, method='GET')
-                request.add_header('User-Agent', 'MLflow-Connectivity-Check')
+                request = urllib.request.Request(health_url, method="GET")
+                request.add_header("User-Agent", "MLflow-Connectivity-Check")
 
                 with urllib.request.urlopen(request, timeout=3) as response:
                     if response.status == 200:
@@ -196,7 +203,9 @@ class PredictionService:
             except urllib.error.HTTPError as e:
                 # 404 is acceptable - server is up but no health endpoint
                 if e.code == 404:
-                    logger.info("MLflow server at %s is reachable (no health endpoint)", uri)
+                    logger.info(
+                        "MLflow server at %s is reachable (no health endpoint)", uri
+                    )
                     return True
                 logger.debug("HTTP error checking %s: %s", health_url, e)
                 return False
@@ -231,7 +240,7 @@ class PredictionService:
         import mlflow
 
         # Set MLflow tracking URI with timeout
-        os.environ['MLFLOW_TRACKING_REQUEST_TIMEOUT'] = '10'  # 10 second timeout
+        os.environ["MLFLOW_TRACKING_REQUEST_TIMEOUT"] = "10"  # 10 second timeout
         mlflow.set_tracking_uri(tracking_uri)
 
         # Build model URI based on alias, version, or name
@@ -249,35 +258,18 @@ class PredictionService:
         def load_model_with_timeout():
             # Download model to temporary location
             import tempfile
+
             with tempfile.TemporaryDirectory() as temp_dir:
-                try:
-                    # Try PyTorch model loading first
-                    model_path = mlflow.pytorch.load_model(model_uri, dst_path=temp_dir)
-                    checkpoint = torch.load(model_path, map_location=self.device)
-                except Exception:
-                    # Fallback to artifact downloading
-                    logger.info("PyTorch model loading failed, trying artifact download")
-                    client = mlflow.tracking.MlflowClient()
+                # Load the PyTorch model using MLflow
+                loaded_model = mlflow.pytorch.load_model(model_uri, dst_path=temp_dir)
 
-                    # Get the model version info
-                    if self.mlflow_model_alias:
-                        # Get model name from alias
-                        model_name = self._find_model_name_by_alias(self.mlflow_model_alias)
-                        model_version = client.get_model_version_by_alias(model_name, self.mlflow_model_alias)
-                    elif self.mlflow_model_version:
-                        model_version = client.get_model_version(self.mlflow_model_name, self.mlflow_model_version)
-                    else:
-                        model_version = client.get_latest_versions(self.mlflow_model_name)[0]
+                # Extract checkpoint from the wrapped model
+                if hasattr(loaded_model, "checkpoint"):
+                    checkpoint = loaded_model.checkpoint
+                else:
+                    # If not wrapped, try to load directly
+                    checkpoint = loaded_model
 
-                    # Download artifacts - need to include the model file name in the path
-                    artifact_path = f"{model_name if self.mlflow_model_alias else self.mlflow_model_name}/{model_name if self.mlflow_model_alias else self.mlflow_model_name}.pt"
-                    artifacts_dir = client.download_artifacts(
-                        model_version.run_id,
-                        artifact_path,
-                        temp_dir
-                    )
-
-                    checkpoint = torch.load(artifacts_dir, map_location=self.device)
             return checkpoint
 
         try:
@@ -285,7 +277,9 @@ class PredictionService:
                 future = executor.submit(load_model_with_timeout)
                 checkpoint = future.result(timeout=30)  # 30 second timeout
         except FutureTimeoutError:
-            raise TimeoutError(f"MLflow operation timed out for {tracking_uri}") from None
+            raise TimeoutError(
+                f"MLflow operation timed out for {tracking_uri}"
+            ) from None
 
         return checkpoint
 
@@ -334,7 +328,9 @@ class PredictionService:
         # Get all registered models
         registered_models = client.search_registered_models()
 
-        logger.info(f"Searching for model with alias '{alias}' across {len(registered_models)} registered models")
+        logger.info(
+            f"Searching for model with alias '{alias}' across {len(registered_models)} registered models"
+        )
 
         # Search for the alias across all models
         for model in registered_models:
@@ -343,7 +339,9 @@ class PredictionService:
                 # Get latest version with the specified alias
                 model_version = client.get_model_version_by_alias(model_name, alias)
                 model_uri = f"models:/{model_name}@{alias}"
-                logger.info(f"Found model '{model_name}' with alias '{alias}' (version {model_version.version})")
+                logger.info(
+                    f"Found model '{model_name}' with alias '{alias}' (version {model_version.version})"
+                )
                 return model_uri
             except Exception:
                 # This model doesn't have the alias, continue searching
@@ -381,7 +379,11 @@ class PredictionService:
             num_users = len(user2idx)
             num_items = len(item2idx)
             hyperparams = checkpoint.get("config", {}).get("hyperparams", {})
-            logger.info("Derived num_users=%d, num_items=%d from user2idx/item2idx", num_users, num_items)
+            logger.info(
+                "Derived num_users=%d, num_items=%d from user2idx/item2idx",
+                num_users,
+                num_items,
+            )
         else:
             num_users = checkpoint.get("num_users")
             num_items = checkpoint.get("num_items")
@@ -389,9 +391,7 @@ class PredictionService:
 
         if num_users is None or num_items is None:
             logger.error("num_users or num_items not found in checkpoint")
-            raise ModelLoadError(
-                "num_users or num_items not found in checkpoint."
-            )
+            raise ModelLoadError("num_users or num_items not found in checkpoint.")
 
         logger.info(
             "Reconstructing model of type %s with %d users and %d items",
@@ -574,7 +574,9 @@ class PredictionService:
         Raises:
             PredictorNotFoundError: If the predictor type is not available.
         """
-        logger.info("Reloading predictor from '%s' to '%s'", self.predictor_type, predictor_type)
+        logger.info(
+            "Reloading predictor from '%s' to '%s'", self.predictor_type, predictor_type
+        )
         self.predictor_type = predictor_type
         self._load_model()
 

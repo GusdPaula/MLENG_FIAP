@@ -113,6 +113,7 @@ class TestPredictorFactory:
             def predict(self, request):
                 """Return dummy prediction."""
                 from recommender.api.models import PredictionResponse
+
                 return PredictionResponse(
                     user_id=request.user_id,
                     item_scores=dict.fromkeys(request.item_ids, 0.5),
@@ -121,6 +122,7 @@ class TestPredictorFactory:
             def predict_batch(self, requests):
                 """Return dummy batch prediction."""
                 from recommender.api.models import PredictionResponse
+
                 return [
                     PredictionResponse(
                         user_id=req.user_id,

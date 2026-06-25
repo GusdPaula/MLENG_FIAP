@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Script to test drift detection in the recommendation API."""
 
-import requests
-import time
 import json
+import time
 
-API_BASE_URL = "http://localhost:8000"
-API_KEY = "default-api-key-change-in-production"
+import requests
+
+API_BASE_URL = "https://dvsfvqr4wn3t2.cloudfront.net"
+API_KEY = "hm8K1JkR2BY4-zn1VGsFO-1MP_xp39GjdoUUacfyEvk"
 HEADERS = {"X-API-Key": API_KEY, "Content-Type": "application/json"}
 
 
@@ -26,7 +27,9 @@ def make_prediction(user_id, item_ids):
 
 def make_recommendation(user_id, k=10):
     """Make a recommendation request."""
-    response = requests.get(f"{API_BASE_URL}/recommend/{user_id}?k={k}", headers=HEADERS)
+    response = requests.get(
+        f"{API_BASE_URL}/recommend/{user_id}?k={k}", headers=HEADERS
+    )
     return response
 
 
@@ -71,13 +74,17 @@ def test_drift_detection():
     print("✅ API is healthy")
 
     # 2. Make normal predictions to establish baseline
-    print("\n2. Making 20 normal predictions (user_id=138131, items=[430292,277119,183411,457231,259078])")
+    print(
+        "\n2. Making 20 normal predictions (user_id=138131, items=[430292,277119,183411,457231,259078])"
+    )
     for i in range(20):
-        response = make_prediction(user_id=138131, item_ids=[430292, 277119, 183411, 457231, 259078])
+        response = make_prediction(
+            user_id=138131, item_ids=[430292, 277119, 183411, 457231, 259078]
+        )
         if response.status_code == 200:
-            print(f"  Prediction {i+1}/20: ✅")
+            print(f"  Prediction {i + 1}/20: ✅")
         else:
-            print(f"  Prediction {i+1}/20: ❌ {response.status_code}")
+            print(f"  Prediction {i + 1}/20: ❌ {response.status_code}")
             if response.status_code == 400:
                 print(f"    Error: {response.text}")
         time.sleep(0.1)  # Small delay between requests
@@ -100,19 +107,48 @@ def test_drift_detection():
     # 6. Make predictions with different patterns to create drift
     print("\n6. Making 100 recommendations (scoring ALL items) to force drift")
     # Use different valid user IDs from processed data - repeat to create more volume
-    drift_users = [911093, 1161163, 457926, 404403, 286616, 1235292, 434418, 535937, 1093035, 1236753,
-                  469194, 1020169, 138131, 911093, 1161163, 457926, 404403, 286616, 1235292, 434418,
-                  535937, 1093035, 1236753, 469194, 1020169, 138131, 911093, 1161163, 457926, 404403] * 4
+    drift_users = [
+        911093,
+        1161163,
+        457926,
+        404403,
+        286616,
+        1235292,
+        434418,
+        535937,
+        1093035,
+        1236753,
+        469194,
+        1020169,
+        138131,
+        911093,
+        1161163,
+        457926,
+        404403,
+        286616,
+        1235292,
+        434418,
+        535937,
+        1093035,
+        1236753,
+        469194,
+        1020169,
+        138131,
+        911093,
+        1161163,
+        457926,
+        404403,
+    ] * 4
 
     for i in range(100):
         user_id = drift_users[i]
         # Use recommendations instead of predictions - this scores ALL items, creating different distribution
         response = make_recommendation(user_id=user_id, k=50)
         if response.status_code == 200:
-            if (i+1) % 10 == 0:
-                print(f"  Drift prediction {i+1}/100: ✅ (user_id={user_id})")
+            if (i + 1) % 10 == 0:
+                print(f"  Drift prediction {i + 1}/100: ✅ (user_id={user_id})")
         else:
-            print(f"  Drift prediction {i+1}/100: ❌ {response.status_code}")
+            print(f"  Drift prediction {i + 1}/100: ❌ {response.status_code}")
             if response.status_code == 400:
                 print(f"    Error: {response.text}")
         time.sleep(0.05)
@@ -133,7 +169,9 @@ def test_drift_detection():
     if result:
         print("\n📊 DRIFT DETECTION RESULTS:")
         for shift_type, shift_result in result.items():
-            status = "🔴 DETECTED" if shift_result.get("has_shift") else "🟢 NOT DETECTED"
+            status = (
+                "🔴 DETECTED" if shift_result.get("has_shift") else "🟢 NOT DETECTED"
+            )
             print(f"  {shift_type}: {status}")
             print(f"    Message: {shift_result.get('message')}")
 
@@ -142,7 +180,9 @@ if __name__ == "__main__":
     try:
         test_drift_detection()
     except requests.exceptions.ConnectionError:
-        print("❌ Cannot connect to API. Make sure the API is running on http://localhost:8000")
+        print(
+            "❌ Cannot connect to API. Make sure the API is running on http://localhost:8000"
+        )
     except KeyboardInterrupt:
         print("\n\nTest interrupted by user")
     except Exception as e:

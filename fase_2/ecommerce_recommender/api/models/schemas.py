@@ -17,8 +17,12 @@ class PredictionRequest(BaseModel):
     """
 
     user_id: int = Field(..., description="The user ID to generate predictions for")
-    item_ids: list[int] | None = Field(default=None, description="List of item IDs to predict scores for")
-    k: int | None = Field(default=None, ge=1, description="Number of top recommendations to return")
+    item_ids: list[int] | None = Field(
+        default=None, description="List of item IDs to predict scores for"
+    )
+    k: int | None = Field(
+        default=None, ge=1, description="Number of top recommendations to return"
+    )
 
     @field_validator("k")
     @classmethod
@@ -37,8 +41,12 @@ class BatchPredictionRequest(BaseModel):
         k: Number of top recommendations per user (optional).
     """
 
-    user_item_pairs: list[tuple[int, list[int]]] = Field(..., description="List of (user_id, item_ids) tuples")
-    k: int | None = Field(default=None, ge=1, description="Number of top recommendations per user")
+    user_item_pairs: list[tuple[int, list[int]]] = Field(
+        ..., description="List of (user_id, item_ids) tuples"
+    )
+    k: int | None = Field(
+        default=None, ge=1, description="Number of top recommendations per user"
+    )
 
     @field_validator("k")
     @classmethod
@@ -59,8 +67,13 @@ class PredictionResponse(BaseModel):
     """
 
     user_id: int = Field(..., description="The user ID")
-    item_scores: dict[int, float] = Field(default_factory=dict, description="Dictionary mapping item IDs to predicted scores")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata about the prediction")
+    item_scores: dict[int, float] = Field(
+        default_factory=dict,
+        description="Dictionary mapping item IDs to predicted scores",
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata about the prediction"
+    )
 
 
 class BatchPredictionResponse(BaseModel):
@@ -71,8 +84,13 @@ class BatchPredictionResponse(BaseModel):
         metadata: Additional metadata about the batch prediction.
     """
 
-    predictions: list[PredictionResponse] = Field(default_factory=list, description="List of prediction responses")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata about the batch prediction")
+    predictions: list[PredictionResponse] = Field(
+        default_factory=list, description="List of prediction responses"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata about the batch prediction",
+    )
 
 
 class RecommendationResponse(BaseModel):
@@ -85,5 +103,10 @@ class RecommendationResponse(BaseModel):
     """
 
     user_id: int = Field(..., description="The user ID")
-    recommendations: list[tuple[int, float]] = Field(default_factory=list, description="List of (item_id, score) tuples, sorted by score")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata about the recommendation")
+    recommendations: list[tuple[int, float]] = Field(
+        default_factory=list,
+        description="List of (item_id, score) tuples, sorted by score",
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata about the recommendation"
+    )

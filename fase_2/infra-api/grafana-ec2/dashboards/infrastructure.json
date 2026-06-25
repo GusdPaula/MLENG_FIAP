@@ -1,0 +1,107 @@
+{
+  "dashboard": {
+    "title": "Infrastructure Dashboard",
+    "uid": "infrastructure-dashboard",
+    "tags": ["infrastructure", "aws"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "ECS Cluster CPU",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "aws_ecs_cpuutilization_average",
+            "legendFormat": "ECS CPU %"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "ECS Cluster Memory",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "aws_ecs_memory_utilization_average",
+            "legendFormat": "ECS Memory %"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "EC2 CPU Utilization",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "aws_ec2_cpuutilization_average",
+            "legendFormat": "EC2 CPU %"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "EC2 Memory Utilization",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "aws_ec2_memory_utilization_average",
+            "legendFormat": "EC2 Memory %"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "CloudFront Requests",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(aws_cloudfront_requests[5m]))",
+            "legendFormat": "Requests/sec"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "CloudFront Cache Hit Ratio",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(aws_cloudfront_cache_hit_count[5m])) / sum(rate(aws_cloudfront_cache_hit_count[5m]) + rate(aws_cloudfront_cache_miss_count[5m])) * 100",
+            "legendFormat": "Hit Ratio %"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+      },
+      {
+        "id": 7,
+        "title": "ALB Request Count",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(aws_applicationelb_request_count[5m]))",
+            "legendFormat": "Requests/sec"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
+      },
+      {
+        "id": 8,
+        "title": "ALB Target Response Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "avg(aws_applicationelb_target_response_time_average)",
+            "legendFormat": "Response Time ms"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
+      }
+    ]
+  }
+}

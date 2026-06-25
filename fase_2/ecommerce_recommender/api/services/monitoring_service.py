@@ -220,7 +220,7 @@ class ModelPerformanceMonitor:
 
         # Keep only the most recent predictions
         if len(self._prediction_history) > self.window_size:
-            self._prediction_history = self._prediction_history[-self.window_size:]
+            self._prediction_history = self._prediction_history[-self.window_size :]
 
         logger.debug(
             "Recorded %d predictions, total history size: %d",
@@ -264,9 +264,7 @@ class ModelPerformanceMonitor:
             "count": len(arr),
         }
 
-    def detect_performance_drift(
-        self, threshold: float = 2.0
-    ) -> ShiftDetectionResult:
+    def detect_performance_drift(self, threshold: float = 2.0) -> ShiftDetectionResult:
         """Detect performance drift using z-score.
 
         Args:
@@ -280,7 +278,9 @@ class ModelPerformanceMonitor:
         """
         if self._baseline_mean is None or self._baseline_std is None:
             logger.error("Cannot detect drift: baseline not set")
-            raise RuntimeError("Baseline must be set before detecting performance drift.")
+            raise RuntimeError(
+                "Baseline must be set before detecting performance drift."
+            )
 
         current_stats = self.get_current_stats()
         current_mean = current_stats["mean"]
@@ -383,7 +383,9 @@ class MonitoringService:
         if self.performance_monitor._baseline_mean is not None:
             try:
                 results["performance_drift"] = (
-                    self.performance_monitor.detect_performance_drift(self.drift_threshold)
+                    self.performance_monitor.detect_performance_drift(
+                        self.drift_threshold
+                    )
                 )
             except RuntimeError:
                 logger.warning("Performance drift check skipped: baseline not set")
@@ -391,7 +393,9 @@ class MonitoringService:
         # Check data shift
         if self.data_shift_detector.has_baseline():
             latest_metrics = self.performance_monitor._metrics_history[-1]
-            results["data_shift"] = self.data_shift_detector.detect_shift(latest_metrics)
+            results["data_shift"] = self.data_shift_detector.detect_shift(
+                latest_metrics
+            )
 
         return results
 

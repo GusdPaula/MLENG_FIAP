@@ -39,11 +39,21 @@ def compute_ranking_metrics(
     """
     logger.info("Computing ranking metrics on validation set")
 
-    val_indices = val_dataset.indices
-
-    val_samples = np.array(
-        [dataset.samples[i] for i in val_indices[: min(sample_limit, len(val_indices))]]
-    )
+    # Handle both Subset objects (from random_split) and direct Dataset objects
+    if hasattr(val_dataset, "indices"):
+        # Old approach: random_split creates Subset objects
+        val_indices = val_dataset.indices
+        val_samples = np.array(
+            [
+                dataset.samples[i]
+                for i in val_indices[: min(sample_limit, len(val_indices))]
+            ]
+        )
+    else:
+        # New approach: separate train/val datasets
+        val_samples = np.array(
+            val_dataset.samples[: min(sample_limit, len(val_dataset))]
+        )
 
     positive_only = val_samples[val_samples[:, 2] == 1.0][:, :2].astype(np.int64)
 

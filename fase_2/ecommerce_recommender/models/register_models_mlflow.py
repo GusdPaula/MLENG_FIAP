@@ -1,13 +1,15 @@
 """Script to register local models in MLflow model registry.
 
 This script loops through all model files in models/mlflow_experiments/
-and registers them in the MLflow model registry.
+and registers them in the MLflow model registry using proper MLflow PyTorch model format.
 """
 
 import os
 from pathlib import Path
 
 import mlflow
+import mlflow.pytorch
+import torch
 
 # Configure MLflow tracking URI
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
@@ -19,15 +21,19 @@ MODELS_DIR = Path(__file__).parent.parent / "models" / "mlflow_experiments"
 # List of model files to register
 MODEL_FILES = [
     "gmf_binary.pt",
-    "gmf_implicit.pt",
-    "gmf_weighted.pt",
-    "matrix_factorization_binary.pt",
-    "matrix_factorization_implicit.pt",
-    "matrix_factorization_weighted.pt",
-    "ncf_binary.pt",
-    "ncf_implicit.pt",
-    "ncf_weighted.pt",
 ]
+
+
+class CheckpointWrapper(torch.nn.Module):
+    """Wrapper class to make checkpoint compatible with mlflow.pytorch.log_model."""
+
+    def __init__(self, checkpoint):
+        super().__init__()
+        self.checkpoint = checkpoint
+
+    def forward(self, x):
+        raise NotImplementedError("This is a wrapper for checkpoint storage only")
+
 
 def register_model(model_file: str) -> None:
     """Register a single model in MLflow model registry.
@@ -45,48 +51,46 @@ def register_model(model_file: str) -> None:
     print(f"📦 Registering model: {model_name}")
 
     try:
-        import torch
-
-        # Load the checkpoint to get model metadata
+        # Load the checkpoint
         checkpoint = torch.load(model_path, map_location="cpu")
         model_type = checkpoint.get("model_type", "unknown")
 
+        # Wrap checkpoint in a PyTorch module for MLflow logging
+        wrapped_model = CheckpointWrapper(checkpoint)
+
         # Start a new MLflow run
         with mlflow.start_run(run_name=f"register_{model_name}"):
-            # Log the checkpoint file as an artifact
-            mlflow.log_artifact(str(model_path), artifact_path=model_name)
+            # Log the model using MLflow's PyTorch model logging
+            mlflow.pytorch.log_model(
+                wrapped_model,
+                artifact_path=model_name,
+                registered_model_name=model_name,
+            )
 
             # Log model metadata
             mlflow.log_param("model_type", model_type)
             mlflow.log_param("model_file", model_file)
 
-            # Get the run info
-            run_id = mlflow.active_run().info.run_id
-            artifact_uri = f"{mlflow.get_artifact_uri()}/{model_name}/{model_file}"
-
-            # Register the model using the client API
+            # Set the champion alias
             client = mlflow.tracking.MlflowClient()
-
-            # Create registered model if it doesn't exist
             try:
-                client.create_registered_model(model_name)
-                print(f"✅ Created registered model: {model_name}")
-            except Exception:
-                print(f"ℹ️  Registered model already exists: {model_name}")
-
-            # Create a new model version
-            try:
-                model_version = client.create_model_version(
-                    name=model_name,
-                    source=artifact_uri,
-                    run_id=run_id
+                latest_version = client.get_latest_versions(model_name)[0]
+                client.set_registered_model_alias(
+                    name=model_name, alias="champion", version=latest_version.version
                 )
-                print(f"✅ Created model version {model_version.version} for: {model_name}")
+                print(
+                    f"✅ Set champion alias for {model_name} version {latest_version.version}"
+                )
             except Exception as e:
-                print(f"⚠️  Failed to create model version: {e}")
+                print(f"⚠️  Failed to set champion alias: {e}")
+
+            print(f"✅ Successfully registered {model_name} as MLflow PyTorch model")
 
     except Exception as e:
         print(f"❌ Failed to register {model_name}: {e}")
+        import traceback
+
+        traceback.print_exc()
 
 
 def main():
