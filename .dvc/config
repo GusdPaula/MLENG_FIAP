@@ -1,0 +1,6 @@
+[core]
+    analytics = false
+    remote = s3-infra
+    autostage = true
+['remote "s3-infra"']
+    url = s3://fiap-ml-dvc-bucket-tech-challenger-jl5avzz0
