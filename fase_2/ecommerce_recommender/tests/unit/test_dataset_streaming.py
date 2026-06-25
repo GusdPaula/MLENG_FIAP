@@ -10,7 +10,7 @@ from src.recommender.data import (
 )
 
 
-def test_recommender_dataset_streaming_mode():
+def test_recommender_dataset_streaming_mode() -> None:
     """Test that streaming mode works correctly."""
     # Create simple interaction data
     interactions = pd.DataFrame({"user_idx": [0, 1, 2], "item_idx": [0, 1, 2]})
@@ -49,7 +49,7 @@ def test_recommender_dataset_streaming_mode():
     assert neg_user == 0  # Same user as first sample
 
 
-def test_recommender_dataset_streaming_consistency():
+def test_recommender_dataset_streaming_consistency() -> None:
     """Test that streaming mode produces consistent results."""
     # Create interaction data
     interactions = pd.DataFrame({"user_idx": [0, 1], "item_idx": [0, 1]})
@@ -81,7 +81,7 @@ def test_recommender_dataset_streaming_consistency():
     assert len(sample1_pos) == 3
 
 
-def test_recommender_dataset_streaming_batching():
+def test_recommender_dataset_streaming_batching() -> None:
     """Test batch processing with streaming mode."""
     interactions = pd.DataFrame({"user_idx": [0, 1, 2], "item_idx": [0, 1, 2]})
 
@@ -103,7 +103,7 @@ def test_recommender_dataset_streaming_batching():
         assert labels.dtype == torch.float32
 
 
-def test_batch_collator():
+def test_batch_collator() -> None:
     """Test the BatchCollator utility."""
     collator = BatchCollator(device="cpu")
 
@@ -126,7 +126,7 @@ def test_batch_collator():
     assert labels.dtype == torch.float32
 
 
-def test_make_batches():
+def test_make_batches() -> None:
     """Test the make_batches utility function."""
     interactions = pd.DataFrame({"user_idx": [0, 1, 2], "item_idx": [0, 1, 2]})
 
@@ -144,7 +144,7 @@ def test_make_batches():
         assert users.shape[0] == items.shape[0] == labels.shape[0]
 
 
-def test_recommender_dataset_streaming_edge_cases():
+def test_recommender_dataset_streaming_edge_cases() -> None:
     """Test edge cases for streaming dataset."""
     # Empty interactions
     interactions = pd.DataFrame({"user_idx": [], "item_idx": []})

@@ -3,6 +3,7 @@
 import argparse
 import json
 import logging
+from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 def compute_baseline_ranking_metrics(
-    predict_fn,
+    predict_fn: Callable[[np.ndarray, np.ndarray], np.ndarray],
     test_interactions: np.ndarray,
     num_items: int,
     k: int = 10,

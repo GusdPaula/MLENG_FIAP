@@ -36,6 +36,7 @@ def main():
     print(f"{BOLD}{BLUE}      MLENG FIAP - PHASE 2 ENV VALIDATOR       {RESET}")
     print(f"{BOLD}{BLUE}==============================================={RESET}")
 
+
     has_errors = False
 
     # 1. Check Python Version

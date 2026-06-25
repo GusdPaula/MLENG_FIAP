@@ -51,7 +51,7 @@ class EpochResult:
 class Trainer:
     """Encapsulates a single-epoch train/evaluate cycle."""
 
-    def __init__(self, model: nn.Module, config: dict, device: str = "cpu"):
+    def __init__(self, model: nn.Module, config: dict[str, Any], device: str = "cpu") -> None:
         """Initialize the trainer.
 
         Args:
@@ -150,7 +150,7 @@ class Trainer:
         metrics: tuple[str, ...] = ("auc_roc", "avg_precision"),
         num_items: int | None = None,
         k: int = 10,
-    ) -> dict:
+    ) -> dict[str, float]:
         """Evaluate the model on ``dataloader``.
 
         Args:

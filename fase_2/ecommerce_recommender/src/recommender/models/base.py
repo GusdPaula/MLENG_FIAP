@@ -16,7 +16,7 @@ import torch.nn as nn
 class BaseRecommenderModel(nn.Module, ABC):
     """Abstract base class for all recommender models."""
 
-    def __init__(self, num_users: int, num_items: int, embedding_dim: int = 64):
+    def __init__(self, num_users: int, num_items: int, embedding_dim: int = 64) -> None:
         """Initialize the base recommender model.
 
         Args:

@@ -2,9 +2,10 @@ import sys
 import types
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
+from typing import Any
 
 
-def load_module_from_path(module_name: str, path: Path):
+def load_module_from_path(module_name: str, path: Path) -> types.ModuleType:
     spec = spec_from_file_location(module_name, str(path))
     module = module_from_spec(spec)
     sys.modules[module_name] = module
@@ -23,28 +24,28 @@ class DummyLoadJob:
 class DummyClient:
     def __init__(self, project: str | None = None) -> None:
         self.project = project
-        self.dataset_id = None
-        self.table_name = None
-        self.created_datasets = []
-        self.loaded_files = []
+        self.dataset_id: str | None = None
+        self.table_name: str | None = None
+        self.created_datasets: list[Any] = []
+        self.loaded_files: list[Any] = []
 
-    def dataset(self, dataset_id: str):
+    def dataset(self, dataset_id: str) -> "DummyClient":
         self.dataset_id = dataset_id
         return self
 
-    def table(self, table_name: str):
+    def table(self, table_name: str) -> str:
         self.table_name = table_name
         return f"{self.dataset_id}.{table_name}"
 
-    def create_dataset(self, dataset_ref, exists_ok=True):
+    def create_dataset(self, dataset_ref: Any, exists_ok: bool = True) -> None:
         self.created_datasets.append(dataset_ref)
 
-    def load_table_from_file(self, source_file, table_ref, job_config=None):
+    def load_table_from_file(self, source_file: Any, table_ref: Any, job_config: Any = None) -> DummyLoadJob:
         self.loaded_files.append((source_file, table_ref, job_config))
         return DummyLoadJob()
 
 
-def test_bigquery_uploader_upload_csv(tmp_path):
+def test_bigquery_uploader_upload_csv(tmp_path: Path) -> None:
     google_module = types.ModuleType("google")
     cloud_module = types.ModuleType("google.cloud")
     bigquery_module = types.ModuleType("google.cloud.bigquery")
@@ -92,7 +93,7 @@ def test_bigquery_uploader_upload_csv(tmp_path):
     assert uploader.client.loaded_files
 
 
-def test_bigquery_uploader_missing_file(tmp_path):
+def test_bigquery_uploader_missing_file(tmp_path: Path) -> None:
     google_module = types.ModuleType("google")
     cloud_module = types.ModuleType("google.cloud")
     bigquery_module = types.ModuleType("google.cloud.bigquery")

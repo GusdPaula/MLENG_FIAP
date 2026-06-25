@@ -1,8 +1,8 @@
-# Tests
+# Testes
 
-This directory contains the automated tests for the recommender project.
+Este diretório contém os testes automatizados para o projeto de recomendação.
 
-## Structure
+## Estrutura
 
 ```text
 tests/
@@ -10,42 +10,42 @@ tests/
   integration/
 ```
 
-## Unit tests
+## Testes unitários
 
-The `unit/` folder checks small pieces of the codebase in isolation:
+A pasta `unit/` verifica pequenas partes do código em isolamento:
 
-- model forward passes and output ranges
-- model factory registration
-- dataset loading and negative sampling
-- data processor strategies
-- data pipeline helpers
-- Kaggle and BigQuery helpers
-- MLflow toolkit behavior
+- passes forward do modelo e intervalos de saída
+- registro da factory de modelos
+- carregamento de dataset e negative sampling
+- estratégias de processador de dados
+- auxiliares de pipeline de dados
+- auxiliares do Kaggle e BigQuery
+- comportamento do toolkit MLflow
 
-## Integration tests
+## Testes de integração
 
-The `integration/` folder is reserved for broader end-to-end checks that combine multiple parts of the system.
+A pasta `integration/` é reservada para verificações mais abrangentes end-to-end que combinam múltiplas partes do sistema.
 
-## Notes
+## Notas
 
-- Most tests use lightweight fakes or temporary files so they can run without external services.
-- Some tests simulate optional dependencies such as BigQuery or Kaggle modules.
-- The project currently uses `pytest` as the test runner.
+- A maioria dos testes usa fakes leves ou arquivos temporários para que possam rodar sem serviços externos.
+- Alguns testes simulam dependências opcionais como módulos do BigQuery ou Kaggle.
+- O projeto atualmente usa `pytest` como executor de testes.
 
-## How to run the tests
+## Como rodar os testes
 
-### With `pip`
+### Com `pip`
 
 ```bash
 PYTHONPATH=src python -m pytest tests/unit -v
 PYTHONPATH=src python -m pytest tests/integration -v
 ```
 
-### With Poetry
+### Com Poetry
 
 ```bash
 poetry run pytest tests/unit -v
 poetry run pytest tests/integration -v
 ```
 
-If your environment does not automatically expose `src/`, prefix the commands with `PYTHONPATH=src`.
+Se seu ambiente não expõe automaticamente `src/`, prefixe os comandos com `PYTHONPATH=src`.

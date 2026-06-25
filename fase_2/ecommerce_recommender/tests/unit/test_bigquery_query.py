@@ -3,9 +3,12 @@ import sys
 import types
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
+from typing import Any
+
+import pytest
 
 
-def load_module_from_path(module_name: str, path: Path):
+def load_module_from_path(module_name: str, path: Path) -> types.ModuleType:
     spec = spec_from_file_location(module_name, str(path))
     module = module_from_spec(spec)
     sys.modules[module_name] = module
@@ -14,41 +17,41 @@ def load_module_from_path(module_name: str, path: Path):
 
 
 class DummyRow(dict):
-    def __getitem__(self, item):
+    def __getitem__(self, item: str) -> Any:
         return super().__getitem__(item)
 
 
 class DummyQueryResult:
-    def __init__(self, schema, rows):
+    def __init__(self, schema: list[str], rows: list[dict[str, Any]]) -> None:
         self.schema = [types.SimpleNamespace(name=name) for name in schema]
         self._rows = [DummyRow(row) for row in rows]
         self.total_rows = len(rows)
 
-    def __iter__(self):
+    def __iter__(self) -> Any:
         return iter(self._rows)
 
 
 class DummyQueryJob:
-    def __init__(self, result):
+    def __init__(self, result: DummyQueryResult) -> None:
         self._result = result
 
-    def result(self):
+    def result(self) -> DummyQueryResult:
         return self._result
 
 
 class DummyClient:
     def __init__(self, project: str | None = None) -> None:
         self.project = project
-        self.queries = []
+        self.queries: list[str] = []
 
-    def query(self, query_text: str):
+    def query(self, query_text: str) -> DummyQueryJob:
         self.queries.append(query_text)
         schema = ["event_id", "user_id"]
         rows = [{"event_id": 1, "user_id": 100}, {"event_id": 2, "user_id": 101}]
         return DummyQueryJob(DummyQueryResult(schema, rows))
 
 
-def test_bigquery_query_extract_table_and_versions(tmp_path, monkeypatch):
+def test_bigquery_query_extract_table_and_versions(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     google_module = types.ModuleType("google")
     cloud_module = types.ModuleType("google.cloud")
     bigquery_module = types.ModuleType("google.cloud.bigquery")
@@ -101,7 +104,7 @@ def test_bigquery_query_extract_table_and_versions(tmp_path, monkeypatch):
     assert csv_lines[2] == "2,101"
 
 
-def test_bigquery_query_skips_existing_file(tmp_path, monkeypatch):
+def test_bigquery_query_skips_existing_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     google_module = types.ModuleType("google")
     cloud_module = types.ModuleType("google.cloud")
     bigquery_module = types.ModuleType("google.cloud.bigquery")

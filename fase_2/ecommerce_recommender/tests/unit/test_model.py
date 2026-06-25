@@ -2,7 +2,7 @@ import torch
 from src.recommender.models.ncf import NCFModel
 
 
-def test_ncf_forward_shape():
+def test_ncf_forward_shape() -> None:
     model = NCFModel(
         num_users=100, num_items=50, embedding_dim=16, hidden_layers=[32, 16]
     )
@@ -14,7 +14,7 @@ def test_ncf_forward_shape():
     assert output.shape == (8,)
 
 
-def test_ncf_output_range():
+def test_ncf_output_range() -> None:
     model = NCFModel(
         num_users=100, num_items=50, embedding_dim=16, hidden_layers=[32, 16]
     )
@@ -27,7 +27,7 @@ def test_ncf_output_range():
     assert (output <= 1).all()
 
 
-def test_ncf_single_sample():
+def test_ncf_single_sample() -> None:
     model = NCFModel(num_users=10, num_items=10, embedding_dim=8, hidden_layers=[16])
     user = torch.tensor([0])
     item = torch.tensor([0])

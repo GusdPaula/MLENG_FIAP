@@ -8,3 +8,9 @@ pytest
 mlflow
 tqdm
 notebook
+pydantic>=2.0
+scipy
+fastapi
+uvicorn[standard]
+python-dotenv
+httpx2

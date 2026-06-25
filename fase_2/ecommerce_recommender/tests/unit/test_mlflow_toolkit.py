@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import sys
 import types
+from typing import Any
 
 import pandas as pd
+import pytest
 from src.recommender.mlflow_toolkit import MLflowToolkit
 
 
-def _install_dummy_mlflow(monkeypatch):  # noqa: C901 - local test double with many stubs
+def _install_dummy_mlflow(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[Any]]:  # noqa: C901 - local test double with many stubs
     calls: dict[str, list] = {
         "set_tracking_uri": [],
         "set_registry_uri": [],
@@ -98,7 +100,7 @@ def _install_dummy_mlflow(monkeypatch):  # noqa: C901 - local test double with m
     return calls
 
 
-def _install_failing_mlflow(monkeypatch):
+def _install_failing_mlflow(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[Any]]:
     calls = _install_dummy_mlflow(monkeypatch)
     state = {"tracking_uri": None}
 
@@ -148,7 +150,7 @@ def _install_failing_mlflow(monkeypatch):
     return calls
 
 
-def test_setup_and_experiment_creation(monkeypatch):
+def test_setup_and_experiment_creation(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = _install_dummy_mlflow(monkeypatch)
     toolkit = MLflowToolkit(
         tracking_uri="http://localhost:5000",
@@ -164,7 +166,7 @@ def test_setup_and_experiment_creation(monkeypatch):
     assert calls["create_experiment"] == ["demo-experiment"]
 
 
-def test_logging_helpers_and_model_registration(tmp_path, monkeypatch):
+def test_logging_helpers_and_model_registration(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     calls = _install_dummy_mlflow(monkeypatch)
     toolkit = MLflowToolkit(experiment_name="demo-experiment")
 
@@ -187,7 +189,7 @@ def test_logging_helpers_and_model_registration(tmp_path, monkeypatch):
     assert registered.name == "demo-model"
 
 
-def test_setup_falls_back_to_local_store(monkeypatch):
+def test_setup_falls_back_to_local_store(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = _install_failing_mlflow(monkeypatch)
     toolkit = MLflowToolkit(
         tracking_uri="http://localhost:5000",

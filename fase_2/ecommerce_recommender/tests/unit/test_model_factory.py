@@ -13,19 +13,19 @@ from src.recommender.models.base import BaseRecommenderModel
 # -- factory registration -----------------------------------------------
 
 
-def test_factory_registers_builtin_models():
+def test_factory_registers_builtin_models() -> None:
     available = ModelFactory.available_models()
     assert "ncf" in available
     assert "gmf" in available
     assert "matrix_factorization" in available
 
 
-def test_factory_unknown_model_raises():
+def test_factory_unknown_model_raises() -> None:
     with pytest.raises(ValueError, match="Unknown model type"):
         ModelFactory.create("does_not_exist", num_users=10, num_items=5)
 
 
-def test_factory_returns_base_instance():
+def test_factory_returns_base_instance() -> None:
     model = ModelFactory.create("ncf", num_users=10, num_items=5, embedding_dim=8)
     assert isinstance(model, BaseRecommenderModel)
 
@@ -41,7 +41,7 @@ def test_factory_returns_base_instance():
         ("matrix_factorization", {}),
     ],
 )
-def test_factory_models_forward_shape(model_type, extra):
+def test_factory_models_forward_shape(model_type: str, extra: dict) -> None:
     model = ModelFactory.create(
         model_type,
         num_users=20,
@@ -63,7 +63,7 @@ def test_factory_models_forward_shape(model_type, extra):
         ("matrix_factorization", {}),
     ],
 )
-def test_factory_models_output_in_range(model_type, extra):
+def test_factory_models_output_in_range(model_type: str, extra: dict) -> None:
     model = ModelFactory.create(
         model_type,
         num_users=20,
@@ -78,7 +78,7 @@ def test_factory_models_output_in_range(model_type, extra):
     assert torch.all(out <= 1)
 
 
-def test_each_model_exposes_model_name():
+def test_each_model_exposes_model_name() -> None:
     assert NCFModel(num_users=2, num_items=2, embedding_dim=4).model_name == "ncf"
     assert GMFModel(num_users=2, num_items=2, embedding_dim=4).model_name == "gmf"
     assert (
@@ -87,7 +87,7 @@ def test_each_model_exposes_model_name():
     )
 
 
-def test_factory_register_decorator():
+def test_factory_register_decorator() -> None:
     @ModelFactory.register("dummy_for_test")
     class _Dummy(BaseRecommenderModel):
         @property
@@ -106,7 +106,7 @@ def test_factory_register_decorator():
 # -- parameter filtering tests ----------------------------------------------
 
 
-def test_factory_filters_invalid_params_gmf():
+def test_factory_filters_invalid_params_gmf() -> None:
     """GMF should reject hidden_layers parameter."""
     import warnings
 
@@ -126,7 +126,7 @@ def test_factory_filters_invalid_params_gmf():
         assert "hidden_layers" in str(w[0].message)
 
 
-def test_factory_filters_invalid_params_ncf():
+def test_factory_filters_invalid_params_ncf() -> None:
     """NCF should reject projection_dim parameter."""
     import warnings
 
@@ -146,7 +146,7 @@ def test_factory_filters_invalid_params_ncf():
         assert "projection_dim" in str(w[0].message)
 
 
-def test_factory_filters_invalid_params_mf():
+def test_factory_filters_invalid_params_mf() -> None:
     """MatrixFactorization should reject hidden_layers and dropout parameters."""
     import warnings
 
@@ -168,7 +168,7 @@ def test_factory_filters_invalid_params_mf():
         assert "dropout" in str(w[0].message)
 
 
-def test_factory_accepts_valid_params_gmf():
+def test_factory_accepts_valid_params_gmf() -> None:
     """GMF should accept its valid parameters."""
     import warnings
 
@@ -188,7 +188,7 @@ def test_factory_accepts_valid_params_gmf():
         assert len(w) == 0
 
 
-def test_factory_accepts_valid_params_ncf():
+def test_factory_accepts_valid_params_ncf() -> None:
     """NCF should accept its valid parameters."""
     import warnings
 
@@ -208,7 +208,7 @@ def test_factory_accepts_valid_params_ncf():
         assert len(w) == 0
 
 
-def test_factory_accepts_valid_params_mf():
+def test_factory_accepts_valid_params_mf() -> None:
     """MatrixFactorization should accept its valid parameters."""
     import warnings
 
@@ -227,7 +227,7 @@ def test_factory_accepts_valid_params_mf():
         assert len(w) == 0
 
 
-def test_factory_param_map_coverage():
+def test_factory_param_map_coverage() -> None:
     """Ensure all registered models have parameter mappings."""
     for model_type in ModelFactory.available_models():
         assert model_type in ModelFactory.MODEL_PARAM_MAP, (

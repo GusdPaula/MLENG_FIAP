@@ -1,242 +1,243 @@
-# `recommender` package overview
+# Visão geral do pacote `recommender`
 
-This folder contains the source code for a small recommender-system project built with PyTorch.
+Esta pasta contém o código fonte para um pequeno projeto de sistema de recomendação construído com PyTorch.
 
-The code is organized around three main ideas:
+O código é organizado em torno de três principais ideias:
 
-1. Load raw ecommerce events.
-2. Turn those events into training samples.
-3. Train one of several recommender models through a configuration file.
+1. Carregar eventos brutos de e-commerce.
+2. Transformar esses eventos em amostras de treinamento.
+3. Treinar um de vários modelos de recomendação através de um arquivo de configuração.
 
-## Folder structure
+## Estrutura de pastas
 
 ```text
 src/recommender/
-  data/         # loading, cleaning, and preprocessing helpers
-  models/       # recommender model implementations and factory
-  training/     # training loop and evaluation metrics
-  mlflow_toolkit/ # MLflow wrapper for experiments, datasets, and models
-  pipelines/    # end-to-end orchestration
+  data/         # auxiliares de carregamento, limpeza e pré-processamento
+  models/       # implementações de modelos de recomendação e factory
+  training/     # loop de treinamento e métricas de avaliação
+  mlflow_toolkit/ # wrapper MLflow para experimentos, datasets e modelos
+  pipelines/    # orquestração end-to-end
+  api/          # API de predição com detecção de desvio de modelo/dados
 ```
 
-## End-to-end flow
+## Fluxo end-to-end
 
-The main entry point is [`pipelines/train_pipeline.py`](recommender/pipelines/train_pipeline.py).
+O ponto de entrada principal é [`pipelines/train_pipeline.py`](recommender/pipelines/train_pipeline.py).
 
-At a high level, the pipeline does the following:
+Em um alto nível, o pipeline faz o seguinte:
 
-1. Reads a YAML config file.
-2. Loads raw events from CSV.
-3. Applies a data processing strategy.
-4. Builds a dataset with negative sampling.
-5. Splits the dataset into train and validation sets.
-6. Creates the model through a factory.
-7. Trains the model and computes metrics.
-8. Saves the trained model artifact to disk.
+1. Lê um arquivo de configuração YAML.
+2. Carrega eventos brutos de CSV.
+3. Aplica uma estratégia de processamento de dados.
+4. Constrói um dataset com negative sampling.
+5. Divide o dataset em conjuntos de treino e validação.
+6. Cria o modelo através de uma factory.
+7. Treina o modelo e computa métricas.
+8. Salva o artefato do modelo treinado em disco.
 
-## Data handling
+## Manipulação de dados
 
 ### `load_events`
 
-Defined in [`data/dataset.py`](recommender/data/dataset.py), this function reads the raw CSV file into a pandas DataFrame and adds a simple event weight:
+Definido em [`data/dataset.py`](recommender/data/dataset.py), esta função lê o arquivo CSV bruto em um DataFrame pandas e adiciona um peso simples de evento:
 
 - `view` -> `1`
 - `addtocart` -> `2`
 - `transaction` -> `3`
 
-### `DataProcessor` strategies
+### Estratégias `DataProcessor`
 
-The more flexible preprocessing logic lives in [`data/processors.py`](recommender/data/processors.py).
+A lógica de pré-processamento mais flexível está em [`data/processors.py`](recommender/data/processors.py).
 
-The project uses a strategy pattern so the pipeline can switch preprocessing behavior through config.
+O projeto usa um padrão de estratégia para que o pipeline possa alternar o comportamento de pré-processamento através da configuração.
 
-Available strategies:
+Estratégias disponíveis:
 
 - `WeightedEventProcessor`
 - `BinaryInteractionProcessor`
 - `ImplicitFeedbackProcessor`
 
-What each one does:
+O que cada uma faz:
 
-- `WeightedEventProcessor`: keeps all events and assigns different weights depending on the event type.
-- `BinaryInteractionProcessor`: keeps only `addtocart` and `transaction` events and treats them as positive interactions.
-- `ImplicitFeedbackProcessor`: keeps all events and treats every interaction as positive with weight `1.0`.
+- `WeightedEventProcessor`: mantém todos os eventos e atribui pesos diferentes dependendo do tipo de evento.
+- `BinaryInteractionProcessor`: mantém apenas eventos `addtocart` e `transaction` e os trata como interações positivas.
+- `ImplicitFeedbackProcessor`: mantém todos os eventos e trata cada interação como positiva com peso `1.0`.
 
-Each processor also:
+Cada processador também:
 
-- builds `user2idx` and `item2idx` mappings
-- creates `user_idx` and `item_idx` columns
-- optionally filters users/items with too few interactions
+- constrói mapeamentos `user2idx` e `item2idx`
+- cria colunas `user_idx` e `item_idx`
+- opcionalmente filtra usuários/itens com poucas interações
 
 ### `RecommenderDataset`
 
-Also in [`data/dataset.py`](recommender/data/dataset.py), the `RecommenderDataset` class prepares training samples using negative sampling.
+Também em [`data/dataset.py`](recommender/data/dataset.py), a classe `RecommenderDataset` prepara amostras de treinamento usando negative sampling.
 
-For every positive interaction `(user, item)`:
+Para cada interação positiva `(user, item)`:
 
-- it adds one positive sample with label `1.0`
-- it adds `num_negatives` sampled items that the user did not interact with, each labeled `0.0`
+- adiciona uma amostra positiva com rótulo `1.0`
+- adiciona `num_negatives` itens amostrados que o usuário não interagiu, cada um rotulado como `0.0`
 
-This makes the training problem a binary classification task: the model learns to predict whether a `(user, item)` pair is likely to be a real interaction.
+Isso torna o problema de treinamento uma tarefa de classificação binária: o modelo aprende a prever se um par `(user, item)` é provável de ser uma interação real.
 
-## Models
+## Modelos
 
-All models inherit from [`models/base.py`](recommender/models/base.py).
+Todos os modelos herdam de [`models/base.py`](recommender/models/base.py).
 
-The shared contract is simple:
+O contrato compartilhado é simples:
 
-- each model must implement `forward(user_ids, item_ids)`
-- each model must expose a `model_name`
+- cada modelo deve implementar `forward(user_ids, item_ids)`
+- cada modelo deve expor um `model_name`
 
 ### 1. Matrix Factorization
 
-Defined in [`models/matrix_factorization.py`](recommender/models/matrix_factorization.py).
+Definido em [`models/matrix_factorization.py`](recommender/models/matrix_factorization.py).
 
-This is the classic collaborative filtering baseline.
+Este é o baseline clássico de collaborative filtering.
 
-It learns:
+Ele aprende:
 
-- a user embedding
-- an item embedding
-- a user bias
-- an item bias
-- a global bias
+- um embedding de usuário
+- um embedding de item
+- um bias de usuário
+- um bias de item
+- um bias global
 
-The score is computed as:
+O score é computado como:
 
 ```text
 score(u, i) = global_bias + user_bias + item_bias + dot(user_embedding, item_embedding)
 ```
 
-Then the score is passed through a sigmoid so the output is in `[0, 1]`.
+Então o score é passado através de um sigmoid para que a saída esteja em `[0, 1]`.
 
-Why it is useful:
+Por que é útil:
 
-- simple
-- fast
-- strong baseline for recommendation tasks
+- simples
+- rápido
+- forte baseline para tarefas de recomendação
 
 ### 2. GMF
 
-Defined in [`models/gmf.py`](recommender/models/gmf.py).
+Definido em [`models/gmf.py`](recommender/models/gmf.py).
 
-GMF stands for Generalized Matrix Factorization.
+GMF significa Generalized Matrix Factorization.
 
-It learns user and item embeddings, combines them with element-wise multiplication, optionally projects that representation to another size, and then predicts with a final linear layer.
+Ele aprende embeddings de usuário e item, combina-os com multiplicação elemento a elemento, opcionalmente projeta essa representação para outro tamanho, e então prediz com uma camada linear final.
 
-In simple terms:
+Em termos simples:
 
-- user embedding + item embedding
-- element-wise product
-- optional projection
+- embedding de usuário + embedding de item
+- produto elemento a elemento
+- projeção opcional
 - dropout
-- linear output
+- saída linear
 - sigmoid
 
-Why it is useful:
+Por que é útil:
 
-- more flexible than plain matrix factorization
-- still relatively lightweight
-- works well as a neural version of collaborative filtering
+- mais flexível que matrix factorização simples
+- ainda relativamente leve
+- funciona bem como uma versão neural de collaborative filtering
 
 ### 3. NCF
 
-Defined in [`models/ncf.py`](recommender/models/ncf.py).
+Definido em [`models/ncf.py`](recommender/models/ncf.py).
 
-NCF stands for Neural Collaborative Filtering.
+NCF significa Neural Collaborative Filtering.
 
-This model:
+Este modelo:
 
-- learns a user embedding
-- learns an item embedding
-- concatenates both embeddings
-- sends them through an MLP
-- applies sigmoid to produce the final score
+- aprende um embedding de usuário
+- aprende um embedding de item
+- concatena ambos os embeddings
+- envia-os através de uma MLP
+- aplica sigmoid para produzir o score final
 
-The hidden layer sizes are configurable through `hidden_layers`.
+Os tamanhos das camadas ocultas são configuráveis através de `hidden_layers`.
 
-Why it is useful:
+Por que é útil:
 
-- can learn more complex user-item interactions than MF or GMF
-- typically the most expressive model in this package
+- pode aprender interações usuário-item mais complexas que MF ou GMF
+- tipicamente o modelo mais expressivo neste pacote
 
-## Model factory
+## Factory de modelos
 
-The file [`models/factory.py`](recommender/models/factory.py) contains `ModelFactory`.
+O arquivo [`models/factory.py`](recommender/models/factory.py) contém `ModelFactory`.
 
-The factory is a registry that maps a string name to a model class.
+A factory é um registro que mapeia um nome de string para uma classe de modelo.
 
-Current built-in model keys:
+Chaves de modelos embutidos atuais:
 
 - `ncf`
 - `gmf`
 - `matrix_factorization`
 
-This is what makes the training pipeline config-driven:
+Isso é o que torna o pipeline de treinamento orientado por configuração:
 
 ```yaml
 model:
   type: ncf
 ```
 
-If you want to add a new model:
+Se você quiser adicionar um novo modelo:
 
-1. Create a subclass of `BaseRecommenderModel`.
-2. Register it in `ModelFactory`.
-3. Select it in the config file.
+1. Crie uma subclasse de `BaseRecommenderModel`.
+2. Registre-a em `ModelFactory`.
+3. Selecione-a no arquivo de configuração.
 
-## Training
+## Treinamento
 
-The training loop is in [`training/trainer.py`](recommender/training/trainer.py).
+O loop de treinamento está em [`training/trainer.py`](recommender/training/trainer.py).
 
-What the trainer does:
+O que o trainer faz:
 
-- uses `BCELoss`
-- optimizes with Adam
-- trains one epoch at a time
-- evaluates with:
+- usa `BCELoss`
+- otimiza com Adam
+- treina uma epoch por vez
+- avalia com:
   - ROC AUC
   - Average Precision
 
-Important detail:
+Detalhe importante:
 
-- the models output sigmoid probabilities
-- because of that, `BCELoss` is a natural fit here
+- os modelos produzem probabilidades sigmoid
+- por isso, `BCELoss` é uma escolha natural aqui
 
-## MLflow Toolkit
+## Toolkit MLflow
 
-The MLflow helper lives in [`mlflow_toolkit/toolkit.py`](recommender/mlflow_toolkit/toolkit.py).
+O helper MLflow está em [`mlflow_toolkit/toolkit.py`](recommender/mlflow_toolkit/toolkit.py).
 
-It is responsible for MLflow-specific tasks:
+Ele é responsável por tarefas específicas do MLflow:
 
-- configuring the tracking URI
-- selecting or creating an experiment
-- starting runs
-- logging params and metrics
-- logging datasets
-- logging and registering PyTorch models
+- configurar o tracking URI
+- selecionar ou criar um experimento
+- iniciar runs
+- registrar parâmetros e métricas
+- registrar datasets
+- registrar e registrar modelos PyTorch
 
-This keeps the training pipeline clean and avoids mixing MLflow code with model logic.
+Isso mantém o pipeline de treinamento limpo e evita misturar código MLflow com lógica de modelo.
 
-## Ranking metrics
+## Métricas de ranking
 
-[`training/metrics.py`](recommender/training/metrics.py) adds recommendation-style metrics:
+[`training/metrics.py`](recommender/training/metrics.py) adiciona métricas de estilo de recomendação:
 
 - `hit_rate_at_k`
 - `ndcg_at_k`
 
-These are computed on the validation set after training.
+Estas são computadas no conjunto de validação após o treinamento.
 
-They answer a different question from AUC/AP:
+Elas respondem a uma pergunta diferente de AUC/AP:
 
-- AUC/AP measure classification quality
-- Hit Rate and NDCG measure how good the ranked top recommendations are
+- AUC/AP medem a qualidade de classificação
+- Hit Rate e NDCG medem o quão boas são as recomendações top ranqueadas
 
-## Pipeline configuration
+## Configuração do pipeline
 
-The pipeline expects a YAML file with a `model` section.
+O pipeline espera um arquivo YAML com uma seção `model`.
 
-Typical values used by the code:
+Valores típicos usados pelo código:
 
 - `seed`
 - `raw_events_path`
@@ -251,7 +252,7 @@ Typical values used by the code:
 - `hyperparams`
 - `artifact_dir`
 
-Example shape:
+Exemplo de formato:
 
 ```yaml
 model:
@@ -271,25 +272,25 @@ model:
   artifact_dir: models
 ```
 
-## Output artifact
+## Artefato de saída
 
-At the end of training, the pipeline saves a `.pt` file containing:
+Ao final do treinamento, o pipeline salva um arquivo `.pt` contendo:
 
-- the model type
-- the trained model weights
+- o tipo do modelo
+- os pesos do modelo treinado
 - `user2idx`
 - `item2idx`
-- the training config
-- validation metrics
+- a configuração de treinamento
+- métricas de validação
 
-This makes it possible to reload the model later with the same user/item mapping.
+Isso torna possível recarregar o modelo mais tarde com o mesmo mapeamento usuário/item.
 
-## Small implementation notes
+## Notas de implementação
 
-- The pipeline imports the public package APIs from `recommender.data`, `recommender.models`, and `recommender.training`.
-- `create_interaction_matrix` is available in [`data/dataset.py`](recommender/data/dataset.py), but the main pipeline currently uses the processor strategies instead.
-- The code is built around implicit-feedback style recommendation, not a full explicit rating system.
+- O pipeline importa as APIs públicas do pacote de `recommender.data`, `recommender.models` e `recommender.training`.
+- `create_interaction_matrix` está disponível em [`data/dataset.py`](recommender/data/dataset.py), mas o pipeline principal atualmente usa as estratégias de processador.
+- O código é construído em torno de recomendação de estilo feedback implícito, não um sistema completo de classificação explícita.
 
-## In one sentence
+## Em uma frase
 
-This package loads ecommerce interaction logs, converts them into user-item training pairs, trains a configurable recommendation model, and stores the trained artifact with the mappings needed for inference later.
+Este pacote carrega logs de interação de e-commerce, converte-os em pares de treinamento usuário-item, treina um modelo de recomendação configurável e armazena o artefato treinado com os mapeamentos necessários para inferência posterior.
