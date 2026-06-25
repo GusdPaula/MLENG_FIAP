@@ -6,11 +6,12 @@ exposing prediction endpoints with proper error handling and validation.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse
@@ -32,12 +33,15 @@ from ..models.schemas import (
     PredictionResponse,
     RecommendationResponse,
 )
+from ..services.logging_config import configure_structured_logging
 from ..services.prediction_service import PredictionService
+from ..services.prometheus_metrics import PROMETHEUS_AVAILABLE, PrometheusMetrics
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+# Configure structured logging
+configure_structured_logging(
+    log_level=os.getenv("LOG_LEVEL", "INFO"),
+    log_group=os.getenv("CLOUDWATCH_LOG_GROUP", "/ecs/ml-recommender-api"),
+    stream_name=os.getenv("CLOUDWATCH_LOG_STREAM", "api-logs"),
 )
 
 logger = logging.getLogger(__name__)
@@ -46,16 +50,97 @@ logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
 RATE_LIMIT = os.getenv("RATE_LIMIT", "100/minute")
 
+# Model check interval (in seconds)
+MODEL_CHECK_INTERVAL = int(os.getenv("MODEL_CHECK_INTERVAL", "60"))
+
 # IP whitelisting configuration
-ALLOWED_IPS = os.getenv("ALLOWED_IPS", "").split(",") if os.getenv("ALLOWED_IPS") else []
+ALLOWED_IPS = (
+    os.getenv("ALLOWED_IPS", "").split(",") if os.getenv("ALLOWED_IPS") else []
+)
 
 # API Key configuration
 API_KEY = os.getenv("API_KEY")
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 # Model configuration
-MODEL_PATH = os.getenv("MODEL_PATH", "ecommerce_recommender/models/mlflow_experiments/gmf_binary.pt")
-MLFLOW_TRACKING_URIS = os.getenv("MLFLOW_TRACKING_URIS", "").split(",") if os.getenv("MLFLOW_TRACKING_URIS") else []
+MODEL_PATH = os.getenv(
+    "MODEL_PATH", "ecommerce_recommender/models/mlflow_experiments/gmf_binary.pt"
+)
+
+# Global variables for background task
+model_check_task: Optional[asyncio.Task] = None
+
+
+async def periodic_model_check():
+    """Periodically check if model is available and load it if not."""
+    global prediction_service, prometheus_metrics
+
+    while True:
+        try:
+            if prediction_service is None:
+                logger.info(
+                    "Model not available, attempting to load from MLflow",
+                    extra={"task": "model_check", "status": "loading"},
+                )
+                model_path = Path(MODEL_PATH)
+
+                try:
+                    new_service = PredictionService(
+                        model_path=model_path,
+                        predictor_type="top_k",
+                        device="cpu",
+                        enable_monitoring=True,
+                        mlflow_tracking_uris=MLFLOW_TRACKING_URIS,
+                        mlflow_model_name=MLFLOW_MODEL_NAME,
+                        mlflow_model_version=MLFLOW_MODEL_VERSION,
+                        mlflow_model_alias=MLFLOW_MODEL_ALIAS,
+                    )
+                    prediction_service = new_service
+                    logger.info(
+                        "Model loaded successfully from periodic check",
+                        extra={"task": "model_check", "status": "success"},
+                    )
+
+                    # Set model info in Prometheus
+                    if prometheus_metrics and prediction_service._model_metadata:
+                        model_version = prediction_service._model_metadata.get(
+                            "model_version", "unknown"
+                        )
+                        prometheus_metrics.set_model_info(
+                            model_name="ml-recommender",
+                            version=model_version,
+                            predictor_type="top_k",
+                        )
+                        if prometheus_metrics.model_available_gauge:
+                            prometheus_metrics.model_available_gauge.set(1)
+                except ModelLoadError as e:
+                    logger.warning(
+                        f"Failed to load model during periodic check: {e}",
+                        extra={
+                            "task": "model_check",
+                            "status": "failed",
+                            "error": str(e),
+                        },
+                    )
+            else:
+                logger.debug(
+                    "Model is available, skipping periodic check",
+                    extra={"task": "model_check", "status": "skipped"},
+                )
+        except Exception as e:
+            logger.error(
+                f"Error in periodic model check: {e}",
+                extra={"task": "model_check", "status": "error", "error": str(e)},
+            )
+
+        await asyncio.sleep(MODEL_CHECK_INTERVAL)
+
+
+MLFLOW_TRACKING_URIS = (
+    os.getenv("MLFLOW_TRACKING_URIS", "").split(",")
+    if os.getenv("MLFLOW_TRACKING_URIS")
+    else []
+)
 MLFLOW_MODEL_NAME = os.getenv("MLFLOW_MODEL_NAME")
 MLFLOW_MODEL_VERSION = os.getenv("MLFLOW_MODEL_VERSION")
 MLFLOW_MODEL_ALIAS = os.getenv("MLFLOW_MODEL_ALIAS", "champion")
@@ -108,8 +193,10 @@ async def verify_api_key(api_key: str = Depends(api_key_header)) -> str:
 
     return api_key
 
+
 # Global prediction service instance
 prediction_service: PredictionService | None = None
+prometheus_metrics: PrometheusMetrics | None = None
 
 
 @asynccontextmanager
@@ -123,15 +210,41 @@ async def lifespan(app: FastAPI):
         None
     """
     # Startup
-    global prediction_service
-    logger.info("Starting prediction API service")
-    logger.info(f"API key authentication enabled (key: {API_KEY[:8]}...)" if len(API_KEY) > 8 else "API key authentication enabled (using default key - CHANGE IN PRODUCTION)")
+    global prediction_service, prometheus_metrics, model_check_task
+    logger.info("Starting prediction API service", extra={"service": "prediction_api"})
+    logger.info(
+        f"API key authentication enabled (key: {API_KEY[:8]}...)"
+        if len(API_KEY) > 8
+        else "API key authentication enabled (using default key - CHANGE IN PRODUCTION)",
+        extra={"auth": "enabled"},
+    )
+
+    # Initialize Prometheus metrics if available
+    if PROMETHEUS_AVAILABLE:
+        try:
+            prometheus_metrics = PrometheusMetrics(port=9090)
+            prometheus_metrics.start_server()
+            logger.info(
+                "Prometheus metrics server started on port 9090",
+                extra={"metrics": "prometheus"},
+            )
+        except Exception as e:
+            logger.warning(
+                f"Failed to start Prometheus metrics server: {e}",
+                extra={"metrics": "failed"},
+            )
+            prometheus_metrics = None
 
     # Initialize prediction service
     model_path = Path(MODEL_PATH)
-    logger.info(f"Loading model from {model_path}")
+    logger.info(
+        f"Loading model from {model_path}", extra={"model_path": str(model_path)}
+    )
     if not model_path.exists():
-        logger.warning(f"Model file not found at {model_path}, service will be initialized but predictions will fail")
+        logger.warning(
+            f"Model file not found at {model_path}, service will be initialized but predictions will fail",
+            extra={"model_path": str(model_path), "status": "not_found"},
+        )
 
     try:
         prediction_service = PredictionService(
@@ -144,16 +257,52 @@ async def lifespan(app: FastAPI):
             mlflow_model_version=MLFLOW_MODEL_VERSION,
             mlflow_model_alias=MLFLOW_MODEL_ALIAS,
         )
-        logger.info("Prediction service initialized successfully")
+        logger.info(
+            "Prediction service initialized successfully",
+            extra={"status": "initialized"},
+        )
+
+        # Set model info in Prometheus
+        if prometheus_metrics and prediction_service._model_metadata:
+            model_version = prediction_service._model_metadata.get(
+                "model_version", "unknown"
+            )
+            prometheus_metrics.set_model_info(
+                model_name="ml-recommender",
+                version=model_version,
+                predictor_type="top_k",
+            )
     except ModelLoadError as e:
-        logger.error(f"Failed to initialize prediction service: {e}")
+        logger.error(
+            f"Failed to initialize prediction service: {e}",
+            extra={"status": "failed", "error": str(e)},
+        )
         prediction_service = None
+
+    # Start periodic model check background task
+    model_check_task = asyncio.create_task(periodic_model_check())
+    logger.info(
+        f"Periodic model check started (interval: {MODEL_CHECK_INTERVAL}s)",
+        extra={"task": "model_check", "interval": MODEL_CHECK_INTERVAL},
+    )
 
     yield
 
     # Shutdown
-    logger.info("Shutting down prediction API service")
+    logger.info(
+        "Shutting down prediction API service", extra={"status": "shutting_down"}
+    )
+    if model_check_task:
+        model_check_task.cancel()
+        try:
+            await model_check_task
+        except asyncio.CancelledError:
+            logger.info(
+                "Periodic model check task cancelled",
+                extra={"task": "model_check", "status": "cancelled"},
+            )
     prediction_service = None
+    prometheus_metrics = None
 
 
 # Create FastAPI application
@@ -164,10 +313,13 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, lambda request, exc: JSONResponse(
-    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-    content={"detail": "Rate limit exceeded. Please try again later."}
-))
+app.add_exception_handler(
+    RateLimitExceeded,
+    lambda request, exc: JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        content={"detail": "Rate limit exceeded. Please try again later."},
+    ),
+)
 
 
 @app.get("/health")
@@ -186,8 +338,7 @@ async def health_check() -> dict[str, Any]:
 @app.get("/model/info")
 @limiter.limit(RATE_LIMIT)
 async def get_model_info(
-    request: Request,
-    api_key: str = Depends(verify_api_key)
+    request: Request, api_key: str = Depends(verify_api_key)
 ) -> dict[str, Any]:
     """Get information about the loaded model.
 
@@ -222,7 +373,7 @@ async def get_model_info(
 async def predict(
     request: Request,
     prediction_request: PredictionRequest,
-    api_key: str = Depends(verify_api_key)
+    api_key: str = Depends(verify_api_key),
 ) -> PredictionResponse:
     """Generate predictions for a single user.
 
@@ -237,22 +388,73 @@ async def predict(
     Raises:
         HTTPException: If prediction fails.
     """
+    import time
+
+    start_time = time.time()
+
     try:
         if prediction_service is None:
+            if prometheus_metrics:
+                prometheus_metrics.record_error("service_unavailable", "high")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Prediction service not initialized",
             )
+
+        logger.info(
+            f"Processing prediction request for user {prediction_request.user_id}",
+            extra={"user_id": prediction_request.user_id, "endpoint": "/predict"},
+        )
+
         response = prediction_service.predict(prediction_request)
+
+        # Record Prometheus metrics
+        if prometheus_metrics:
+            duration = time.time() - start_time
+            model_version = prediction_service._model_metadata.get(
+                "model_version", "unknown"
+            )
+            prometheus_metrics.record_prediction(
+                predictor_type="top_k", model_version=model_version, duration=duration
+            )
+            prometheus_metrics.record_api_request(
+                endpoint="/predict", method="POST", status=200, duration=duration
+            )
+
+        logger.info(
+            f"Prediction completed for user {prediction_request.user_id}",
+            extra={
+                "user_id": prediction_request.user_id,
+                "endpoint": "/predict",
+                "status": "success",
+            },
+        )
+
         return response
     except InvalidInputError as e:
-        logger.warning(f"Invalid input: {e}")
+        logger.warning(
+            f"Invalid input: {e}", extra={"endpoint": "/predict", "error": str(e)}
+        )
+        if prometheus_metrics:
+            duration = time.time() - start_time
+            prometheus_metrics.record_error("invalid_input", "medium")
+            prometheus_metrics.record_api_request(
+                endpoint="/predict", method="POST", status=400, duration=duration
+            )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         ) from e
     except Exception as e:
-        logger.error(f"Prediction failed: {e}")
+        logger.error(
+            f"Prediction failed: {e}", extra={"endpoint": "/predict", "error": str(e)}
+        )
+        if prometheus_metrics:
+            duration = time.time() - start_time
+            prometheus_metrics.record_error("prediction_failed", "high")
+            prometheus_metrics.record_api_request(
+                endpoint="/predict", method="POST", status=500, duration=duration
+            )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Prediction failed: {str(e)}",
@@ -262,8 +464,7 @@ async def predict(
 @app.post("/predict/batch", response_model=BatchPredictionResponse)
 @limiter.limit(RATE_LIMIT)
 async def predict_batch(
-    request: Request,
-    batch_request: BatchPredictionRequest
+    request: Request, batch_request: BatchPredictionRequest
 ) -> BatchPredictionResponse:
     """Generate predictions for multiple users.
 
@@ -312,9 +513,7 @@ async def predict_batch(
 @app.get("/recommend/{user_id}", response_model=RecommendationResponse)
 @limiter.limit(RATE_LIMIT)
 async def recommend(
-    request: Request,
-    user_id: int,
-    k: int = 10
+    request: Request, user_id: int, k: int = 10
 ) -> RecommendationResponse:
     """Generate top-k recommendations for a user.
 
@@ -328,23 +527,70 @@ async def recommend(
     Raises:
         HTTPException: If recommendation fails.
     """
+    import time
+
+    start_time = time.time()
+
     if prediction_service is None:
+        if prometheus_metrics:
+            prometheus_metrics.record_error("service_unavailable", "high")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Prediction service not initialized",
         )
 
     try:
+        logger.info(
+            f"Generating top-{k} recommendations for user {user_id}",
+            extra={"user_id": user_id, "k": k, "endpoint": "/recommend"},
+        )
+
         response = prediction_service.recommend(user_id=user_id, k=k)
+
+        # Record Prometheus metrics
+        if prometheus_metrics:
+            duration = time.time() - start_time
+            model_version = prediction_service._model_metadata.get(
+                "model_version", "unknown"
+            )
+            prometheus_metrics.record_prediction(
+                predictor_type="top_k", model_version=model_version, duration=duration
+            )
+            prometheus_metrics.record_api_request(
+                endpoint="/recommend", method="GET", status=200, duration=duration
+            )
+
+        logger.info(
+            f"Recommendations generated for user {user_id}",
+            extra={"user_id": user_id, "endpoint": "/recommend", "status": "success"},
+        )
+
         return response
     except InvalidInputError as e:
-        logger.warning(f"Invalid input: {e}")
+        logger.warning(
+            f"Invalid input: {e}", extra={"endpoint": "/recommend", "error": str(e)}
+        )
+        if prometheus_metrics:
+            duration = time.time() - start_time
+            prometheus_metrics.record_error("invalid_input", "medium")
+            prometheus_metrics.record_api_request(
+                endpoint="/recommend", method="GET", status=400, duration=duration
+            )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         ) from e
     except Exception as e:
-        logger.error(f"Recommendation failed: {e}")
+        logger.error(
+            f"Recommendation failed: {e}",
+            extra={"endpoint": "/recommend", "error": str(e)},
+        )
+        if prometheus_metrics:
+            duration = time.time() - start_time
+            prometheus_metrics.record_error("recommendation_failed", "high")
+            prometheus_metrics.record_api_request(
+                endpoint="/recommend", method="GET", status=500, duration=duration
+            )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Recommendation failed: {str(e)}",
@@ -354,8 +600,7 @@ async def recommend(
 @app.post("/monitoring/baselines")
 @limiter.limit(RATE_LIMIT)
 async def set_monitoring_baselines(
-    request: Request,
-    api_key: str = Depends(verify_api_key)
+    request: Request, api_key: str = Depends(verify_api_key)
 ) -> dict[str, str]:
     """Set monitoring baselines based on current prediction history.
 
@@ -409,15 +654,33 @@ async def check_shifts() -> dict[str, Any]:
 
     try:
         results = prediction_service.check_shifts()
+
+        # Record drift alerts in Prometheus
+        if prometheus_metrics:
+            for shift_type, result in results.items():
+                if result.has_shift:
+                    severity = (
+                        "high" if result.shift_type == "model_drift" else "medium"
+                    )
+                    prometheus_metrics.record_drift_alert(
+                        drift_type=shift_type,
+                        severity=severity,
+                        score=result.test_statistic,
+                    )
+                    logger.warning(
+                        f"Drift detected: {result.message}",
+                        extra={"shift_type": shift_type, "severity": severity},
+                    )
+
         return results
     except RuntimeError as e:
-        logger.warning(f"Failed to check shifts: {e}")
+        logger.warning(f"Failed to check shifts: {e}", extra={"error": str(e)})
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         ) from e
     except Exception as e:
-        logger.error(f"Failed to check shifts: {e}")
+        logger.error(f"Failed to check shifts: {e}", extra={"error": str(e)})
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to check shifts: {str(e)}",
@@ -427,8 +690,7 @@ async def check_shifts() -> dict[str, Any]:
 @app.get("/monitoring/summary")
 @limiter.limit(RATE_LIMIT)
 async def get_monitoring_summary(
-    request: Request,
-    api_key: str = Depends(verify_api_key)
+    request: Request, api_key: str = Depends(verify_api_key)
 ) -> dict[str, Any]:
     """Get monitoring status summary.
 
@@ -501,7 +763,9 @@ async def invalid_input_error_handler(request, exc: InvalidInputError) -> JSONRe
 
 
 @app.exception_handler(PredictorNotFoundError)
-async def predictor_not_found_error_handler(request, exc: PredictorNotFoundError) -> JSONResponse:
+async def predictor_not_found_error_handler(
+    request, exc: PredictorNotFoundError
+) -> JSONResponse:
     """Handle PredictorNotFoundError exceptions.
 
     Args:

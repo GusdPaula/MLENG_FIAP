@@ -21,7 +21,7 @@ from typing import Any, Dict
 import numpy as np
 import torch
 import yaml
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 
 from ..data import (
     DataProcessorContext,
@@ -46,9 +46,10 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
     Args:
         config_path: Path to the model configuration YAML file. Defaults to "configs/model.yaml".
     """
-    from dotenv import load_dotenv
-    load_dotenv()
+    # Note: load_dotenv() removed to prevent .env MLFLOW_TRACKING_URI from overriding mlflow.yaml config
+    # The mlflow.yaml config should be the source of truth for MLflow configuration
 
+    # Load configs first
     with open(config_path) as f:
         cfg = yaml.safe_load(f)["model"]
 
@@ -58,6 +59,14 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
     if mlflow_config_path.exists():
         with open(mlflow_config_path) as f:
             mlflow_cfg = yaml.safe_load(f).get("mlflow", {})
+
+    # --- MLflow Setup FIRST (before PyTorch/CUDA initialization) ---
+    mlflow_toolkit = MLflowToolkit(
+        tracking_uri=mlflow_cfg.get("tracking_uri"),
+        experiment_name=mlflow_cfg.get("experiment_name", "ecommerce_recommender"),
+        registry_uri=mlflow_cfg.get("registry_uri"),
+    )
+    mlflow_toolkit.setup()
 
     import os
 
@@ -118,21 +127,29 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
 
     logger.info("  Users: %d, Items: %d", num_users, num_items)
 
-    # --- 3. Dataset with negative sampling ----------------------------
-    logger.info("Generating dataset with negative sampling...")
-    dataset = RecommenderDataset(
-        interactions, num_items, num_negatives=cfg["num_negatives"]
-    )
-    logger.info("  Total samples: %d", len(dataset))
+    # --- 3. Train/val split at DataFrame level -------------------------
+    train_size = int(0.8 * len(interactions))
 
-    # --- 4. Train/val split ------------------------------------------
-    train_size = int(0.8 * len(dataset))
-    val_size = len(dataset) - train_size
-    train_dataset, val_dataset = random_split(
-        dataset,
-        [train_size, val_size],
-        generator=torch.Generator().manual_seed(cfg["seed"]),
+    # Shuffle interactions before split
+    interactions_shuffled = interactions.sample(
+        frac=1, random_state=cfg["seed"]
+    ).reset_index(drop=True)
+    train_interactions = interactions_shuffled.iloc[:train_size].reset_index(drop=True)
+    val_interactions = interactions_shuffled.iloc[train_size:].reset_index(drop=True)
+
+    logger.info("  Train samples: %d", len(train_interactions))
+    logger.info("  Val samples: %d", len(val_interactions))
+
+    # --- 4. Dataset with negative sampling ----------------------------
+    logger.info("Generating dataset with negative sampling...")
+    train_dataset = RecommenderDataset(
+        train_interactions, num_items, num_negatives=cfg["num_negatives"]
     )
+    val_dataset = RecommenderDataset(
+        val_interactions, num_items, num_negatives=cfg["num_negatives"]
+    )
+    logger.info("  Train samples (with negatives): %d", len(train_dataset))
+    logger.info("  Val samples (with negatives): %d", len(val_dataset))
 
     # Configure DataLoader parallel workers
     num_workers = cfg.get("num_workers", min(4, os.cpu_count() or 1))
@@ -165,14 +182,7 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
     )
     logger.info("Model: %s (%s)", model_type, model.model_name)
 
-    # --- MLflow Setup ------------------------------------------------
-    mlflow_toolkit = MLflowToolkit(
-        tracking_uri=mlflow_cfg.get("tracking_uri"),
-        experiment_name=mlflow_cfg.get("experiment_name", "ecommerce_recommender"),
-        registry_uri=mlflow_cfg.get("registry_uri"),
-    )
-    mlflow_toolkit.setup()
-
+    # --- MLflow Run ------------------------------------------------
     run_name = f"{model_type}-{processor_cfg}"
     with mlflow_toolkit.start_run(
         run_name=run_name,
@@ -192,12 +202,18 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
             }
         )
 
-        # Log MLflow dataset
+        # Log MLflow datasets
         mlflow_toolkit.log_dataset(
-            interactions,
-            name=f"{processor_cfg}_interactions",
+            train_interactions,
+            name=f"{processor_cfg}_train_interactions",
             source=str(raw_path),
             context="training",
+        )
+        mlflow_toolkit.log_dataset(
+            val_interactions,
+            name=f"{processor_cfg}_val_interactions",
+            source=str(raw_path),
+            context="validation",
         )
 
         # --- 6. Training loop --------------------------------------------
@@ -287,7 +303,7 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
         hr, ndcg = compute_ranking_metrics(
             model=model,
             val_dataset=val_dataset,
-            dataset=dataset,
+            dataset=train_dataset,
             num_items=num_items,
             device=device,
             k=10,
@@ -358,7 +374,9 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
         logger.info("MLflow logging completed successfully.")
 
         # --- 10. Promote model to Staging if best ------------------------
-        registered_model_name = cfg.get("registered_model_name", "ecommerce_recommender")
+        registered_model_name = cfg.get(
+            "registered_model_name", "ecommerce_recommender"
+        )
         if registered_model_name and not mlflow_toolkit.is_offline:
             logger.info("Evaluating model for Staging promotion...")
             # Default comparison metric is ndcg_at_10
@@ -377,15 +395,21 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
                     monitor_metric = "final_train_loss"
                     higher_is_better = False
 
-            logger.info("Using metric '%s' (higher_is_better=%s) for staging comparison.", monitor_metric, higher_is_better)
+            logger.info(
+                "Using metric '%s' (higher_is_better=%s) for staging comparison.",
+                monitor_metric,
+                higher_is_better,
+            )
             promoted = mlflow_toolkit.promote_best_to_staging(
                 model_name=registered_model_name,
                 run_id=run.info.run_id,
                 metric_name=monitor_metric,
-                higher_is_better=higher_is_better
+                higher_is_better=higher_is_better,
             )
             if promoted:
-                logger.info("Model version successfully evaluated and promoted to Staging stage.")
+                logger.info(
+                    "Model version successfully evaluated and promoted to Staging stage."
+                )
             else:
                 logger.info("Model version evaluated but not promoted to Staging.")
 

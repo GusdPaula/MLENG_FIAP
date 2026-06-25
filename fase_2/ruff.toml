@@ -8,6 +8,10 @@ ignore = ["E501", "N999", "C901", "B008"]
 per-file-ignores = {
     "ecommerce_recommender/models/assign_champion_alias.py" = ["T201"],
     "ecommerce_recommender/models/register_models_mlflow.py" = ["T201"],
+    "scripts/*.py" = ["T201"],
+    "scratch/*.py" = ["T201"],
+    "ecommerce_recommender/tests/integration/smoke_tests.py" = ["T201"],
+    "infra-api/grafana-ec2/setup_grafana.py" = ["T201"],
 }
 
 [lint.pep8-naming]

@@ -46,3 +46,18 @@ dev = [
     "pre-commit (>=3.4.0,<4.0.0)",
     "ipykernel (>=7.3.0,<8.0.0)"
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["ecommerce_recommender/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+    "unit: marks tests as unit tests"
+]
+norecursedirs = [
+    "ecommerce_recommender/tests/integration",
+    "scratch"
+]
