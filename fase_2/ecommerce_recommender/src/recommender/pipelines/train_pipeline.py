@@ -284,7 +284,7 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
         logger.info("-" * 60)
         logger.info("Calculando métricas de ranking...")
 
-        hr, ndcg = compute_ranking_metrics(
+        ranking = compute_ranking_metrics(
             model=model,
             val_dataset=val_dataset,
             dataset=dataset,
@@ -295,8 +295,11 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
             positive_limit=1000,
         )
 
-        logger.info("  Hit Rate@10: %.4f", hr)
-        logger.info("  NDCG@10:     %.4f", ndcg)
+        logger.info("  Hit Rate@10:    %.4f", ranking.hit_rate)
+        logger.info("  NDCG@10:        %.4f", ranking.ndcg)
+        logger.info("  Precision@10:   %.4f", ranking.precision)
+        logger.info("  Recall@10:      %.4f", ranking.recall)
+        logger.info("  MRR@10:         %.4f", ranking.mrr)
 
         # --- 8. Persist model locally ------------------------------------
         artifact_dir = Path(cfg.get("artifact_dir", "models"))
@@ -306,8 +309,7 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
             "loss": train_loss,
             "auc_roc": metrics["auc_roc"],
             "avg_precision": metrics["avg_precision"],
-            "hit_rate_at_10": hr,
-            "ndcg_at_10": ndcg,
+            **ranking.to_dict(10),
         }
 
         early_stopping_info: Dict[str, Any] = {
@@ -342,8 +344,7 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
                 "final_train_loss": train_loss,
                 "final_auc_roc": metrics["auc_roc"],
                 "final_avg_precision": metrics["avg_precision"],
-                "hit_rate_at_10": hr,
-                "ndcg_at_10": ndcg,
+                **ranking.to_dict(10),
             }
         )
 
