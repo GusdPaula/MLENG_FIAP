@@ -1,201 +1,201 @@
-# Model Monitoring Plan
+# Plano de Monitoramento de Modelo
 
-## Current State
+## Estado Atual
 
-### Existing Monitoring Components
+### Componentes de Monitoramento Existentes
 
-The recommender API currently has a solid foundation for monitoring with the following components:
+A API de recomendação atualmente possui uma base sólida para monitoramento com os seguintes componentes:
 
-1. **Data Shift Detection** (`DataShiftDetector`)
-   - Uses Kolmogorov-Smirnov (KS) test to detect distribution shifts in prediction scores
-   - Configurable p-value threshold (default: 0.05)
-   - Requires baseline metrics to be set
+1. **Detecção de Mudança de Dados** (`DataShiftDetector`)
+   - Usa o teste Kolmogorov-Smirnov (KS) para detectar mudanças de distribuição nos scores de predição
+   - Limiar de p-value configurável (padrão: 0.05)
+   - Requer que métricas de baseline sejam definidas
 
-2. **Performance Drift Detection** (`ModelPerformanceMonitor`)
-   - Tracks prediction statistics (mean, std, min, max, count)
-   - Uses z-score based drift detection (default threshold: 2.0)
-   - Sliding window approach (default: 1000 predictions)
-   - Requires baseline to be set
+2. **Detecção de Deriva de Desempenho** (`ModelPerformanceMonitor`)
+   - Rastreia estatísticas de predição (média, desvio padrão, mínimo, máximo, contagem)
+   - Usa detecção de deriva baseada em z-score (limiar padrão: 2.0)
+   - Abordagem de janela deslizante (padrão: 1000 predições)
+   - Requer que baseline seja definido
 
-3. **Monitoring Service** (`MonitoringService`)
-   - Orchestrates data shift and performance drift detection
-   - Records predictions with timestamps, user IDs, item IDs
-   - Provides unified interface for monitoring operations
+3. **Serviço de Monitoramento** (`MonitoringService`)
+   - Orquestra detecção de mudança de dados e deriva de desempenho
+   - Registra predições com timestamps, IDs de usuário, IDs de item
+   - Fornece interface unificada para operações de monitoramento
 
-4. **API Integration**
-   - Monitoring enabled by default in `PredictionService`
-   - Endpoints for setting baselines: `POST /monitoring/baselines`
-   - Endpoints for checking shifts: `GET /monitoring/check`
-   - Endpoints for summary: `GET /monitoring/summary`
-   - Automatic prediction recording in service methods
+4. **Integração com API**
+   - Monitoramento habilitado por padrão em `PredictionService`
+   - Endpoints para definir baselines: `POST /monitoring/baselines`
+   - Endpoints para verificar mudanças: `GET /monitoring/check`
+   - Endpoints para resumo: `GET /monitoring/summary`
+   - Registro automático de predições nos métodos de serviço
 
-## What's Missing for Production Monitoring
+## O Que Falta para Monitoramento em Produção
 
-### 1. **Persistent Storage**
-**Status**: ❌ Missing
-- Current implementation uses in-memory storage only
-- Data is lost when service restarts
-- No historical tracking beyond sliding window
+### 1. **Armazenamento Persistente**
+**Status**: ❌ Ausente
+- Implementação atual usa apenas armazenamento em memória
+- Dados são perdidos quando o serviço reinicia
+- Sem rastreamento histórico além da janela deslizante
 
-**Required**:
-- Database or time-series database for metrics storage (e.g., Prometheus, InfluxDB, PostgreSQL)
-- Persistent storage for baselines and historical data
-- Data retention policies
+**Necessário**:
+- Banco de dados ou banco de dados de séries temporais para armazenamento de métricas (ex: Prometheus, InfluxDB, PostgreSQL)
+- Armazenamento persistente para baselines e dados históricos
+- Políticas de retenção de dados
 
-### 2. **Alerting System**
-**Status**: ❌ Missing
-- No automated alerting when shifts are detected
-- Shifts are logged but not propagated to alerting channels
-- No escalation policies
+### 2. **Sistema de Alertas**
+**Status**: ❌ Ausente
+- Sem alertas automatizados quando mudanças são detectadas
+- Mudanças são registradas mas não propagadas para canais de alerta
+- Sem políticas de escalonamento
 
-**Required**:
-- Alert manager integration (e.g., Prometheus Alertmanager, PagerDuty, Opsgenie)
-- Email/SMS/Slack notifications for critical alerts
-- Alert severity levels and routing rules
-- Alert suppression and deduplication
+**Necessário**:
+- Integração com gerenciador de alertas (ex: Prometheus Alertmanager, PagerDuty, Opsgenie)
+- Notificações por email/SMS/Slack para alertas críticos
+- Níveis de severidade de alerta e regras de roteamento
+- Supressão e deduplicação de alertas
 
-### 3. **External Metrics Integration**
-**Status**: ❌ Missing
-- No integration with standard monitoring tools (Prometheus, Grafana)
-- No custom metrics exposition
-- No dashboard visualization
+### 3. **Integração de Métricas Externas**
+**Status**: ❌ Ausente
+- Sem integração com ferramentas de monitoramento padrão (Prometheus, Grafana)
+- Sem exposição de métricas personalizadas
+- Sem visualização de dashboard
 
-**Required**:
-- Prometheus metrics endpoint (`/metrics`)
-- Custom metrics for:
-  - Request rate and latency
-  - Error rates by endpoint
-  - Prediction score distributions
-  - User/item coverage
-  - Model version tracking
-- Grafana dashboards for visualization
+**Necessário**:
+- Endpoint de métricas Prometheus (`/metrics`)
+- Métricas personalizadas para:
+  - Taxa de requisições e latência
+  - Taxas de erro por endpoint
+  - Distribuições de scores de predição
+  - Cobertura de usuário/item
+  - Rastreamento de versão de modelo
+- Dashboards Grafana para visualização
 
-### 4. **Business Metrics**
-**Status**: ❌ Missing
-- Only technical metrics (prediction scores) are tracked
-- No business KPIs (conversion rate, click-through rate, revenue impact)
-- No A/B testing integration
+### 4. **Métricas de Negócio**
+**Status**: ❌ Ausente
+- Apenas métricas técnicas (scores de predição) são rastreadas
+- Sem KPIs de negócio (taxa de conversão, taxa de cliques, impacto de receita)
+- Sem integração com testes A/B
 
-**Required**:
-- Business metric tracking (e.g., recommendation CTR, add-to-cart rate)
-- Feature importance tracking
-- Recommendation diversity metrics
-- Cold-start user/item tracking
+**Necessário**:
+- Rastreamento de métricas de negócio (ex: CTR de recomendação, taxa de adição ao carrinho)
+- Rastreamento de importância de features
+- Métricas de diversidade de recomendação
+- Rastreamento de usuário/item cold-start
 
-### 5. **Automated Baseline Management**
-**Status**: ⚠️ Manual only
-- Baselines must be set manually via API endpoint
-- No automatic baseline updates
-- No A/B testing for baseline validation
+### 5. **Gerenciamento Automatizado de Baseline**
+**Status**: ⚠️ Apenas manual
+- Baselines devem ser definidos manualmente via endpoint de API
+- Sem atualizações automáticas de baseline
+- Sem testes A/B para validação de baseline
 
-**Required**:
-- Automatic baseline calculation from historical data
-- Scheduled baseline updates (e.g., daily/weekly)
-- Baseline versioning and rollback capability
-- Statistical validation before baseline updates
+**Necessário**:
+- Cálculo automático de baseline a partir de dados históricos
+- Atualizações agendadas de baseline (ex: diária/semanal)
+- Versionamento de baseline e capacidade de rollback
+- Validação estatística antes de atualizações de baseline
 
-### 6. **Model Version Tracking**
-**Status**: ⚠️ Basic
-- Model metadata stored in service
-- No model performance comparison across versions
-- No shadow deployment capability
+### 6. **Rastreamento de Versão de Modelo**
+**Status**: ⚠️ Básico
+- Metadados do modelo armazenados no serviço
+- Sem comparação de desempenho do modelo entre versões
+- Sem capacidade de deployment shadow
 
-**Required**:
-- Model version registry
-- Performance comparison between model versions
-- Canary deployment support
-- Gradual rollout monitoring
+**Necessário**:
+- Registro de versão de modelo
+- Comparação de desempenho entre versões de modelo
+- Suporte a deployment canary
+- Monitoramento de rollout gradual
 
-### 7. **Real-time Monitoring**
-**Status**: ⚠️ Batch only
-- Predictions recorded in batches
-- No real-time streaming metrics
-- No instant anomaly detection
+### 7. **Monitoramento em Tempo Real**
+**Status**: ⚠️ Apenas em lote
+- Predições registradas em lotes
+- Sem métricas de streaming em tempo real
+- Sem detecção instantânea de anomalias
 
-**Required**:
-- Real-time metrics pipeline (e.g., Kafka, Redis Streams)
-- Streaming anomaly detection
-- Real-time alerting for sudden drops
+**Necessário**:
+- Pipeline de métricas em tempo real (ex: Kafka, Redis Streams)
+- Detecção de anomalias em streaming
+- Alertas em tempo real para quedas súbitas
 
-### 8. **Data Quality Monitoring**
-**Status**: ❌ Missing
-- No monitoring of input data quality
-- No feature distribution tracking
-- No missing value/outlier detection
+### 8. **Monitoramento de Qualidade de Dados**
+**Status**: ❌ Ausente
+- Sem monitoramento da qualidade dos dados de entrada
+- Sem rastreamento de distribuição de features
+- Sem detecção de valores ausentes/outliers
 
-**Required**:
-- Input data quality checks
-- Feature distribution monitoring
-- Missing value rate tracking
-- Outlier detection for user/item IDs
+**Necessário**:
+- Verificações de qualidade de dados de entrada
+- Monitoramento de distribuição de features
+- Rastreamento de taxa de valores ausentes
+- Detecção de outliers para IDs de usuário/item
 
-### 9. **System Health Monitoring**
-**Status**: ❌ Missing
-- No system resource monitoring
-- No dependency health checks
-- No latency tracking
+### 9. **Monitoramento de Saúde do Sistema**
+**Status**: ❌ Ausente
+- Sem monitoramento de recursos do sistema
+- Sem verificações de saúde de dependências
+- Sem rastreamento de latência
 
-**Required**:
-- System metrics (CPU, memory, GPU utilization)
-- Database connection health
-- External service health checks
-- Request latency tracking (p50, p95, p99)
+**Necessário**:
+- Métricas do sistema (CPU, memória, utilização de GPU)
+- Saúde da conexão com banco de dados
+- Verificações de saúde de serviços externos
+- Rastreamento de latência de requisição (p50, p95, p99)
 
-### 10. **Compliance and Audit Logging**
-**Status**: ❌ Missing
-- No audit trail for predictions
-- No compliance reporting
-- No data lineage tracking
+### 10. **Conformidade e Registro de Auditoria**
+**Status**: ❌ Ausente
+- Sem rastro de auditoria para predições
+- Sem relatórios de conformidade
+- Sem rastreamento de linhagem de dados
 
-**Required**:
-- Prediction audit logs
-- Model decision explainability
-- Fairness and bias monitoring
-- Data retention and privacy compliance
+**Necessário**:
+- Logs de auditoria de predições
+- Explicabilidade de decisões do modelo
+- Monitoramento de justiça e viés
+- Conformidade de retenção de dados e privacidade
 
-## Implementation Roadmap
+## Roadmap de Implementação
 
-### Phase 1: Foundation (Week 1-2)
-- ✅ Implement Prometheus metrics endpoint
-- ✅ Add system resource monitoring
-- ✅ Set up Grafana dashboards
-- ✅ Implement persistent metrics storage (PostgreSQL/TimescaleDB)
+### Fase 1: Fundação (Semana 1-2)
+- ✅ Implementar endpoint de métricas Prometheus
+- ✅ Adicionar monitoramento de recursos do sistema
+- ✅ Configurar dashboards Grafana
+- ✅ Implementar armazenamento persistente de métricas (PostgreSQL/TimescaleDB)
 
-### Phase 2: Alerting (Week 3)
-- ⏳ Integrate Alertmanager
-- ⏳ Configure email/Slack notifications
-- ⏳ Define alert rules and severity levels
-- ⏳ Implement alert suppression logic
+### Fase 2: Alertas (Semana 3)
+- ⏳ Integrar Alertmanager
+- ⏳ Configurar notificações por email/Slack
+- ⏳ Definir regras de alerta e níveis de severidade
+- ⏳ Implementar lógica de supressão de alertas
 
-### Phase 3: Advanced Monitoring (Week 4-6)
-- ⏳ Add business metrics tracking
-- ⏳ Implement data quality monitoring
-- ⏳ Add real-time streaming metrics
-- ⏳ Implement automated baseline management
+### Fase 3: Monitoramento Avançado (Semana 4-6)
+- ⏳ Adicionar rastreamento de métricas de negócio
+- ⏳ Implementar monitoramento de qualidade de dados
+- ⏳ Adicionar métricas de streaming em tempo real
+- ⏳ Implementar gerenciamento automatizado de baseline
 
-### Phase 4: Model Lifecycle (Week 7-8)
-- ⏳ Build model version registry
-- ⏳ Implement canary deployment monitoring
-- ⏳ Add A/B testing integration
-- ⏳ Implement compliance reporting
+### Fase 4: Ciclo de Vida do Modelo (Semana 7-8)
+- ⏳ Construir registro de versão de modelo
+- ⏳ Implementar monitoramento de deployment canary
+- ⏳ Adicionar integração com testes A/B
+- ⏳ Implementar relatórios de conformidade
 
-## Configuration Recommendations
+## Recomendações de Configuração
 
-### Environment Variables
+### Variáveis de Ambiente
 ```bash
-# Monitoring Configuration
+# Configuração de Monitoramento
 MONITORING_ENABLED=true
 MONITORING_STORAGE_TYPE=postgresql|influxdb|prometheus
 MONITORING_STORAGE_URL=postgresql://user:pass@localhost:5432/monitoring
 MONITORING_RETENTION_DAYS=90
 
-# Alerting Configuration
+# Configuração de Alertas
 ALERT_ENABLED=true
 ALERT_WEBHOOK_URL=https://hooks.slack.com/services/...
 ALERT_EMAIL_RECIPIENTS=team@company.com
 ALERT_SEVERITY_THRESHOLD=warning
 
-# Thresholds
+# Limitares
 SHIFT_THRESHOLD=0.05
 DRIFT_THRESHOLD=2.0
 MONITORING_WINDOW_SIZE=1000
@@ -205,99 +205,99 @@ PROMETHEUS_ENABLED=true
 PROMETHEUS_PORT=9090
 ```
 
-### Recommended Thresholds
-- **Data Shift**: p-value < 0.05 (statistically significant)
-- **Performance Drift**: z-score > 2.0 (2 standard deviations)
-- **Error Rate**: > 5% for warning, > 10% for critical
-- **Latency**: p95 > 500ms for warning, > 1s for critical
-- **Prediction Rate**: Drop > 50% for immediate alert
+### Limitares Recomendados
+- **Mudança de Dados**: p-value < 0.05 (estatisticamente significativo)
+- **Deriva de Desempenho**: z-score > 2.0 (2 desvios padrão)
+- **Taxa de Erro**: > 5% para aviso, > 10% para crítico
+- **Latência**: p95 > 500ms para aviso, > 1s para crítico
+- **Taxa de Predição**: Queda > 50% para alerta imediato
 
-## Monitoring Dashboard Metrics
+## Métricas do Dashboard de Monitoramento
 
-### Technical Metrics
-1. **Request Metrics**
-   - Requests per second (RPS)
-   - Request latency (p50, p95, p99)
-   - Error rate by endpoint
-   - Request size
+### Métricas Técnicas
+1. **Métricas de Requisição**
+   - Requisições por segundo (RPS)
+   - Latência de requisição (p50, p95, p99)
+   - Taxa de erro por endpoint
+   - Tamanho da requisição
 
-2. **Prediction Metrics**
-   - Prediction score distribution
-   - Prediction rate per user/item
-   - Coverage (unique users/items served)
-   - Score percentiles
+2. **Métricas de Predição**
+   - Distribuição de scores de predição
+   - Taxa de predição por usuário/item
+   - Cobertura (usuários/itens únicos atendidos)
+   - Percentis de score
 
-3. **Model Metrics**
-   - Model version
-   - Model load time
-   - Prediction time per request
-   - Memory/CPU/GPU utilization
+3. **Métricas de Modelo**
+   - Versão do modelo
+   - Tempo de carregamento do modelo
+   - Tempo de predição por requisição
+   - Utilização de memória/CPU/GPU
 
-4. **System Metrics**
-   - Service health status
-   - Database connection pool
-   - Cache hit rate
-   - Thread pool utilization
+4. **Métricas de Sistema**
+   - Status de saúde do serviço
+   - Pool de conexão com banco de dados
+   - Taxa de acerto de cache
+   - Utilização do pool de threads
 
-### Business Metrics
-1. **Engagement Metrics**
-   - Click-through rate (CTR)
-   - Add-to-cart rate
-   - Conversion rate
-   - Average order value
+### Métricas de Negócio
+1. **Métricas de Engajamento**
+   - Taxa de cliques (CTR)
+   - Taxa de adição ao carrinho
+   - Taxa de conversão
+   - Valor médio do pedido
 
-2. **Recommendation Quality**
-   - Recommendation diversity
-   - Novelty score
-   - Serendipity
-   - Coverage
+2. **Qualidade de Recomendação**
+   - Diversidade de recomendação
+   - Score de novidade
+   - Serendipidade
+   - Cobertura
 
-3. **User Metrics**
-   - Active users
-   - New users
-   - User retention
-   - Session length
+3. **Métricas de Usuário**
+   - Usuários ativos
+   - Novos usuários
+   - Retenção de usuários
+   - Duração da sessão
 
-## Alert Scenarios
+## Cenários de Alerta
 
-### Critical Alerts (Immediate Action Required)
-- Model service down (error rate > 50%)
-- Performance drift > 5 standard deviations
-- Data shift detected with p-value < 0.01
-- Prediction latency p99 > 5 seconds
-- Database connection failures
+### Alertas Críticos (Ação Imediata Necessária)
+- Serviço de modelo fora (taxa de erro > 50%)
+- Deriva de desempenho > 5 desvios padrão
+- Mudança de dados detectada com p-value < 0.01
+- Latência de predição p99 > 5 segundos
+- Falhas de conexão com banco de dados
 
-### Warning Alerts (Investigate Within 1 Hour)
-- Performance drift > 2 standard deviations
-- Data shift detected with p-value < 0.05
-- Error rate > 10%
-- Latency p95 > 1 second
-- Prediction rate drop > 30%
+### Alertas de Aviso (Investigar Dentro de 1 Hora)
+- Deriva de desempenho > 2 desvios padrão
+- Mudança de dados detectada com p-value < 0.05
+- Taxa de erro > 10%
+- Latência p95 > 1 segundo
+- Queda na taxa de predição > 30%
 
-### Info Alerts (Monitor Trend)
-- Baseline needs update
-- Model approaching end of life
-- Gradual performance degradation
-- Unusual traffic patterns
+### Alertas de Informação (Monitorar Tendência)
+- Baseline precisa de atualização
+- Modelo aproximando fim de vida útil
+- Degradação gradual de desempenho
+- Padrões de tráfego incomuns
 
-## Next Steps
+## Próximos Passos
 
-1. **Immediate (This Week)**
-   - Add Prometheus metrics endpoint to FastAPI app
-   - Set up basic Grafana dashboards
-   - Configure logging aggregation (ELK stack or similar)
+1. **Imediato (Esta Semana)**
+   - Adicionar endpoint de métricas Prometheus ao app FastAPI
+   - Configurar dashboards básicos do Grafana
+   - Configurar agregação de logs (stack ELK ou similar)
 
-2. **Short-term (Next 2 Weeks)**
-   - Implement persistent storage for metrics
-   - Add alerting integration
-   - Create system health endpoints
+2. **Curto Prazo (Próximas 2 Semanas)**
+   - Implementar armazenamento persistente para métricas
+   - Adicionar integração de alertas
+   - Criar endpoints de saúde do sistema
 
-3. **Medium-term (Next Month)**
-   - Add business metrics tracking
-   - Implement data quality monitoring
-   - Set up automated baseline management
+3. **Médio Prazo (Próximo Mês)**
+   - Adicionar rastreamento de métricas de negócio
+   - Implementar monitoramento de qualidade de dados
+   - Configurar gerenciamento automatizado de baseline
 
-4. **Long-term (Next Quarter)**
-   - Build model version registry
-   - Implement canary deployment monitoring
-   - Add compliance and audit logging
+4. **Longo Prazo (Próximo Trimestre)**
+   - Construir registro de versão de modelo
+   - Implementar monitoramento de deployment canary
+   - Adicionar conformidade e registro de auditoria

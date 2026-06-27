@@ -127,17 +127,29 @@ Item Embedding + Item Bias ──┘
 
 ## Resultados
 
-> **Nota:** Os valores abaixo são placeholders. Serão atualizados após o retreino final no MLflow server do grupo.
+| Modelo | Loss | AUC-ROC | Avg Prec | HR@10 | NDCG@10 | Prec@10 | Rec@10 | MRR@10 | TrainLat(s) |
+|--------|------|---------|----------|-------|---------|---------|--------|--------|-------------|
+| **NCF Models** |
+| ncf_weighted | 0.0339 | 0.9221 | 0.8446 | 0.1490 | 0.0896 | 0.0156 | 0.1518 | 0.0714 | 0.00 |
+| ncf_binary | 0.0293 | 0.8576 | 0.7979 | 0.3650 | 0.3151 | 0.0590 | 0.4492 | 0.2962 | 0.00 |
+| ncf_implicit | 0.0356 | 0.9202 | 0.8416 | 0.1360 | 0.0826 | 0.0143 | 0.1405 | 0.0652 | 0.00 |
+| **GMF Models** |
+| gmf_weighted | 0.0038 | 0.9181 | 0.8504 | 0.1840 | 0.0935 | 0.0193 | 0.1895 | 0.0647 | 0.00 |
+| gmf_binary | 0.4784 | 0.7242 | 0.5066 | 0.2250 | 0.1940 | 0.0350 | 0.2551 | 0.1962 | 0.00 |
+| gmf_implicit | 0.0037 | 0.9187 | 0.8514 | 0.2040 | 0.1076 | 0.0216 | 0.2147 | 0.0756 | 0.00 |
+| **MF Models** |
+| matrix_factorization_weighted | 0.0036 | 0.9296 | 0.8673 | 0.3390 | 0.2323 | 0.0358 | 0.3547 | 0.1958 | 0.00 |
+| matrix_factorization_binary | 0.2466 | 0.8175 | 0.6718 | 0.1520 | 0.0924 | 0.0235 | 0.1509 | 0.0875 | 0.00 |
+| matrix_factorization_implicit | 0.0034 | 0.9299 | 0.8671 | 0.3420 | 0.2287 | 0.0362 | 0.3563 | 0.1911 | 0.00 |
+| **Baselines** |
+| Popularidade | N/A | 0.8003 | 0.5528 | 0.0130 | 0.0059 | 0.0014 | 0.0121 | 0.0043 | 0.0177 |
+| Regressão Logística | N/A | 0.7960 | 0.5118 | 0.0120 | 0.0060 | 0.0013 | 0.0118 | 0.0044 | 6.8681 |
 
-| Modelo | AUC-ROC | Avg Prec | HR@10 | NDCG@10 | Prec@10 | Rec@10 | MRR@10 |
-|--------|---------|----------|-------|---------|---------|--------|--------|
-| **NCF (PyTorch)** | — | — | — | — | — | — | — |
-| **GMF (PyTorch)** | — | — | — | — | — | — | — |
-| **MF (PyTorch)** | — | — | — | — | — | — | — |
-| Popularidade (sklearn) | — | — | — | — | — | — | — |
-| Regressão Logística (sklearn) | — | — | — | — | — | — | — |
+**Melhor modelo:** `ncf_binary` (NDCG@10: 0.3151, HR@10: 0.3650, MRR@10: 0.2962)
 
-Os resultados são gerados automaticamente via `dvc repro` (stage evaluate) e salvos em `reports/metrics.json`.
+*Nota: Para sistemas de recomendação, métricas de ranking (NDCG@10, HR@10) são mais relevantes que métricas de classificação (AUC-ROC).*
+
+Os resultados são gerados automaticamente via `dvc repro` (stage evaluate) e salvos em `ecommerce_recommender/reports/metrics.json`.
 
 ---
 

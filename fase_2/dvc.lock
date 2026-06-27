@@ -7,12 +7,12 @@ stages:
     deps:
     - path: configs/model.yaml
       hash: md5
-      md5: 9a1fdd1c5a5e5457485289188ffe5312
-      size: 1370
+      md5: e373bf84be03adc649475b4d4accd672
+      size: 1327
     - path: data/raw/events.csv
       hash: md5
-      md5: fddaf7c1c6a9df23a726500a08ffdd7e
-      size: 94237913
+      md5: b2c06f552519442bddbd7c3bcc770123
+      size: 96994015
     params:
       configs/model.yaml:
         model.min_interactions: 5
@@ -20,41 +20,41 @@ stages:
     outs:
     - path: data/processed/interactions.csv
       hash: md5
-      md5: 5a8a884c02d803186a8ecc698bfbd9b8
-      size: 45550878
+      md5: 8321e4e8e454055600cc4cd40aa9737b
+      size: 44601414
     - path: data/processed/item2idx.json
       hash: md5
-      md5: bb7dbf8360cb5408a11a472305521f6e
+      md5: 6fb1892f9c2ef2b4eb95164403010886
       size: 1122476
     - path: data/processed/user2idx.json
       hash: md5
-      md5: b4f4b40095332856220ae42aee883340
+      md5: def5a7cbb53b57239ba87cae2c2b0ca0
       size: 1388405
   train:
     cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from
       recommender.pipelines.train_pipeline import run_training_pipeline;
-      run_training_pipeline()" --config configs/model.yaml
+      run_training_pipeline(comprehensive=True)" --config configs/model.yaml
     deps:
     - path: configs/model.yaml
       hash: md5
-      md5: 9a1fdd1c5a5e5457485289188ffe5312
-      size: 1370
+      md5: e373bf84be03adc649475b4d4accd672
+      size: 1327
     - path: data/processed/interactions.csv
       hash: md5
-      md5: 5a8a884c02d803186a8ecc698bfbd9b8
-      size: 45550878
+      md5: 8321e4e8e454055600cc4cd40aa9737b
+      size: 44601414
     - path: data/processed/item2idx.json
       hash: md5
-      md5: bb7dbf8360cb5408a11a472305521f6e
+      md5: 6fb1892f9c2ef2b4eb95164403010886
       size: 1122476
     - path: data/processed/user2idx.json
       hash: md5
-      md5: b4f4b40095332856220ae42aee883340
+      md5: def5a7cbb53b57239ba87cae2c2b0ca0
       size: 1388405
     params:
       configs/model.yaml:
         model.batch_size: 1024
-        model.epochs: 1
+        model.epochs: 10
         model.hyperparams:
           embedding_dim: 64
           hidden_layers:
@@ -69,8 +69,8 @@ stages:
     outs:
     - path: models/model.pt
       hash: md5
-      md5: 85605e02cfd558d179e406b78ac210d0
-      size: 39442773
+      md5: 3dc13978e8f22009cc864a9694531f8b
+      size: 39442837
   evaluate:
     cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from
       recommender.pipelines.evaluate_pipeline import run_evaluation_pipeline;
@@ -78,26 +78,26 @@ stages:
     deps:
     - path: configs/model.yaml
       hash: md5
-      md5: 9a1fdd1c5a5e5457485289188ffe5312
-      size: 1370
+      md5: e373bf84be03adc649475b4d4accd672
+      size: 1327
     - path: data/processed/interactions.csv
       hash: md5
-      md5: 5a8a884c02d803186a8ecc698bfbd9b8
-      size: 45550878
+      md5: 8321e4e8e454055600cc4cd40aa9737b
+      size: 44601414
     - path: data/processed/item2idx.json
       hash: md5
-      md5: bb7dbf8360cb5408a11a472305521f6e
+      md5: 6fb1892f9c2ef2b4eb95164403010886
       size: 1122476
     - path: data/processed/user2idx.json
       hash: md5
-      md5: b4f4b40095332856220ae42aee883340
+      md5: def5a7cbb53b57239ba87cae2c2b0ca0
       size: 1388405
     - path: models/model.pt
       hash: md5
-      md5: 85605e02cfd558d179e406b78ac210d0
-      size: 39442773
+      md5: 3dc13978e8f22009cc864a9694531f8b
+      size: 39442837
     outs:
     - path: reports/metrics.json
       hash: md5
-      md5: c985ec89a8b77a0830c10764f2f27be2
-      size: 607
+      md5: baf0feb4b8c9992e5402283e560e5edf
+      size: 5252

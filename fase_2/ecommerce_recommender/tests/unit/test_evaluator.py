@@ -121,15 +121,13 @@ def test_compute_ranking_metrics_sample_limits() -> None:
 
 def test_ranking_metrics_to_dict() -> None:
     """Test RankingMetrics.to_dict output."""
-    metrics = RankingMetrics(
-        hit_rate=0.5, ndcg=0.3, precision=0.2, recall=0.4, mrr=0.6
-    )
+    metrics = RankingMetrics(hit_rate=0.5, ndcg=0.3, precision=0.2, recall=0.4, mrr=0.6)
     d = metrics.to_dict(k=10)
 
     assert d == {
-        "hit_rate@10": 0.5,
-        "ndcg@10": 0.3,
-        "precision@10": 0.2,
-        "recall@10": 0.4,
-        "mrr@10": 0.6,
+        "hit_rate_10": 0.5,
+        "ndcg_10": 0.3,
+        "precision_10": 0.2,
+        "recall_10": 0.4,
+        "mrr_10": 0.6,
     }

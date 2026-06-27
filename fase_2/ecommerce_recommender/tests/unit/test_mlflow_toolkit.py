@@ -152,6 +152,15 @@ def _install_failing_mlflow(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[A
 
 def test_setup_and_experiment_creation(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = _install_dummy_mlflow(monkeypatch)
+
+    # Mock config to return None so tracking_uri parameter is used
+    dummy_settings = types.SimpleNamespace(mlflow_tracking_uri=None)
+    monkeypatch.setitem(
+        sys.modules,
+        "src.recommender.config",
+        types.SimpleNamespace(get_settings=lambda: dummy_settings),
+    )
+
     toolkit = MLflowToolkit(
         tracking_uri="http://localhost:5000",
         experiment_name="demo-experiment",
@@ -166,7 +175,9 @@ def test_setup_and_experiment_creation(monkeypatch: pytest.MonkeyPatch) -> None:
     assert calls["create_experiment"] == ["demo-experiment"]
 
 
-def test_logging_helpers_and_model_registration(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_logging_helpers_and_model_registration(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
     calls = _install_dummy_mlflow(monkeypatch)
     toolkit = MLflowToolkit(experiment_name="demo-experiment")
 
@@ -191,6 +202,15 @@ def test_logging_helpers_and_model_registration(tmp_path: Any, monkeypatch: pyte
 
 def test_setup_falls_back_to_local_store(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = _install_failing_mlflow(monkeypatch)
+
+    # Mock config to return None so tracking_uri parameter is used
+    dummy_settings = types.SimpleNamespace(mlflow_tracking_uri=None)
+    monkeypatch.setitem(
+        sys.modules,
+        "src.recommender.config",
+        types.SimpleNamespace(get_settings=lambda: dummy_settings),
+    )
+
     toolkit = MLflowToolkit(
         tracking_uri="http://localhost:5000",
         experiment_name="demo-experiment",

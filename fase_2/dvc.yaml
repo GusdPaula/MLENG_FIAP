@@ -15,7 +15,7 @@ stages:
       - data/processed/item2idx.json
 
   train:
-    cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from recommender.pipelines.train_pipeline import run_training_pipeline; run_training_pipeline()" --config configs/model.yaml
+    cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from recommender.pipelines.train_pipeline import run_training_pipeline; run_training_pipeline(comprehensive=True)" --config configs/model.yaml
     wdir: ecommerce_recommender
     deps:
       - data/processed/interactions.csv

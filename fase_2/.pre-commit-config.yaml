@@ -7,3 +7,16 @@ repos:
       - id: check-yaml
       - id: check-added-large-files
       - id: check-merge-conflict
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+  - repo: local
+    hooks:
+      - id: pytest-unit
+        name: pytest-unit
+        entry: bash -c 'cd fase_2 && poetry run pytest ecommerce_recommender/tests/unit'
+        language: system
+        pass_filenames: false

@@ -30,7 +30,7 @@ model:
   # Note: "ndcg_at_k" uses sampling for efficiency during training.
   early_stopping:
     enabled: true
-    monitor: ndcg_at_k
+    monitor: auc_roc
     mode: max
     patience: 3
     min_delta: 0.0

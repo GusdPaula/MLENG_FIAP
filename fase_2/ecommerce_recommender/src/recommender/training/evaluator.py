@@ -27,11 +27,11 @@ class RankingMetrics:
     def to_dict(self, k: int = 10) -> dict[str, float]:
         """Return metrics as a dictionary suitable for MLflow logging."""
         return {
-            f"hit_rate@{k}": self.hit_rate,
-            f"ndcg@{k}": self.ndcg,
-            f"precision@{k}": self.precision,
-            f"recall@{k}": self.recall,
-            f"mrr@{k}": self.mrr,
+            f"hit_rate_{k}": self.hit_rate,
+            f"ndcg_{k}": self.ndcg,
+            f"precision_{k}": self.precision,
+            f"recall_{k}": self.recall,
+            f"mrr_{k}": self.mrr,
         }
 
 

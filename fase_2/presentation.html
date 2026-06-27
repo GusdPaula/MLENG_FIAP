@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Recomendação E-Commerce — FIAP Tech Challenge Fase 2</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --red: #E02020;
+    --dark: #0D0D0D;
+    --dark2: #161616;
+    --card: #1E1E1E;
+    --border: #2A2A2A;
+    --text: #F0F0F0;
+    --muted: #888;
+    --accent: #E02020;
+    --accent2: #FF6B6B;
+    --green: #4CAF50;
+    --gold: #FFC107;
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--dark);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── NAV ── */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 32px;
+    background: var(--dark2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 100;
+  }
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .nav-brand span { color: var(--red); font-weight: 700; font-size: 15px; }
+  .nav-pills {
+    display: flex;
+    gap: 4px;
+  }
+  .nav-pill {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+  .nav-pill:hover { border-color: var(--red); color: var(--text); }
+  .nav-pill.active { background: var(--red); border-color: var(--red); color: white; }
+  .nav-arrows { display: flex; gap: 8px; }
+  .arrow-btn {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .arrow-btn:hover { border-color: var(--red); background: var(--red); }
+  .arrow-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* ── SLIDES ── */
+  .slides-container { flex: 1; overflow: hidden; position: relative; }
+  .slide {
+    position: absolute; inset: 0;
+    padding: 36px 48px;
+    display: none;
+    flex-direction: column;
+    overflow-y: auto;
+    animation: fadeIn 0.35s ease;
+  }
+  .slide.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+  /* ── TAGS ── */
+  .tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .tag-s { background: rgba(224,32,32,0.15); color: var(--red); border: 1px solid rgba(224,32,32,0.3); }
+  .tag-t { background: rgba(255,193,7,0.15); color: var(--gold); border: 1px solid rgba(255,193,7,0.3); }
+  .tag-a { background: rgba(76,175,80,0.15); color: var(--green); border: 1px solid rgba(76,175,80,0.3); }
+  .tag-r { background: rgba(33,150,243,0.15); color: #42A5F5; border: 1px solid rgba(33,150,243,0.3); }
+
+  h1 { font-size: 48px; font-weight: 800; line-height: 1.1; }
+  h2 { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
+  h3 { font-size: 16px; font-weight: 600; color: var(--muted); margin-bottom: 20px; }
+  p { line-height: 1.7; color: #CCC; font-size: 14px; }
+
+  .title-accent { color: var(--red); }
+  .muted { color: var(--muted); }
+  .small { font-size: 12px; }
+
+  /* ── GRID UTILITIES ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .card-highlight { border-color: var(--red); }
+  .card-gold { border-color: var(--gold); }
+
+  /* ── STAT ── */
+  .stat-big { font-size: 36px; font-weight: 800; color: var(--red); }
+  .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* ── FUNNEL ── */
+  .funnel { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .funnel-bar {
+    display: flex; align-items: center; gap: 12px;
+    width: 100%;
+  }
+  .funnel-fill {
+    height: 36px; border-radius: 6px;
+    display: flex; align-items: center; padding-left: 12px;
+    font-size: 13px; font-weight: 600; transition: width 0.8s ease;
+  }
+  .funnel-meta { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+  /* ── PIPELINE ── */
+  .pipeline { display: flex; align-items: center; gap: 0; }
+  .pipe-step {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 12px;
+    text-align: center;
+    position: relative;
+  }
+  .pipe-step + .pipe-step { margin-left: 8px; }
+  .pipe-step::before {
+    content: '→';
+    position: absolute;
+    left: -18px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 18px;
+  }
+  .pipe-step:first-child::before { display: none; }
+  .pipe-icon { font-size: 28px; margin-bottom: 8px; }
+  .pipe-name { font-size: 13px; font-weight: 700; }
+  .pipe-desc { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* ── METRICS TABLE ── */
+  .metrics-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .metrics-table th {
+    background: var(--dark2);
+    padding: 8px 10px;
+    text-align: center;
+    color: var(--muted);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+  }
+  .metrics-table th:first-child { text-align: left; }
+  .metrics-table td {
+    padding: 7px 10px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    color: #CCC;
+  }
+  .metrics-table td:first-child { text-align: left; font-weight: 500; color: var(--text); }
+  .metrics-table tr:hover td { background: rgba(255,255,255,0.03); }
+  .metrics-table tr.winner td { background: rgba(76,175,80,0.08); }
+  .metrics-table tr.winner td:first-child { color: var(--green); }
+  .metrics-table tr.section-header td {
+    background: var(--dark2);
+    color: var(--muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    padding: 5px 10px;
+  }
+  .best-val { color: var(--green); font-weight: 700; }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .badge-green { background: rgba(76,175,80,0.2); color: var(--green); }
+  .badge-red { background: rgba(224,32,32,0.2); color: var(--red); }
+  .badge-gold { background: rgba(255,193,7,0.2); color: var(--gold); }
+
+  /* ── INSIGHT CARDS ── */
+  .insight {
+    border-left: 3px solid var(--red);
+    padding-left: 14px;
+    margin-bottom: 14px;
+  }
+  .insight-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .insight-body { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+  /* ── MODEL ARCH ── */
+  .model-arch {
+    background: var(--dark2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    font-family: monospace;
+    font-size: 11px;
+    color: #AAA;
+    line-height: 1.8;
+  }
+
+  /* ── PROGRESS BAR ── */
+  .metric-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .metric-bar-label { font-size: 12px; min-width: 160px; color: var(--text); }
+  .metric-bar-track { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .metric-bar-fill { height: 100%; border-radius: 4px; transition: width 1s ease; }
+  .metric-bar-val { font-size: 12px; min-width: 50px; text-align: right; color: var(--muted); }
+
+  /* ── STAR BIG ── */
+  .star-layout { display: flex; gap: 32px; }
+  .star-left { flex: 0 0 220px; }
+  .star-box {
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    border: 2px solid var(--red);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 4px;
+    margin-bottom: 16px;
+  }
+  .star-letter { font-size: 64px; font-weight: 900; color: var(--red); line-height: 1; }
+  .star-word { font-size: 18px; font-weight: 600; color: var(--text); }
+
+  /* page counter */
+  .page-counter { font-size: 11px; color: var(--muted); }
+
+  /* ── divider ── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  ul.clean-list { list-style: none; padding: 0; }
+  ul.clean-list li {
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: #CCC;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  ul.clean-list li::before { content: '›'; color: var(--red); font-size: 16px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">
+    <span>FIAP</span>
+    Tech Challenge Fase 2 — Sistema de Recomendação E-Commerce
+  </div>
+  <div class="nav-pills">
+    <button class="nav-pill active" onclick="goTo(0)">Situação</button>
+    <button class="nav-pill" onclick="goTo(1)">Tarefa</button>
+    <button class="nav-pill" onclick="goTo(2)">Ação</button>
+    <button class="nav-pill" onclick="goTo(3)">Resultados</button>
+    <button class="nav-pill" onclick="goTo(4)">Conclusão</button>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <span class="page-counter" id="pageCounter">1 / 5</span>
+    <div class="nav-arrows">
+      <button class="arrow-btn" id="prevBtn" onclick="prev()" disabled>‹</button>
+      <button class="arrow-btn" id="nextBtn" onclick="next()">›</button>
+    </div>
+  </div>
+</nav>
+
+<!-- SLIDES CONTAINER -->
+<div class="slides-container">
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- PAGE 1: SITUAÇÃO                                       -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="slide active" id="slide-0">
+    <div>
+        <h1 style="font-size:38px;margin-bottom:8px;">
+          E-Commerce<br><span class="title-accent">Recommender System</span>
+        </h1>
+        <h3 style="margin-bottom:24px;">RetailRocket Dataset · FIAP MLEng Fase 2</h3>
+
+        <p style="margin-bottom:24px;max-width:640px;">
+          Plataformas de e-commerce enfrentam o desafio de conectar usuários a produtos relevantes em
+          catálogos com centenas de milhares de itens. A ausência de recomendações personalizadas aumenta
+          a taxa de abandono e reduz a conversão.
+        </p>
+
+        <div class="grid-4" style="margin-bottom:24px;">
+          <div class="card" style="text-align:center;">
+            <div class="stat-big">2.76M</div>
+            <div class="stat-label">Eventos totais</div>
+          </div>
+          <div class="card" style="text-align:center;">
+            <div class="stat-big">1.4M</div>
+            <div class="stat-label">Usuários únicos</div>
+          </div>
+          <div class="card" style="text-align:center;">
+            <div class="stat-big">235K</div>
+            <div class="stat-label">Itens únicos</div>
+          </div>
+          <div class="card" style="text-align:center;">
+            <div class="stat-big">4.5m</div>
+            <div class="stat-label">Meses de dados</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:14px;color:var(--muted);">FUNIL DE CONVERSÃO — RetailRocket</div>
+          <div class="funnel">
+            <div class="funnel-bar">
+              <div class="funnel-fill" style="width:100%;background:linear-gradient(90deg,#E02020,#FF6B6B);">
+                🖱 View — 2.66M eventos
+              </div>
+              <span class="funnel-meta">96.7%</span>
+            </div>
+            <div class="funnel-bar">
+              <div class="funnel-fill" style="width:36%;background:linear-gradient(90deg,#FF6B00,#FFA040);">
+                🛒 Add to Cart — 69K
+              </div>
+              <span class="funnel-meta">2.5% &nbsp;↓ 2.69% de conv.</span>
+            </div>
+            <div class="funnel-bar">
+              <div class="funnel-fill" style="width:14%;background:linear-gradient(90deg,#4CAF50,#81C784);">
+                💳 Compra — 22K
+              </div>
+              <span class="funnel-meta">0.8% &nbsp;↓ 31% de conv.</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="small muted">
+          Dataset coletado em ambiente real (mai–set 2015). Dados completamente anonimizados.
+          Apenas feedback implícito — sem ratings explícitos, sem dados demográficos.
+        </p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- PAGE 2: TAREFA                                         -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="slide" id="slide-1">
+    <div>
+        <h2 style="margin-bottom:4px;">O que precisávamos resolver</h2>
+        <h3 style="margin-bottom:24px;">Construir, treinar e comparar modelos de recomendação em escala</h3>
+
+        <div class="grid-2" style="margin-bottom:20px;">
+          <div class="card">
+            <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--gold);">🎯 Objetivos</div>
+            <ul class="clean-list">
+              <li>Implementar ≥ 3 arquiteturas de recomendação</li>
+              <li>Avaliar 9 combinações modelo × processamento</li>
+              <li>Comparar com 2 baselines clássicos (sklearn)</li>
+              <li>Rastrear todos experimentos no MLflow</li>
+              <li>Versionar dados e modelos com DVC</li>
+              <li>Documentar resultados no Model Card</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--red);">⚡ Desafios</div>
+            <ul class="clean-list">
+              <li>Dataset de 2.76M eventos implícitos (sem rating)</li>
+              <li>Sparsidade extrema (~99.99%)</li>
+              <li>Negative sampling necessário</li>
+              <li>Cold start para usuários/itens novos</li>
+              <li>Custo computacional de 9 treinos simultâneos</li>
+              <li>Pipeline reprodutível end-to-end</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:14px;color:var(--muted);">ESTRATÉGIAS DE PROCESSAMENTO DE DADOS</div>
+          <div class="grid-3">
+            <div style="border-left:3px solid var(--red);padding-left:12px;">
+              <div style="font-weight:700;font-size:13px;margin-bottom:6px;">Weighted</div>
+              <div style="font-size:12px;color:var(--muted);line-height:1.6;">
+                Pesos por tipo de evento:<br>
+                View = 1 · AddToCart = 2<br>Transaction = 3
+              </div>
+            </div>
+            <div style="border-left:3px solid var(--gold);padding-left:12px;">
+              <div style="font-weight:700;font-size:13px;margin-bottom:6px;">Binary</div>
+              <div style="font-size:12px;color:var(--muted);line-height:1.6;">
+                Interação = 1 ou 0.<br>
+                Foco em presença/ausência<br>sem distinção de tipo.
+              </div>
+            </div>
+            <div style="border-left:3px solid var(--green);padding-left:12px;">
+              <div style="font-weight:700;font-size:13px;margin-bottom:6px;">Implicit</div>
+              <div style="font-size:12px;color:var(--muted);line-height:1.6;">
+                Frequência normalizada.<br>
+                Aproveita sinais de<br>engajamento repetido.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--muted);">SETUP DO DATASET (PÓS-FILTRO)</div>
+          <div class="grid-4">
+            <div style="text-align:center;">
+              <div style="font-size:22px;font-weight:800;color:var(--gold);">81K</div>
+              <div style="font-size:11px;color:var(--muted);">Usuários (≥5 interações)</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:22px;font-weight:800;color:var(--gold);">67K</div>
+              <div style="font-size:11px;color:var(--muted);">Itens</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:22px;font-weight:800;color:var(--gold);">897K</div>
+              <div style="font-size:11px;color:var(--muted);">Interações</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:22px;font-weight:800;color:var(--gold);">80/20</div>
+              <div style="font-size:11px;color:var(--muted);">Split treino/val</div>
+            </div>
+          </div>
+        </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- PAGE 3: AÇÃO                                           -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="slide" id="slide-2">
+    <div>
+        <h2 style="margin-bottom:4px;">Solução implementada</h2>
+        <h3 style="margin-bottom:16px;">Pipeline DVC · PyTorch · MLflow · 9 combinações</h3>
+
+        <div class="pipeline" style="margin-bottom:20px;">
+          <div class="pipe-step">
+            <div class="pipe-icon">🗃</div>
+            <div class="pipe-name">Preprocess</div>
+            <div class="pipe-desc">events.csv → weighted/binary/implicit</div>
+          </div>
+          <div class="pipe-step">
+            <div class="pipe-icon">🧠</div>
+            <div class="pipe-name">Train</div>
+            <div class="pipe-desc">9 modelos · MLflow · Early Stopping</div>
+          </div>
+          <div class="pipe-step">
+            <div class="pipe-icon">📊</div>
+            <div class="pipe-name">Evaluate</div>
+            <div class="pipe-desc">7 métricas · Baselines · Tabela comparativa</div>
+          </div>
+          <div class="pipe-step">
+            <div class="pipe-icon">☁️</div>
+            <div class="pipe-name">Track</div>
+            <div class="pipe-desc">MLflow Server · S3 Artifacts · DVC Push</div>
+          </div>
+        </div>
+
+        <div class="grid-3" style="margin-bottom:16px;">
+          <div class="card">
+            <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:8px;">NCF — Neural CF</div>
+            <div class="model-arch">User Emb(64d) ─┐
+Item Emb(64d) ─┤ Concat
+               └→ Linear(128)
+                → ReLU+Dropout
+                → Linear(64)
+                → Linear(1)→ σ</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:8px;">He et al. (2017) · MLP sobre embeddings</div>
+          </div>
+          <div class="card">
+            <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:8px;">GMF — Gen. MF</div>
+            <div class="model-arch">User Emb(64d) ─┐
+Item Emb(64d) ─┤ Hadamard
+               └→ Product
+                → Dropout
+                → Linear(1)
+                → Sigmoid</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:8px;">Branch element-wise do paper NCF</div>
+          </div>
+          <div class="card">
+            <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:8px;">MF — Matrix Fact.</div>
+            <div class="model-arch">User Emb + Bias ─┐
+Item Emb + Bias ─┤ Dot
+                 └→ Product
+                  + Biases
+                  + Global Bias
+                  → Sigmoid</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:8px;">Funk-SVD: μ + b_u + b_i + p·q</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--muted);">HIPERPARÂMETROS</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;">
+              <div style="color:var(--muted);">Loss</div><div>BCELoss</div>
+              <div style="color:var(--muted);">Optimizer</div><div>Adam · lr=0.001</div>
+              <div style="color:var(--muted);">Batch size</div><div>1024</div>
+              <div style="color:var(--muted);">Epochs</div><div>10 (Early Stop p=3)</div>
+              <div style="color:var(--muted);">Embedding</div><div>dim=64</div>
+              <div style="color:var(--muted);">Neg. samples</div><div>4 por positivo</div>
+            </div>
+          </div>
+          <div class="card">
+            <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--muted);">DESIGN PATTERNS</div>
+            <ul class="clean-list">
+              <li><strong>Factory</strong> — criação de modelos por config</li>
+              <li><strong>Strategy</strong> — processamento weighted/binary/implicit</li>
+              <li><strong>Singleton</strong> — Settings globais</li>
+              <li><strong>Builder</strong> — MLflowToolkit</li>
+            </ul>
+          </div>
+        </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- PAGE 4: RESULTADOS                                     -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="slide" id="slide-3">
+    <h2 style="margin-bottom:2px;">Resultados — Tabela Comparativa</h2>
+    <h3 style="margin-bottom:16px;">11 modelos avaliados · 7 métricas · Conjunto de validação</h3>
+
+    <table class="metrics-table">
+      <thead>
+        <tr>
+          <th style="text-align:left;min-width:200px;">Modelo</th>
+          <th>Loss</th>
+          <th>AUC-ROC</th>
+          <th>Avg Prec</th>
+          <th>HR@10</th>
+          <th>NDCG@10</th>
+          <th>Prec@10</th>
+          <th>Rec@10</th>
+          <th>MRR@10</th>
+          <th>Train (s)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="section-header"><td colspan="10">NCF — Neural Collaborative Filtering</td></tr>
+        <tr class="winner">
+          <td>ncf_binary <span class="badge badge-green">🏆 melhor ranking</span></td>
+          <td>0.0293</td><td>0.8576</td><td>0.7979</td>
+          <td class="best-val">0.3650</td><td class="best-val">0.3151</td>
+          <td>0.0590</td><td class="best-val">0.4492</td><td class="best-val">0.2962</td><td>—</td>
+        </tr>
+        <tr>
+          <td>ncf_weighted</td>
+          <td>0.0339</td><td>0.9221</td><td>0.8446</td><td>0.1490</td><td>0.0896</td><td>0.0156</td><td>0.1518</td><td>0.0714</td><td>—</td>
+        </tr>
+        <tr>
+          <td>ncf_implicit</td>
+          <td>0.0356</td><td>0.9202</td><td>0.8416</td><td>0.1360</td><td>0.0826</td><td>0.0143</td><td>0.1405</td><td>0.0652</td><td>—</td>
+        </tr>
+
+        <tr class="section-header"><td colspan="10">GMF — Generalized Matrix Factorization</td></tr>
+        <tr>
+          <td>gmf_implicit</td>
+          <td>0.0037</td><td>0.9187</td><td>0.8514</td><td>0.2040</td><td>0.1076</td><td>0.0216</td><td>0.2147</td><td>0.0756</td><td>—</td>
+        </tr>
+        <tr>
+          <td>gmf_weighted</td>
+          <td>0.0038</td><td>0.9181</td><td>0.8504</td><td>0.1840</td><td>0.0935</td><td>0.0193</td><td>0.1895</td><td>0.0647</td><td>—</td>
+        </tr>
+        <tr>
+          <td>gmf_binary</td>
+          <td>0.4784</td><td>0.7242</td><td>0.5066</td><td>0.2250</td><td>0.1940</td><td>0.0350</td><td>0.2551</td><td>0.1962</td><td>—</td>
+        </tr>
+
+        <tr class="section-header"><td colspan="10">MF — Matrix Factorization (Funk-SVD)</td></tr>
+        <tr>
+          <td>matrix_factorization_implicit <span class="badge badge-gold">melhor AUC</span></td>
+          <td>0.0034</td><td class="best-val">0.9299</td><td>0.8671</td><td>0.3420</td><td>0.2287</td><td>0.0362</td><td>0.3563</td><td>0.1911</td><td>—</td>
+        </tr>
+        <tr>
+          <td>matrix_factorization_weighted</td>
+          <td>0.0036</td><td>0.9296</td><td class="best-val">0.8673</td><td>0.3390</td><td>0.2323</td><td>0.0358</td><td>0.3547</td><td>0.1958</td><td>—</td>
+        </tr>
+        <tr>
+          <td>matrix_factorization_binary</td>
+          <td>0.2466</td><td>0.8175</td><td>0.6718</td><td>0.1520</td><td>0.0924</td><td>0.0235</td><td>0.1509</td><td>0.0875</td><td>—</td>
+        </tr>
+
+        <tr class="section-header"><td colspan="10">Baselines — Scikit-Learn</td></tr>
+        <tr>
+          <td>Popularidade</td>
+          <td>N/A</td><td>0.8003</td><td>0.5528</td><td>0.0130</td><td>0.0059</td><td>0.0014</td><td>0.0121</td><td>0.0043</td><td>0.018</td>
+        </tr>
+        <tr>
+          <td>Regressão Logística</td>
+          <td>N/A</td><td>0.7960</td><td>0.5118</td><td>0.0120</td><td>0.0060</td><td>0.0013</td><td>0.0118</td><td>0.0044</td><td>6.87</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:12px;font-size:11px;color:var(--muted);">
+      * Latência de treino para modelos PyTorch não disponível via MLflow run duration API nesta sessão. Baseline: tempo medido durante avaliação. &nbsp;·&nbsp;
+      <span class="badge badge-green">🏆 melhor ranking</span> = maior NDCG@10, HR@10 e MRR@10
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- PAGE 5: CONCLUSÃO                                      -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="slide" id="slide-4">
+    <div>
+        <h2 style="margin-bottom:4px;">Conclusões & Insights</h2>
+        <h3 style="margin-bottom:16px;">O que aprendemos com 11 modelos e 7 métricas</h3>
+
+        <div class="card card-gold" style="margin-bottom:16px;display:flex;align-items:center;gap:20px;">
+          <div style="font-size:48px;">🏆</div>
+          <div>
+            <div style="font-size:11px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;">Melhor modelo para recomendação</div>
+            <div style="font-size:22px;font-weight:800;margin:4px 0;">ncf_binary</div>
+            <div style="display:flex;gap:16px;font-size:13px;color:#CCC;">
+              <span>NDCG@10: <strong style="color:var(--green);">0.3151</strong></span>
+              <span>HR@10: <strong style="color:var(--green);">0.3650</strong></span>
+              <span>MRR@10: <strong style="color:var(--green);">0.2962</strong></span>
+              <span>Rec@10: <strong style="color:var(--green);">0.4492</strong></span>
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-top:6px;">
+              Métricas de ranking são mais relevantes para recomendação do que AUC-ROC
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-bottom:16px;">
+          <div>
+            <div class="insight">
+              <div class="insight-title">Binary supera weighted/implicit em ranking</div>
+              <div class="insight-body">Tratar toda interação como sinal binário de preferência melhora HR@10, NDCG@10 e MRR em modelos NCF — provavelmente por não superestimar a força das views.</div>
+            </div>
+            <div class="insight">
+              <div class="insight-title">MF domina AUC-ROC, NCF domina ranking</div>
+              <div class="insight-body">Matrix Factorization (implicit) obteve AUC-ROC 0.9299, mas perde para ncf_binary em todas métricas de ranking. Para produção, NDCG e HR são mais relevantes.</div>
+            </div>
+            <div class="insight">
+              <div class="insight-title">GMF binary convergiu mal (Loss: 0.478)</div>
+              <div class="insight-body">Loss alto sugere que o produto de Hadamard não captura bem interações binárias — a MLP do NCF fornece a não-linearidade necessária para esse tipo de sinal.</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card" style="margin-bottom:14px;">
+              <div style="font-size:12px;font-weight:700;margin-bottom:12px;color:var(--muted);">GANHO vs BASELINE (ncf_binary)</div>
+              <div class="metric-bar">
+                <div class="metric-bar-label">HR@10</div>
+                <div class="metric-bar-track"><div class="metric-bar-fill" style="width:95%;background:var(--green);"></div></div>
+                <div class="metric-bar-val">+28× pop.</div>
+              </div>
+              <div class="metric-bar">
+                <div class="metric-bar-label">NDCG@10</div>
+                <div class="metric-bar-track"><div class="metric-bar-fill" style="width:92%;background:var(--green);"></div></div>
+                <div class="metric-bar-val">+53× pop.</div>
+              </div>
+              <div class="metric-bar">
+                <div class="metric-bar-label">MRR@10</div>
+                <div class="metric-bar-track"><div class="metric-bar-fill" style="width:88%;background:var(--green);"></div></div>
+                <div class="metric-bar-val">+69× pop.</div>
+              </div>
+              <div class="metric-bar">
+                <div class="metric-bar-label">Rec@10</div>
+                <div class="metric-bar-track"><div class="metric-bar-fill" style="width:98%;background:var(--green);"></div></div>
+                <div class="metric-bar-val">+37× pop.</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--muted);">PRÓXIMOS PASSOS</div>
+              <ul class="clean-list">
+                <li>Serving em produção com FastAPI + cache Redis</li>
+                <li>Retreino periódico com dados mais recentes</li>
+                <li>Explorar NCF+GMF híbrido (NeuMF)</li>
+                <li>Adicionar features de conteúdo (categoria, preço)</li>
+                <li>Métricas de diversidade (coverage, novelty)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="display:flex;align-items:center;gap:32px;padding:14px 20px;">
+          <div style="font-size:12px;color:var(--muted);">Rastreamento completo em</div>
+          <a href="https://mlflow.asgardprint.com.br" style="color:var(--red);font-weight:700;font-size:13px;text-decoration:none;">
+            🔗 mlflow.asgardprint.com.br
+          </a>
+          <div style="font-size:12px;color:var(--muted);">·&nbsp; Experimento:</div>
+          <div style="font-size:12px;font-weight:600;">ecommerce_recommender_fiap_5</div>
+          <div style="margin-left:auto;font-size:12px;color:var(--muted);">Pipeline: DVC · PyTorch · Scikit-Learn · MLflow · S3</div>
+        </div>
+    </div>
+  </div>
+
+</div><!-- /slides-container -->
+
+<script>
+  let current = 0;
+  const total = 5;
+
+  function goTo(n) {
+    document.getElementById('slide-' + current).classList.remove('active');
+    document.querySelectorAll('.nav-pill')[current].classList.remove('active');
+    current = n;
+    document.getElementById('slide-' + current).classList.add('active');
+    document.querySelectorAll('.nav-pill')[current].classList.add('active');
+    document.getElementById('pageCounter').textContent = (current + 1) + ' / ' + total;
+    document.getElementById('prevBtn').disabled = current === 0;
+    document.getElementById('nextBtn').disabled = current === total - 1;
+  }
+
+  function next() { if (current < total - 1) goTo(current + 1); }
+  function prev() { if (current > 0) goTo(current - 1); }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next();
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') prev();
+  });
+</script>
+</body>
+</html>
