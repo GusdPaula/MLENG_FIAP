@@ -107,7 +107,9 @@ class PredictionService:
             ModelLoadError: If the model cannot be loaded.
         """
         # Try loading from MLflow first if configured
-        if self.mlflow_tracking_uri and (self.mlflow_model_name or self.mlflow_model_alias):
+        if self.mlflow_tracking_uri and (
+            self.mlflow_model_name or self.mlflow_model_alias
+        ):
             logger.info(
                 "Attempting to load model from MLflow: URI=%s, Model=%s, Version=%s, Alias=%s",
                 self.mlflow_tracking_uri,
@@ -123,7 +125,7 @@ class PredictionService:
             except Exception as e:
                 logger.warning(
                     "Failed to load model from MLflow: %s. Falling back to local path.",
-                    e
+                    e,
                 )
 
         # Fall back to local path
@@ -169,6 +171,7 @@ class PredictionService:
 
         # Download model to temporary location
         import tempfile
+
         with tempfile.TemporaryDirectory() as temp_dir:
             try:
                 # Try PyTorch model loading first
@@ -183,22 +186,29 @@ class PredictionService:
                 if self.mlflow_model_alias:
                     # Get model name from alias
                     model_name = self._find_model_name_by_alias(self.mlflow_model_alias)
-                    model_version = client.get_model_version_by_alias(model_name, self.mlflow_model_alias)
+                    model_version = client.get_model_version_by_alias(
+                        model_name, self.mlflow_model_alias
+                    )
                 elif self.mlflow_model_version:
-                    model_version = client.get_model_version(self.mlflow_model_name, self.mlflow_model_version)
+                    model_version = client.get_model_version(
+                        self.mlflow_model_name, self.mlflow_model_version
+                    )
                 else:
-                    model_version = client.get_latest_versions(self.mlflow_model_name)[0]
+                    model_version = client.get_latest_versions(self.mlflow_model_name)[
+                        0
+                    ]
 
                 # Download artifacts
                 artifacts_dir = client.download_artifacts(
                     model_version.run_id,
                     model_name if self.mlflow_model_alias else self.mlflow_model_name,
-                    temp_dir
+                    temp_dir,
                 )
 
                 # Find the .pt file
                 import os
-                pt_files = [f for f in os.listdir(artifacts_dir) if f.endswith('.pt')]
+
+                pt_files = [f for f in os.listdir(artifacts_dir) if f.endswith(".pt")]
                 if not pt_files:
                     raise Exception("No .pt file found in artifacts") from None
 
@@ -252,7 +262,9 @@ class PredictionService:
         # Get all registered models
         registered_models = client.search_registered_models()
 
-        logger.info(f"Searching for model with alias '{alias}' across {len(registered_models)} registered models")
+        logger.info(
+            f"Searching for model with alias '{alias}' across {len(registered_models)} registered models"
+        )
 
         # Search for the alias across all models
         for model in registered_models:
@@ -261,7 +273,9 @@ class PredictionService:
                 # Get latest version with the specified alias
                 model_version = client.get_model_version_by_alias(model_name, alias)
                 model_uri = f"models:/{model_name}@{alias}"
-                logger.info(f"Found model '{model_name}' with alias '{alias}' (version {model_version.version})")
+                logger.info(
+                    f"Found model '{model_name}' with alias '{alias}' (version {model_version.version})"
+                )
                 return model_uri
             except Exception:
                 # This model doesn't have the alias, continue searching
@@ -299,7 +313,11 @@ class PredictionService:
             num_users = len(user2idx)
             num_items = len(item2idx)
             hyperparams = checkpoint.get("config", {}).get("hyperparams", {})
-            logger.info("Derived num_users=%d, num_items=%d from user2idx/item2idx", num_users, num_items)
+            logger.info(
+                "Derived num_users=%d, num_items=%d from user2idx/item2idx",
+                num_users,
+                num_items,
+            )
         else:
             num_users = checkpoint.get("num_users")
             num_items = checkpoint.get("num_items")
@@ -307,9 +325,7 @@ class PredictionService:
 
         if num_users is None or num_items is None:
             logger.error("num_users or num_items not found in checkpoint")
-            raise ModelLoadError(
-                "num_users or num_items not found in checkpoint."
-            )
+            raise ModelLoadError("num_users or num_items not found in checkpoint.")
 
         logger.info(
             "Reconstructing model of type %s with %d users and %d items",
@@ -341,11 +357,23 @@ class PredictionService:
             len(item2idx),
         )
 
+        # Load popular items for cold start fallback
+        popular_items = checkpoint.get("popular_items", {})
+        if popular_items:
+            logger.info(
+                "Loaded %d popular items for cold start fallback", len(popular_items)
+            )
+        else:
+            logger.warning(
+                "No popular items found in checkpoint, cold start fallback disabled"
+            )
+
         self._predictor = PredictorFactory.create(
             predictor_type=self.predictor_type,
             model=model,
             user2idx=user2idx,
             item2idx=item2idx,
+            popular_items=popular_items,
         )
 
         logger.info("PredictionService initialized successfully")
@@ -492,7 +520,9 @@ class PredictionService:
         Raises:
             PredictorNotFoundError: If the predictor type is not available.
         """
-        logger.info("Reloading predictor from '%s' to '%s'", self.predictor_type, predictor_type)
+        logger.info(
+            "Reloading predictor from '%s' to '%s'", self.predictor_type, predictor_type
+        )
         self.predictor_type = predictor_type
         self._load_model()
 

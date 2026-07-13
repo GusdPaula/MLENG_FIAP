@@ -81,15 +81,18 @@ class TrainingPipeline:
         interactions_path = processed_dir / "interactions.csv"
         user2idx_path = processed_dir / "user2idx.json"
         item2idx_path = processed_dir / "item2idx.json"
+        popular_items_path = processed_dir / "popular_items.json"
 
         if all(p.exists() for p in [interactions_path, user2idx_path, item2idx_path]):
             return self._load_processed_data(
-                interactions_path, user2idx_path, item2idx_path
+                interactions_path, user2idx_path, item2idx_path, popular_items_path
             )
         else:
             return self._process_raw_data()
 
-    def _load_processed_data(self, interactions_path, user2idx_path, item2idx_path):
+    def _load_processed_data(
+        self, interactions_path, user2idx_path, item2idx_path, popular_items_path
+    ):
         """Load pre-processed interactions and mappings."""
         import json
 
@@ -101,9 +104,31 @@ class TrainingPipeline:
             user2idx = {int(k): v for k, v in json.load(f).items()}
         with open(item2idx_path) as f:
             item2idx = {int(k): v for k, v in json.load(f).items()}
+
+        # Load popular items for cold start fallback
+        popular_items = {}
+        if popular_items_path.exists():
+            with open(popular_items_path) as f:
+                popular_items = {int(k): v for k, v in json.load(f).items()}
+            logger.info(
+                "Loaded %d popular items for cold start fallback", len(popular_items)
+            )
+        else:
+            logger.warning(
+                "popular_items.json not found, cold start fallback will be disabled"
+            )
+
         processor_cfg = self.cfg.get("processor", "weighted")
         raw_path = self.cfg.get("raw_events_path", "data/raw/events.csv")
-        return interactions, user2idx, item2idx, processor_cfg, processor_cfg, raw_path
+        return (
+            interactions,
+            user2idx,
+            item2idx,
+            processor_cfg,
+            processor_cfg,
+            raw_path,
+            popular_items,
+        )
 
     def _process_raw_data(self):
         """Process raw events into interactions."""
@@ -120,6 +145,23 @@ class TrainingPipeline:
         interactions, user2idx, item2idx = processor.process(
             events, min_interactions=self.cfg.get("min_interactions", 1)
         )
+
+        # Calculate popular items for cold start fallback
+        if "weight" in interactions.columns:
+            popular_items = interactions.groupby("itemid")["weight"].sum().to_dict()
+        else:
+            popular_items = interactions.groupby("itemid").size().to_dict()
+
+        # Normalize popularity scores to [0, 1] range
+        if popular_items:
+            max_pop = max(popular_items.values())
+            if max_pop > 0:
+                popular_items = {k: v / max_pop for k, v in popular_items.items()}
+
+        logger.info(
+            "Calculated %d popular items for cold start fallback", len(popular_items)
+        )
+
         return (
             interactions,
             user2idx,
@@ -127,6 +169,7 @@ class TrainingPipeline:
             processor_cfg,
             processor.strategy_name,
             raw_path,
+            popular_items,
         )
 
     def _create_dataset(self, interactions, num_items):
@@ -341,7 +384,14 @@ class TrainingPipeline:
         return ranking
 
     def _save_model(
-        self, model, model_type, processor_name, user2idx, item2idx, metrics
+        self,
+        model,
+        model_type,
+        processor_name,
+        user2idx,
+        item2idx,
+        metrics,
+        popular_items=None,
     ):
         """Save model checkpoint locally."""
         artifact_dir = Path(self.cfg.get("artifact_dir", "models"))
@@ -359,6 +409,7 @@ class TrainingPipeline:
             metrics_dict,
             early_stopping_info,
             artifact_dir,
+            popular_items,
         )
 
         self._copy_for_dvc(artifact_path, artifact_dir)
@@ -384,6 +435,7 @@ class TrainingPipeline:
         metrics_dict,
         early_stopping_info,
         artifact_dir,
+        popular_items=None,
     ):
         """Save model checkpoint."""
         artifact_path = save_checkpoint(
@@ -396,6 +448,7 @@ class TrainingPipeline:
             metrics=metrics_dict,
             early_stopping_info=early_stopping_info,
             artifact_dir=artifact_dir,
+            popular_items=popular_items,
         )
         logger.info("Model saved locally to %s", artifact_path)
         return artifact_path
@@ -487,30 +540,39 @@ class TrainingPipeline:
         """Train single model from config."""
         self._setup_threads_and_seed()
         data = self._load_or_process_data()
-        logger.info("Users: %d, Items: %d", len(data[1]), len(data[2]))
+        (
+            interactions,
+            user2idx,
+            item2idx,
+            processor_cfg,
+            processor_name,
+            raw_path,
+            popular_items,
+        ) = data
+        logger.info("Users: %d, Items: %d", len(user2idx), len(item2idx))
 
-        dataset = self._create_dataset(data[0], len(data[2]))
+        dataset = self._create_dataset(interactions, len(item2idx))
         train_dataset, val_dataset = self._split_dataset(dataset)
         train_loader, val_loader = self._create_data_loaders(train_dataset, val_dataset)
 
         model_type = self.cfg.get("type", "ncf")
-        model = self._create_model(len(data[1]), len(data[2]), model_type)
+        model = self._create_model(len(user2idx), len(item2idx), model_type)
 
         self._train_and_log_single_model(
             model,
             model_type,
-            data[3],
-            data[4],
-            data[5],
+            processor_cfg,
+            processor_name,
+            raw_path,
             dataset,
             train_dataset,
             val_dataset,
             train_loader,
             val_loader,
-            data[1],
-            data[2],
-            data[0],
-            data[3],
+            user2idx,
+            item2idx,
+            interactions,
+            popular_items,
         )
 
     def _train_and_log_single_model(
@@ -528,7 +590,7 @@ class TrainingPipeline:
         user2idx,
         item2idx,
         interactions,
-        processor_type,
+        popular_items,
     ):
         """Train and log single model to MLflow."""
         mlflow_toolkit = self._setup_mlflow()
@@ -541,7 +603,7 @@ class TrainingPipeline:
             self._log_params(mlflow_toolkit, model_type, processor_cfg)
             self._log_dataset(mlflow_toolkit, interactions, processor_cfg, raw_path)
             self._log_train_val_samples(
-                mlflow_toolkit, dataset, train_dataset, val_dataset, processor_type
+                mlflow_toolkit, dataset, train_dataset, val_dataset, processor_cfg
             )
 
             history, best, monitor = self._train_model(
@@ -552,7 +614,13 @@ class TrainingPipeline:
                 model, val_dataset, dataset, len(item2idx)
             )
             self._save_model(
-                model, model_type, processor_name, user2idx, item2idx, history
+                model,
+                model_type,
+                processor_name,
+                user2idx,
+                item2idx,
+                history,
+                popular_items,
             )
 
             self._log_metrics_and_model(

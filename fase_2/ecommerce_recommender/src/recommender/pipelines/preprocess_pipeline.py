@@ -50,9 +50,38 @@ class PreprocessPipeline:
         logger.info("  Unique Users: %d", len(user2idx))
         logger.info("  Unique Items: %d", len(item2idx))
         logger.info("  Interactions shape: %s", str(interactions.shape))
-        return interactions, user2idx, item2idx
 
-    def _save_processed_data(self, interactions, user2idx, item2idx):
+        # Calculate popular items for cold start fallback
+        popular_items = self._calculate_popular_items(interactions)
+        logger.info("  Popular items calculated: %d items", len(popular_items))
+
+        return interactions, user2idx, item2idx, popular_items
+
+    def _calculate_popular_items(self, interactions):
+        """Calculate item popularity scores from interactions.
+
+        Args:
+            interactions: DataFrame with user-item interactions and weights.
+
+        Returns:
+            Dictionary mapping item IDs to popularity scores.
+        """
+        # Group by item_id and sum the weights to get popularity
+        if "weight" in interactions.columns:
+            item_popularity = interactions.groupby("itemid")["weight"].sum().to_dict()
+        else:
+            # If no weight column, use count as popularity
+            item_popularity = interactions.groupby("itemid").size().to_dict()
+
+        # Normalize popularity scores to [0, 1] range
+        if item_popularity:
+            max_pop = max(item_popularity.values())
+            if max_pop > 0:
+                item_popularity = {k: v / max_pop for k, v in item_popularity.items()}
+
+        return item_popularity
+
+    def _save_processed_data(self, interactions, user2idx, item2idx, popular_items):
         """Save processed data to files."""
         processed_dir = Path("data/processed")
         processed_dir.mkdir(parents=True, exist_ok=True)
@@ -60,6 +89,7 @@ class PreprocessPipeline:
         interactions_path = processed_dir / "interactions.csv"
         user2idx_path = processed_dir / "user2idx.json"
         item2idx_path = processed_dir / "item2idx.json"
+        popular_items_path = processed_dir / "popular_items.json"
 
         logger.info("Saving processed files to %s...", processed_dir)
 
@@ -71,6 +101,9 @@ class PreprocessPipeline:
         with open(item2idx_path, "w") as f:
             json.dump(item2idx, f)
 
+        with open(popular_items_path, "w") as f:
+            json.dump(popular_items, f)
+
         logger.info("Preprocessing artifacts saved successfully.")
 
     def run(self):
@@ -78,8 +111,8 @@ class PreprocessPipeline:
         logger.info("Starting preprocessing using config: %s", self.config_path)
 
         events = self._load_events()
-        interactions, user2idx, item2idx = self._process_events(events)
-        self._save_processed_data(interactions, user2idx, item2idx)
+        interactions, user2idx, item2idx, popular_items = self._process_events(events)
+        self._save_processed_data(interactions, user2idx, item2idx, popular_items)
 
 
 def run_preprocess_pipeline(config_path: str = "configs/model.yaml") -> None:

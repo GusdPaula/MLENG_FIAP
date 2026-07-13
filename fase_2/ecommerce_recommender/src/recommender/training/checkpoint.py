@@ -20,6 +20,7 @@ def save_checkpoint(
     metrics: Dict[str, float],
     early_stopping_info: Dict[str, Any],
     artifact_dir: Path,
+    popular_items: Dict[Any, float] | None = None,
 ) -> Path:
     """Save model checkpoint with all necessary metadata.
 
@@ -33,6 +34,7 @@ def save_checkpoint(
         metrics: Dictionary of evaluation metrics.
         early_stopping_info: Dictionary with early stopping information.
         artifact_dir: Directory to save the checkpoint.
+        popular_items: Optional dictionary of item popularity scores for cold start fallback.
 
     Returns:
         Path to the saved checkpoint file.
@@ -49,6 +51,13 @@ def save_checkpoint(
         "metrics": metrics,
         "early_stopping": early_stopping_info,
     }
+
+    if popular_items:
+        checkpoint["popular_items"] = popular_items
+        logger.info(
+            "Included %d popular items in checkpoint for cold start fallback",
+            len(popular_items),
+        )
 
     torch.save(checkpoint, checkpoint_path)
     logger.info(f"Saved model checkpoint: {checkpoint_path}")
