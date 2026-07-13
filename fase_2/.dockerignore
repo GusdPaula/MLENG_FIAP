@@ -28,9 +28,8 @@ mlflow.db
 ecommerce_recommender/mlflow.db
 ecommerce_recommender/notebooks/mlflow.db
 
-# Data & Models (we want to mount these via volumes, not bake them into the image)
+# Data (we want to mount these via volumes, not bake them into the image)
 ecommerce_recommender/data/
-ecommerce_recommender/models/
 reports/
 
 # Environmental variables

@@ -1,0 +1,127 @@
+{
+  "dashboard": {
+    "title": "Model Monitoring Dashboard",
+    "uid": "model-monitoring",
+    "tags": ["ml", "monitoring", "model"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Prediction Score Mean",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "cloudwatch",
+              "uid": "${__datasource.uid}"
+            },
+            "query": {
+              "namespace": "ML-Recommender",
+              "metricName": "PredictionScoreMean",
+              "statistics": ["Average"],
+              "period": 60,
+              "region": "us-east-1",
+              "dimensions": []
+            }
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Prediction Score Std Dev",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+        "targets": [
+          {
+            "refId": "B",
+            "datasource": {
+              "type": "cloudwatch",
+              "uid": "${__datasource.uid}"
+            },
+            "query": {
+              "namespace": "ML-Recommender",
+              "metricName": "PredictionScoreStd",
+              "statistics": ["Average"],
+              "period": 60,
+              "region": "us-east-1",
+              "dimensions": []
+            }
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Prediction Count",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+        "targets": [
+          {
+            "refId": "C",
+            "datasource": {
+              "type": "cloudwatch",
+              "uid": "${__datasource.uid}"
+            },
+            "query": {
+              "namespace": "ML-Recommender",
+              "metricName": "PredictionCount",
+              "statistics": ["Sum"],
+              "period": 60,
+              "region": "us-east-1",
+              "dimensions": []
+            }
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Prediction Score Min",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 4},
+        "targets": [
+          {
+            "refId": "D",
+            "datasource": {
+              "type": "cloudwatch",
+              "uid": "${__datasource.uid}"
+            },
+            "query": {
+              "namespace": "ML-Recommender",
+              "metricName": "PredictionScoreMin",
+              "statistics": ["Average"],
+              "period": 60,
+              "region": "us-east-1",
+              "dimensions": []
+            }
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Prediction Score Max",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 4},
+        "targets": [
+          {
+            "refId": "E",
+            "datasource": {
+              "type": "cloudwatch",
+              "uid": "${__datasource.uid}"
+            },
+            "query": {
+              "namespace": "ML-Recommender",
+              "metricName": "PredictionScoreMax",
+              "statistics": ["Average"],
+              "period": 60,
+              "region": "us-east-1",
+              "dimensions": []
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "overwrite": true
+}

@@ -8,6 +8,7 @@ separate components for different monitoring concerns.
 from __future__ import annotations
 
 import logging
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
@@ -15,6 +16,8 @@ from typing import Any
 
 import numpy as np
 from scipy import stats
+
+from .cloudwatch_exporter import CloudWatchMetricsExporter
 
 logger = logging.getLogger(__name__)
 
@@ -320,6 +323,7 @@ class MonitoringService:
         shift_threshold: float = 0.05,
         drift_threshold: float = 2.0,
         window_size: int = 1000,
+        enable_cloudwatch_export: bool = True,
     ):
         """Initialize the monitoring service.
 
@@ -327,10 +331,22 @@ class MonitoringService:
             shift_threshold: P-value threshold for data shift detection.
             drift_threshold: Z-score threshold for performance drift detection.
             window_size: Number of predictions to keep in memory.
+            enable_cloudwatch_export: Whether to automatically export metrics to CloudWatch.
         """
         self.data_shift_detector = DataShiftDetector(threshold=shift_threshold)
         self.performance_monitor = ModelPerformanceMonitor(window_size=window_size)
         self.drift_threshold = drift_threshold
+        self.enable_cloudwatch_export = enable_cloudwatch_export
+
+        # Initialize CloudWatch exporter if enabled
+        self.cloudwatch_exporter = None
+        if enable_cloudwatch_export:
+            try:
+                region = os.getenv("AWS_REGION", "us-east-1")
+                self.cloudwatch_exporter = CloudWatchMetricsExporter(region=region)
+                logger.info("CloudWatch metrics exporter initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize CloudWatch exporter: {e}")
 
         logger.info(
             "Initialized MonitoringService with shift_threshold=%.3f, drift_threshold=%.2f",
@@ -356,9 +372,20 @@ class MonitoringService:
         Returns:
             The recorded MonitoringMetrics object.
         """
-        return self.performance_monitor.record_predictions(
+        metrics = self.performance_monitor.record_predictions(
             scores, user_ids, item_ids, custom_metrics
         )
+
+        # Automatically export to CloudWatch if enabled
+        if self.cloudwatch_exporter and len(scores) > 0:
+            try:
+                stats = self.performance_monitor.get_current_stats()
+                if stats:
+                    self.cloudwatch_exporter.export_performance_stats(stats)
+            except Exception as e:
+                logger.warning(f"Failed to export metrics to CloudWatch: {e}")
+
+        return metrics
 
     def set_baselines(self) -> None:
         """Set baselines for both data shift and performance monitoring."""
@@ -387,6 +414,14 @@ class MonitoringService:
                         self.drift_threshold
                     )
                 )
+                # Export to CloudWatch
+                if self.cloudwatch_exporter:
+                    try:
+                        self.cloudwatch_exporter.export_shift_detection_result(
+                            results["performance_drift"], "ModelDrift"
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to export drift metrics: {e}")
             except RuntimeError:
                 logger.warning("Performance drift check skipped: baseline not set")
 
@@ -396,6 +431,14 @@ class MonitoringService:
             results["data_shift"] = self.data_shift_detector.detect_shift(
                 latest_metrics
             )
+            # Export to CloudWatch
+            if self.cloudwatch_exporter:
+                try:
+                    self.cloudwatch_exporter.export_shift_detection_result(
+                        results["data_shift"], "DataShift"
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to export shift metrics: {e}")
 
         return results
 

@@ -88,7 +88,7 @@ resource "aws_ecs_task_definition" "api" {
 
   tags = var.common_tags
   runtime_platform {
-    cpu_architecture = "ARM64"
+    cpu_architecture = "X86_64"
     operating_system_family = "LINUX"
   }
 
@@ -234,6 +234,26 @@ resource "aws_iam_role_policy" "ecs_task_s3_policy" {
           "arn:aws:s3:::mlflow-artifacts-fiap-7jy4yo6d",
           "arn:aws:s3:::mlflow-artifacts-fiap-7jy4yo6d/*"
         ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "ecs_task_cloudwatch_policy" {
+  name = "${var.project_name}-ecs-task-cloudwatch-policy"
+  role = aws_iam_role.ecs_task_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudwatch:PutMetricData",
+          "cloudwatch:GetMetricStatistics",
+          "cloudwatch:ListMetrics"
+        ]
+        Resource = "*"
       }
     ]
   })
