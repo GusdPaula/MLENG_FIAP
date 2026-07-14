@@ -192,6 +192,6 @@ class BasePredictor(ABC):
             Items not in popular_items get a score of 0.0.
         """
         if not self.enable_cold_start_fallback:
-            return {item_id: 0.0 for item_id in item_ids}
+            return dict.fromkeys(item_ids, 0.0)
 
         return {item_id: self.popular_items.get(item_id, 0.0) for item_id in item_ids}
