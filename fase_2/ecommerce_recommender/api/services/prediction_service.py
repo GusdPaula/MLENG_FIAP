@@ -416,6 +416,17 @@ class PredictionService:
         user2idx = checkpoint.get("user2idx", {})
         item2idx = checkpoint.get("item2idx", {})
 
+        # Load popular items for cold start fallback
+        popular_items = checkpoint.get("popular_items", {})
+        if popular_items:
+            logger.info(
+                "Loaded %d popular items for cold start fallback", len(popular_items)
+            )
+        else:
+            logger.warning(
+                "No popular items found in checkpoint, cold start fallback disabled"
+            )
+
         logger.info(
             "Creating predictor of type '%s' with %d users and %d items",
             self.predictor_type,
@@ -428,6 +439,7 @@ class PredictionService:
             model=model,
             user2idx=user2idx,
             item2idx=item2idx,
+            popular_items=popular_items,
         )
 
         logger.info("PredictionService initialized successfully")

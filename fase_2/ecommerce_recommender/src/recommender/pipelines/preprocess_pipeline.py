@@ -48,6 +48,20 @@ def run_preprocess_pipeline(config_path: str = "configs/model.yaml") -> None:
     logger.info("  Itens Únicos: %d", len(item2idx))
     logger.info("  Formato das interações: %s", str(interactions.shape))
 
+    # Calculate popular items for cold start fallback
+    if "weight" in interactions.columns:
+        item_popularity = interactions.groupby("itemid")["weight"].sum().to_dict()
+    else:
+        item_popularity = interactions.groupby("itemid").size().to_dict()
+
+    # Normalize popularity scores to [0, 1] range
+    if item_popularity:
+        max_pop = max(item_popularity.values())
+        if max_pop > 0:
+            item_popularity = {k: v / max_pop for k, v in item_popularity.items()}
+
+    logger.info("  Itens populares calculados: %d itens", len(item_popularity))
+
     # Salva em data/processed
     processed_dir = Path("data/processed")
     processed_dir.mkdir(parents=True, exist_ok=True)
@@ -55,6 +69,7 @@ def run_preprocess_pipeline(config_path: str = "configs/model.yaml") -> None:
     interactions_path = processed_dir / "interactions.csv"
     user2idx_path = processed_dir / "user2idx.json"
     item2idx_path = processed_dir / "item2idx.json"
+    popular_items_path = processed_dir / "popular_items.json"
 
     logger.info("Salvando arquivos processados em %s...", processed_dir)
 
@@ -67,6 +82,10 @@ def run_preprocess_pipeline(config_path: str = "configs/model.yaml") -> None:
 
     with open(item2idx_path, "w") as f:
         json.dump(item2idx, f)
+
+    # Salva itens populares para cold start fallback
+    with open(popular_items_path, "w") as f:
+        json.dump(item_popularity, f)
 
     logger.info("Artefatos de pré-processamento salvos com sucesso.")
 

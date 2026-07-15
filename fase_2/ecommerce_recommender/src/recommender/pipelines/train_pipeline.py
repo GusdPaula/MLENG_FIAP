@@ -83,10 +83,14 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
     interactions_path = processed_dir / "interactions.csv"
     user2idx_path = processed_dir / "user2idx.json"
     item2idx_path = processed_dir / "item2idx.json"
+    popular_items_path = processed_dir / "popular_items.json"
 
     import json
 
     import pandas as pd
+
+    # Initialize popular_items
+    popular_items = {}
 
     if interactions_path.exists() and user2idx_path.exists() and item2idx_path.exists():
         logger.info(
@@ -100,6 +104,19 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
         # Convert keys back to integers (JSON keys are always strings)
         user2idx = {int(k): v for k, v in user2idx.items()}
         item2idx = {int(k): v for k, v in item2idx.items()}
+
+        # Load popular items for cold start fallback
+        if popular_items_path.exists():
+            with open(popular_items_path) as f:
+                popular_items = {int(k): v for k, v in json.load(f).items()}
+            logger.info(
+                "Loaded %d popular items for cold start fallback", len(popular_items)
+            )
+        else:
+            logger.warning(
+                "popular_items.json not found, cold start fallback will be disabled"
+            )
+
         processor_cfg = cfg.get("processor", "weighted")
         processor_name = processor_cfg
         num_users = len(user2idx)
@@ -124,6 +141,22 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
         processor_name = processor.strategy_name
         num_users = len(user2idx)
         num_items = len(item2idx)
+
+        # Calculate popular items for cold start fallback
+        if "weight" in interactions.columns:
+            popular_items = interactions.groupby("itemid")["weight"].sum().to_dict()
+        else:
+            popular_items = interactions.groupby("itemid").size().to_dict()
+
+        # Normalize popularity scores to [0, 1] range
+        if popular_items:
+            max_pop = max(popular_items.values())
+            if max_pop > 0:
+                popular_items = {k: v / max_pop for k, v in popular_items.items()}
+
+        logger.info(
+            "Calculated %d popular items for cold start fallback", len(popular_items)
+        )
 
     logger.info("  Users: %d, Items: %d", num_users, num_items)
 
@@ -341,6 +374,7 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
             metrics=metrics_dict,
             early_stopping_info=early_stopping_info,
             artifact_dir=artifact_dir,
+            popular_items=popular_items,
         )
 
         logger.info("\nModelo salvo localmente em %s", artifact_path)

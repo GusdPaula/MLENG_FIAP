@@ -56,6 +56,21 @@ class SingleUserPredictor(BasePredictor):
             )
 
         user_idx = self._get_user_idx(request.user_id)
+
+        # Cold start fallback: use popularity scores for unknown users
+        if user_idx is None:
+            logger.info("Using cold start fallback for user %d", request.user_id)
+            item_scores = self._get_popular_item_scores(request.item_ids)
+            return PredictionResponse(
+                user_id=request.user_id,
+                item_scores=item_scores,
+                metadata={
+                    "predictor": self.name,
+                    "model_type": self.model.model_name,
+                    "cold_start": True,
+                },
+            )
+
         item_indices = self._get_item_indices(request.item_ids)
 
         with torch.no_grad():
@@ -130,6 +145,21 @@ class TopKRecommendationPredictor(BasePredictor):
             return self._predict_top_k(request)
         elif request.item_ids:
             user_idx = self._get_user_idx(request.user_id)
+
+            # Cold start fallback: use popularity scores for unknown users
+            if user_idx is None:
+                logger.info("Using cold start fallback for user %d", request.user_id)
+                item_scores = self._get_popular_item_scores(request.item_ids)
+                return PredictionResponse(
+                    user_id=request.user_id,
+                    item_scores=item_scores,
+                    metadata={
+                        "predictor": self.name,
+                        "model_type": self.model.model_name,
+                        "cold_start": True,
+                    },
+                )
+
             item_indices = self._get_item_indices(request.item_ids)
 
             with torch.no_grad():
@@ -245,6 +275,25 @@ class TopKRecommendationPredictor(BasePredictor):
         logger.info("Generating top-%d recommendations for user %d", k, user_id)
 
         user_idx = self._get_user_idx(user_id)
+
+        # Cold start fallback: return popular items for unknown users
+        if user_idx is None:
+            logger.info("Using cold start fallback for user %d", user_id)
+            popular_items = self._get_popular_items(k)
+            recommendations = [
+                (item_id, float(score)) for item_id, score in popular_items
+            ]
+            return RecommendationResponse(
+                user_id=user_id,
+                recommendations=recommendations,
+                metadata={
+                    "predictor": self.name,
+                    "model_type": self.model.model_name,
+                    "k": k,
+                    "cold_start": True,
+                },
+            )
+
         num_items = len(self.item2idx)
 
         with torch.no_grad():
@@ -308,6 +357,21 @@ class BatchPredictor(BasePredictor):
             raise InvalidInputError("item_ids must be provided for prediction.")
 
         user_idx = self._get_user_idx(request.user_id)
+
+        # Cold start fallback: use popularity scores for unknown users
+        if user_idx is None:
+            logger.info("Using cold start fallback for user %d", request.user_id)
+            item_scores = self._get_popular_item_scores(request.item_ids)
+            return PredictionResponse(
+                user_id=request.user_id,
+                item_scores=item_scores,
+                metadata={
+                    "predictor": self.name,
+                    "model_type": self.model.model_name,
+                    "cold_start": True,
+                },
+            )
+
         item_indices = self._get_item_indices(request.item_ids)
 
         with torch.no_grad():
