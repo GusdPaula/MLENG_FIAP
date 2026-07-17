@@ -320,8 +320,8 @@ class MonitoringService:
 
     def __init__(
         self,
-        shift_threshold: float = 0.05,
-        drift_threshold: float = 2.0,
+        shift_threshold: float = 0.1,
+        drift_threshold: float = 1.0,
         window_size: int = 1000,
         enable_cloudwatch_export: bool = True,
     ):

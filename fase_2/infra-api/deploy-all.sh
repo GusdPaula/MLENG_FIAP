@@ -39,14 +39,16 @@ echo ""
 echo -e "${YELLOW}Using provided credentials:${NC}"
 DOCKERHUB_USERNAME="gusdpaula404"
 API_KEY="hm8K1JkR2BY4-zn1VGsFO-1MP_xp39GjdoUUacfyEvk"
+PROJECT_NAME="mlflow-fiap"
 # Skip MLflow URL prompt for fresh deployment - will be set after MLflow deployment
 MLFLOW_URL=""
 
 echo -e "${GREEN}Docker Hub username: ${DOCKERHUB_USERNAME}${NC}"
 echo -e "${GREEN}API key: ${API_KEY}${NC}"
+echo -e "${GREEN}Project name: ${PROJECT_NAME}${NC}"
 echo ""
 
-# Deployment order: S3 -> MLflow -> API
+# Deployment order: S3 -> MLflow -> API -> Prometheus -> Grafana
 echo -e "${GREEN}=== Step 1: Deploy S3/DVC Storage ===${NC}"
 cd s3
 terraform init -reconfigure
@@ -90,19 +92,38 @@ terraform apply \
 API_OUTPUTS=$(terraform output -json)
 API_URL=$(echo $API_OUTPUTS | python3 -c "import sys, json; print(json.load(sys.stdin)['api_url']['value'])")
 API_CLOUDFRONT=$(echo $API_OUTPUTS | python3 -c "import sys, json; print(json.load(sys.stdin)['cloudfront_domain_name']['value'])")
+API_ALB_DNS=$(echo $API_OUTPUTS | python3 -c "import sys, json; print(json.load(sys.stdin)['api_alb_dns']['value'])")
 echo -e "${GREEN}API deployment completed${NC}"
 echo -e "${GREEN}API URL: ${API_URL}${NC}"
 cd ..
 echo ""
 
-echo -e "${GREEN}=== Step 4: Deploy Grafana Monitoring ===${NC}"
-cd grafana
+echo -e "${GREEN}=== Step 4: Deploy Prometheus ===${NC}"
+cd prometheus
 terraform init -reconfigure
-terraform apply -auto-approve
+terraform apply \
+  -auto-approve \
+  -var="api_alb_dns=${API_ALB_DNS}"
+PROMETHEUS_OUTPUTS=$(terraform output -json)
+PROMETHEUS_URL=$(echo $PROMETHEUS_OUTPUTS | python3 -c "import sys, json; print(json.load(sys.stdin)['prometheus_url']['value'])")
+PROMETHEUS_PUBLIC_IP=$(echo $PROMETHEUS_OUTPUTS | python3 -c "import sys, json; print(json.load(sys.stdin)['prometheus_public_ip']['value'])")
+echo -e "${GREEN}Prometheus deployment completed${NC}"
+echo -e "${GREEN}Prometheus URL: ${PROMETHEUS_URL}${NC}"
+echo -e "${GREEN}Prometheus Public IP: ${PROMETHEUS_PUBLIC_IP}${NC}"
+cd ..
+echo ""
+
+echo -e "${GREEN}=== Step 5: Deploy Grafana Monitoring ===${NC}"
+cd grafana-ec2
+terraform init -reconfigure
+terraform apply \
+  -auto-approve \
+  -var="prometheus_url=${PROMETHEUS_URL}" \
+  -var="project_name=${PROJECT_NAME}"
 GRAFANA_OUTPUTS=$(terraform output -json)
-GRAFANA_URL=$(echo $GRAFANA_OUTPUTS | python3 -c "import sys, json; print(json.load(sys.stdin)['grafana_workspace_url']['value'])")
+GRAFANA_URL=$(echo $GRAFANA_OUTPUTS | python3 -c "import sys, json; print(json.load(sys.stdin)['grafana_url']['value'])")
 echo -e "${GREEN}Grafana deployment completed${NC}"
-echo -e "${GREEN}Grafana URL: ${GRAFANA_URL}${NC}"
+echo -e "${GREEN}Grafana URL: https://${GRAFANA_URL}${NC}"
 cd ..
 echo ""
 
@@ -110,7 +131,9 @@ echo -e "${GREEN}=== Deployment Summary ===${NC}"
 echo -e "${GREEN}MLflow URL: https://${MLFLOW_CLOUDFRONT}${NC}"
 echo -e "${GREEN}API URL: ${API_URL}${NC}"
 echo -e "${GREEN}API CloudFront: https://${API_CLOUDFRONT}${NC}"
-echo -e "${GREEN}Grafana URL: ${GRAFANA_URL}${NC}"
+echo -e "${GREEN}Prometheus URL: ${PROMETHEUS_URL}${NC}"
+echo -e "${GREEN}Prometheus Public IP: ${PROMETHEUS_PUBLIC_IP}${NC}"
+echo -e "${GREEN}Grafana URL: https://${GRAFANA_URL}${NC}"
 echo -e "${GREEN}API Key: ${API_KEY}${NC}"
 echo ""
 echo -e "${YELLOW}Save the API key securely - it will not be shown again!${NC}"

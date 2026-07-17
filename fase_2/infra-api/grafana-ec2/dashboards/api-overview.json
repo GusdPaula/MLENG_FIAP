@@ -1,4 +1,5 @@
 {
+  "overwrite": true,
   "dashboard": {
     "title": "API Overview",
     "uid": "api-overview",
@@ -8,99 +9,99 @@
     "panels": [
       {
         "id": 1,
-        "title": "Request Rate",
-        "type": "graph",
+        "title": "Total API Requests",
+        "type": "stat",
         "targets": [
           {
-            "expr": "sum(rate(aws_applicationelb_request_count_sum[5m]))",
-            "legendFormat": "Requests/sec"
+            "expr": "sum(api_requests_total)",
+            "legendFormat": "Total Requests"
           }
         ],
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
       },
       {
         "id": 2,
-        "title": "Response Time (p95)",
-        "type": "graph",
+        "title": "Total Predictions",
+        "type": "stat",
         "targets": [
           {
-            "expr": "histogram_quantile(0.95, sum(rate(aws_applicationelb_target_response_time_sum[5m])))",
-            "legendFormat": "p95"
+            "expr": "sum(predictions_total)",
+            "legendFormat": "Total Predictions"
           }
         ],
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0}
       },
       {
         "id": 3,
-        "title": "Error Rate (5xx)",
-        "type": "graph",
+        "title": "Request Rate",
+        "type": "timeseries",
         "targets": [
           {
-            "expr": "sum(rate(aws_applicationelb_http_code_elb_5XX[5m])) / sum(rate(aws_applicationelb_request_count[5m])) * 100",
-            "legendFormat": "5xx Error Rate %"
+            "expr": "sum(rate(api_requests_total[5m])) by (endpoint, method)",
+            "legendFormat": "{{endpoint}} {{method}}"
           }
         ],
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}
       },
       {
         "id": 4,
-        "title": "Error Rate (4xx)",
-        "type": "graph",
+        "title": "Response Time",
+        "type": "timeseries",
         "targets": [
           {
-            "expr": "sum(rate(aws_applicationelb_http_code_elb_4XX[5m])) / sum(rate(aws_applicationelb_request_count[5m])) * 100",
-            "legendFormat": "4xx Error Rate %"
+            "expr": "histogram_quantile(0.95, sum(rate(api_request_duration_seconds_bucket[5m])) by (le, endpoint))",
+            "legendFormat": "95th percentile - {{endpoint}}"
           }
         ],
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4}
       },
       {
         "id": 5,
-        "title": "CPU Utilization",
-        "type": "graph",
+        "title": "Request Status",
+        "type": "timeseries",
         "targets": [
           {
-            "expr": "avg(aws_ecs_containerinsights_cpu_utilization_average)",
-            "legendFormat": "CPU %"
+            "expr": "sum(rate(api_requests_total[5m])) by (status)",
+            "legendFormat": "Status {{status}}"
           }
         ],
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12}
       },
       {
         "id": 6,
-        "title": "Memory Utilization",
-        "type": "graph",
+        "title": "Prediction Rate",
+        "type": "timeseries",
         "targets": [
           {
-            "expr": "avg(aws_ecs_containerinsights_memory_utilization_average)",
-            "legendFormat": "Memory %"
+            "expr": "rate(predictions_total[5m])",
+            "legendFormat": "Predictions/sec"
           }
         ],
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12}
       },
       {
         "id": 7,
-        "title": "Active Tasks",
+        "title": "Drift Alerts",
         "type": "stat",
         "targets": [
           {
-            "expr": "count(aws_ecs_containerinsights_running_task_count)",
-            "legendFormat": "Active Tasks"
+            "expr": "sum(drift_alerts_total)",
+            "legendFormat": "Total Alerts"
           }
         ],
-        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 24}
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 20}
       },
       {
         "id": 8,
-        "title": "Health Check Status",
+        "title": "Active Users",
         "type": "stat",
         "targets": [
           {
-            "expr": "aws_ecs_containerinsights_cpu_utilization_average",
-            "legendFormat": "Healthy"
+            "expr": "active_users",
+            "legendFormat": "Active Users"
           }
         ],
-        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 24}
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 20}
       }
     ]
   }

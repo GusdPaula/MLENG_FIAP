@@ -1,3 +1,8 @@
+output "api_alb_dns" {
+  description = "DNS name of the API Application Load Balancer for Prometheus scraping"
+  value       = aws_lb.api.dns_name
+}
+
 output "ecs_cluster_id" {
   description = "ID of the ECS cluster"
   value       = aws_ecs_cluster.api.id

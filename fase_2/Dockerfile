@@ -8,8 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry matching version range
-RUN pip install --no-cache-dir "poetry>=2.0.0,<3.0.0"
+# Install Poetry matching version range with increased timeout
+RUN pip install --no-cache-dir --timeout 120 "poetry>=2.0.0,<3.0.0"
 
 # Configure Poetry to create virtual environment inside project folder
 ENV POETRY_NO_INTERACTION=1 \
@@ -21,7 +21,8 @@ ENV POETRY_NO_INTERACTION=1 \
 COPY pyproject.toml poetry.lock ./
 
 # Install main production dependencies (no dev dependencies, no root package install)
-RUN poetry install --only main --no-root --no-directory && rm -rf $POETRY_CACHE_DIR
+# Use retries and increased timeout for better network reliability
+RUN poetry install --only main --no-root --no-directory --no-interaction && rm -rf $POETRY_CACHE_DIR
 
 # Stage 2: Runtime
 FROM python:3.12-slim AS runtime

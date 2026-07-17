@@ -60,7 +60,10 @@ class SingleUserPredictor(BasePredictor):
         # Cold start fallback: use popularity scores for unknown users
         if user_idx is None:
             logger.info("Using cold start fallback for user %d", request.user_id)
-            item_scores = self._get_popular_item_scores(request.item_ids)
+            if self.enable_hybrid:
+                item_scores = self._get_content_based_scores(request.item_ids)
+            else:
+                item_scores = self._get_popular_item_scores(request.item_ids)
             return PredictionResponse(
                 user_id=request.user_id,
                 item_scores=item_scores,
@@ -73,26 +76,54 @@ class SingleUserPredictor(BasePredictor):
 
         item_indices = self._get_item_indices(request.item_ids)
 
-        with torch.no_grad():
-            user_tensor = torch.tensor([user_idx] * len(item_indices), dtype=torch.long)
-            item_tensor = torch.tensor(item_indices, dtype=torch.long)
-            scores = self.model(user_tensor, item_tensor)
+        # Handle unknown items with hybrid approach
+        known_items = []
+        known_indices = []
+        unknown_items = []
 
-        item_scores = {
-            item_id: float(score)
-            for item_id, score in zip(
-                request.item_ids, scores.squeeze().tolist(), strict=True
-            )
-        }
+        for item_id, item_idx in zip(request.item_ids, item_indices):
+            if item_idx is not None:
+                known_items.append(item_id)
+                known_indices.append(item_idx)
+            else:
+                unknown_items.append(item_id)
+
+        item_scores = {}
+
+        # Get CF scores for known items
+        if known_indices:
+            with torch.no_grad():
+                user_tensor = torch.tensor([user_idx] * len(known_indices), dtype=torch.long)
+                item_tensor = torch.tensor(known_indices, dtype=torch.long)
+                scores = self.model(user_tensor, item_tensor)
+
+            item_scores.update({
+                item_id: float(score)
+                for item_id, score in zip(known_items, scores.squeeze().tolist(), strict=True)
+            })
+
+        # Get content-based scores for unknown items
+        if unknown_items and self.enable_hybrid:
+            content_scores = self._get_content_based_scores(unknown_items)
+            item_scores.update(content_scores)
+        elif unknown_items:
+            # Fallback to popularity for unknown items
+            popularity_scores = self._get_popular_item_scores(unknown_items)
+            item_scores.update(popularity_scores)
 
         logger.debug(
             "Generated %d item scores for user %d", len(item_scores), request.user_id
         )
 
+        cold_start_used = user_idx is None or len(unknown_items) > 0
         return PredictionResponse(
             user_id=request.user_id,
             item_scores=item_scores,
-            metadata={"predictor": self.name, "model_type": self.model.model_name},
+            metadata={
+                "predictor": self.name,
+                "model_type": self.model.model_name,
+                "cold_start": cold_start_used,
+            },
         )
 
     def predict_batch(
@@ -162,19 +193,46 @@ class TopKRecommendationPredictor(BasePredictor):
 
             item_indices = self._get_item_indices(request.item_ids)
 
-            with torch.no_grad():
-                user_tensor = torch.tensor(
-                    [user_idx] * len(item_indices), dtype=torch.long
-                )
-                item_tensor = torch.tensor(item_indices, dtype=torch.long)
-                scores = self.model(user_tensor, item_tensor)
+            # Check if any items are unknown (None indices)
+            if None in item_indices:
+                logger.info("Using hybrid cold start for unknown items")
+                # Use content-based scores for unknown items
+                content_scores = self._get_content_based_scores(request.item_ids)
 
-            item_scores = {
-                item_id: float(score)
-                for item_id, score in zip(
-                    request.item_ids, scores.squeeze().tolist(), strict=True
-                )
-            }
+                # Get known items for model prediction
+                known_items = [(idx, item_id) for idx, item_id in zip(item_indices, request.item_ids) if idx is not None]
+
+                if known_items:
+                    # Get model scores for known items
+                    known_indices = [idx for idx, _ in known_items]
+                    known_item_ids = [item_id for _, item_id in known_items]
+
+                    with torch.no_grad():
+                        user_tensor = torch.tensor([user_idx] * len(known_indices), dtype=torch.long)
+                        item_tensor = torch.tensor(known_indices, dtype=torch.long)
+                        scores = self.model(user_tensor, item_tensor)
+
+                    model_scores = {
+                        item_id: float(score)
+                        for item_id, score in zip(known_item_ids, scores.squeeze().tolist(), strict=True)
+                    }
+                    # Combine with content scores
+                    content_scores.update(model_scores)
+
+                item_scores = content_scores
+            else:
+                # All items are known, use model prediction
+                with torch.no_grad():
+                    user_tensor = torch.tensor([user_idx] * len(item_indices), dtype=torch.long)
+                    item_tensor = torch.tensor(item_indices, dtype=torch.long)
+                    scores = self.model(user_tensor, item_tensor)
+
+                item_scores = {
+                    item_id: float(score)
+                    for item_id, score in zip(
+                        request.item_ids, scores.squeeze().tolist(), strict=True
+                    )
+                }
 
             logger.debug(
                 "Generated %d item scores for user %d",
@@ -225,6 +283,28 @@ class TopKRecommendationPredictor(BasePredictor):
         )
 
         user_idx = self._get_user_idx(request.user_id)
+
+        # Cold start fallback: use popular items for unknown users
+        if user_idx is None:
+            logger.info("Using cold start fallback for user %d", request.user_id)
+            if self.enable_hybrid:
+                popular_items = self._get_content_based_items(request.k)
+            else:
+                popular_items = self._get_popular_items(request.k)
+            top_k_scores = {
+                item_id: float(score) for item_id, score in popular_items
+            }
+            return PredictionResponse(
+                user_id=request.user_id,
+                item_scores=top_k_scores,
+                metadata={
+                    "predictor": self.name,
+                    "model_type": self.model.model_name,
+                    "k": request.k,
+                    "cold_start": True,
+                },
+            )
+
         num_items = len(self.item2idx)
 
         with torch.no_grad():
@@ -279,7 +359,10 @@ class TopKRecommendationPredictor(BasePredictor):
         # Cold start fallback: return popular items for unknown users
         if user_idx is None:
             logger.info("Using cold start fallback for user %d", user_id)
-            popular_items = self._get_popular_items(k)
+            if self.enable_hybrid:
+                popular_items = self._get_content_based_items(k)
+            else:
+                popular_items = self._get_popular_items(k)
             recommendations = [
                 (item_id, float(score)) for item_id, score in popular_items
             ]
@@ -361,7 +444,10 @@ class BatchPredictor(BasePredictor):
         # Cold start fallback: use popularity scores for unknown users
         if user_idx is None:
             logger.info("Using cold start fallback for user %d", request.user_id)
-            item_scores = self._get_popular_item_scores(request.item_ids)
+            if self.enable_hybrid:
+                item_scores = self._get_content_based_scores(request.item_ids)
+            else:
+                item_scores = self._get_popular_item_scores(request.item_ids)
             return PredictionResponse(
                 user_id=request.user_id,
                 item_scores=item_scores,
@@ -374,26 +460,54 @@ class BatchPredictor(BasePredictor):
 
         item_indices = self._get_item_indices(request.item_ids)
 
-        with torch.no_grad():
-            user_tensor = torch.tensor([user_idx] * len(item_indices), dtype=torch.long)
-            item_tensor = torch.tensor(item_indices, dtype=torch.long)
-            scores = self.model(user_tensor, item_tensor)
+        # Handle unknown items with hybrid approach
+        known_items = []
+        known_indices = []
+        unknown_items = []
 
-        item_scores = {
-            item_id: float(score)
-            for item_id, score in zip(
-                request.item_ids, scores.squeeze().tolist(), strict=True
-            )
-        }
+        for item_id, item_idx in zip(request.item_ids, item_indices):
+            if item_idx is not None:
+                known_items.append(item_id)
+                known_indices.append(item_idx)
+            else:
+                unknown_items.append(item_id)
+
+        item_scores = {}
+
+        # Get CF scores for known items
+        if known_indices:
+            with torch.no_grad():
+                user_tensor = torch.tensor([user_idx] * len(known_indices), dtype=torch.long)
+                item_tensor = torch.tensor(known_indices, dtype=torch.long)
+                scores = self.model(user_tensor, item_tensor)
+
+            item_scores.update({
+                item_id: float(score)
+                for item_id, score in zip(known_items, scores.squeeze().tolist(), strict=True)
+            })
+
+        # Get content-based scores for unknown items
+        if unknown_items and self.enable_hybrid:
+            content_scores = self._get_content_based_scores(unknown_items)
+            item_scores.update(content_scores)
+        elif unknown_items:
+            # Fallback to popularity for unknown items
+            popularity_scores = self._get_popular_item_scores(unknown_items)
+            item_scores.update(popularity_scores)
 
         logger.debug(
             "Generated %d item scores for user %d", len(item_scores), request.user_id
         )
 
+        cold_start_used = user_idx is None or len(unknown_items) > 0
         return PredictionResponse(
             user_id=request.user_id,
             item_scores=item_scores,
-            metadata={"predictor": self.name, "model_type": self.model.model_name},
+            metadata={
+                "predictor": self.name,
+                "model_type": self.model.model_name,
+                "cold_start": cold_start_used,
+            },
         )
 
     def predict_batch(

@@ -26,6 +26,10 @@ stages:
       hash: md5
       md5: 6fb1892f9c2ef2b4eb95164403010886
       size: 1122476
+    - path: data/processed/popular_items.json
+      hash: md5
+      md5: 9e0b1639bd943d20d76ad9eb211c5b2b
+      size: 2189636
     - path: data/processed/user2idx.json
       hash: md5
       md5: def5a7cbb53b57239ba87cae2c2b0ca0
@@ -47,6 +51,10 @@ stages:
       hash: md5
       md5: 6fb1892f9c2ef2b4eb95164403010886
       size: 1122476
+    - path: data/processed/popular_items.json
+      hash: md5
+      md5: 9e0b1639bd943d20d76ad9eb211c5b2b
+      size: 2189636
     - path: data/processed/user2idx.json
       hash: md5
       md5: def5a7cbb53b57239ba87cae2c2b0ca0
@@ -69,8 +77,8 @@ stages:
     outs:
     - path: models/model.pt
       hash: md5
-      md5: 4417bcff29a23db9ab3f8fa2f5006162
-      size: 39442965
+      md5: 4e2a4329b5e7ce64502d3c5e62e7d089
+      size: 40370901
   evaluate:
     cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from
       recommender.pipelines.evaluate_pipeline import run_evaluation_pipeline;
@@ -94,10 +102,10 @@ stages:
       size: 1388405
     - path: models/model.pt
       hash: md5
-      md5: 4417bcff29a23db9ab3f8fa2f5006162
-      size: 39442965
+      md5: 4e2a4329b5e7ce64502d3c5e62e7d089
+      size: 40370901
     outs:
     - path: reports/metrics.json
       hash: md5
-      md5: 94bcd8a8faf7fe7535e22977257b4afd
-      size: 591
+      md5: 6bc20a739fb234fc28f48fc484afeb63
+      size: 592

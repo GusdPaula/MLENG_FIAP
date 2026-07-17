@@ -15,6 +15,11 @@ variable "instance_type" {
   default     = "t3.medium"
 }
 
+variable "prometheus_url" {
+  description = "URL of Prometheus instance for Grafana data source"
+  type        = string
+}
+
 variable "common_tags" {
   description = "Common tags to apply to all resources"
   type        = map(string)

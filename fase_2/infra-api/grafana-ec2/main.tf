@@ -125,7 +125,7 @@ resource "aws_iam_role" "grafana_ec2_role" {
 
 resource "aws_iam_policy" "grafana_ec2_policy" {
   name        = "${var.project_name}-grafana-ec2-policy"
-  description = "Policy for Grafana EC2 to access CloudWatch"
+  description = "Policy for Grafana EC2 to access logs"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -138,15 +138,6 @@ resource "aws_iam_policy" "grafana_ec2_policy" {
           "logs:PutLogEvents",
           "logs:DescribeLogGroups",
           "logs:DescribeLogStreams"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "cloudwatch:ListMetrics",
-          "cloudwatch:GetMetricStatistics",
-          "cloudwatch:GetMetricData"
         ]
         Resource = "*"
       }
@@ -171,6 +162,12 @@ resource "aws_iam_instance_profile" "grafana_ec2_profile" {
   role = aws_iam_role.grafana_ec2_role.name
 
   tags = var.common_tags
+}
+
+# --- Random Password for Grafana ---
+resource "random_password" "grafana_admin" {
+  length  = 32
+  special = false
 }
 
 # --- EC2 Instance ---
@@ -198,7 +195,10 @@ resource "aws_instance" "grafana_server" {
     Name = "${var.project_name}-grafana-server"
   })
 
-  user_data = templatefile("${path.module}/user_data.sh", {})
+  user_data = templatefile("${path.module}/user_data.sh", {
+    prometheus_url = var.prometheus_url
+    grafana_admin_password = random_password.grafana_admin.result
+  })
 }
 
 # --- Application Load Balancer ---

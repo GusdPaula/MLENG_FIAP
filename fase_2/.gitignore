@@ -53,6 +53,7 @@ reports/
 ecommerce_recommender/mlflow.db
 ecommerce_recommender/notebooks/mlflow.db
 ecommerce_recommender/models/*.pt
+ecommerce_recommender/models/*.pkl
 
 # Terraform
 .terraform/

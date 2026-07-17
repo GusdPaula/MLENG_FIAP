@@ -3,6 +3,17 @@ output "grafana_url" {
   value       = aws_cloudfront_distribution.grafana_distribution.domain_name
 }
 
+output "grafana_admin_username" {
+  description = "Grafana admin username"
+  value       = "admin"
+}
+
+output "grafana_admin_password" {
+  description = "Grafana admin password"
+  value       = random_password.grafana_admin.result
+  sensitive   = true
+}
+
 output "grafana_alb_url" {
   description = "Grafana ALB URL"
   value       = aws_lb.grafana.dns_name

@@ -42,13 +42,15 @@ class PredictionService:
         predictor_type: str = "single_user",
         device: str = "cpu",
         enable_monitoring: bool = True,
-        shift_threshold: float = 0.05,
-        drift_threshold: float = 2.0,
+        shift_threshold: float = 0.1,
+        drift_threshold: float = 1.0,
         monitoring_window_size: int = 1000,
         mlflow_tracking_uris: list[str] | None = None,
         mlflow_model_name: str | None = None,
         mlflow_model_version: str | None = None,
         mlflow_model_alias: str | None = None,
+        feature_extractor_path: str | Path | None = None,
+        content_recommender_path: str | Path | None = None,
     ):
         """Initialize the prediction service.
 
@@ -64,6 +66,8 @@ class PredictionService:
             mlflow_model_name: MLflow model name for remote model loading.
             mlflow_model_version: MLflow model version for remote model loading.
             mlflow_model_alias: MLflow model alias (e.g., "champion") for remote model loading.
+            feature_extractor_path: Path to item feature extractor for cold start.
+            content_recommender_path: Path to content recommender for cold start.
 
         Raises:
             ModelLoadError: If the model cannot be loaded.
@@ -79,6 +83,8 @@ class PredictionService:
         self.mlflow_model_name = mlflow_model_name
         self.mlflow_model_version = mlflow_model_version
         self.mlflow_model_alias = mlflow_model_alias
+        self.feature_extractor_path = Path(feature_extractor_path) if feature_extractor_path else None
+        self.content_recommender_path = Path(content_recommender_path) if content_recommender_path else None
 
         logger.info(
             "Initializing PredictionService with model_path=%s, predictor_type=%s, device=%s, monitoring=%s",
@@ -96,7 +102,46 @@ class PredictionService:
             )
             logger.info("Monitoring service enabled")
 
+        # Log cold start configuration
+        if self.feature_extractor_path or self.content_recommender_path:
+            logger.info(
+                "Cold start enabled: feature_extractor=%s, content_recommender=%s",
+                self.feature_extractor_path,
+                self.content_recommender_path,
+            )
+
         self._load_model()
+
+    def _load_cold_start_components(self) -> tuple[Any, Any]:
+        """Load cold start components if paths are provided.
+
+        Returns:
+            Tuple of (feature_extractor, content_recommender) or (None, None).
+        """
+        feature_extractor = None
+        content_recommender = None
+
+        if self.feature_extractor_path and self.feature_extractor_path.exists():
+            try:
+                import pickle
+                logger.info("Loading feature extractor from %s", self.feature_extractor_path)
+                with open(self.feature_extractor_path, 'rb') as f:
+                    feature_extractor = pickle.load(f)
+                logger.info("Feature extractor loaded successfully")
+            except Exception as e:
+                logger.warning("Failed to load feature extractor: %s", e)
+
+        if self.content_recommender_path and self.content_recommender_path.exists():
+            try:
+                import pickle
+                logger.info("Loading content recommender from %s", self.content_recommender_path)
+                with open(self.content_recommender_path, 'rb') as f:
+                    content_recommender = pickle.load(f)
+                logger.info("Content recommender loaded successfully")
+            except Exception as e:
+                logger.warning("Failed to load content recommender: %s", e)
+
+        return feature_extractor, content_recommender
 
     def _load_model(self) -> None:
         """Load the model and create the predictor instance.
@@ -270,6 +315,48 @@ class PredictionService:
                     # If not wrapped, try to load directly
                     checkpoint = loaded_model
 
+                # Try to download the checkpoint artifact which contains popular_items
+                try:
+                    # Get the run ID from the model URI
+                    client = mlflow.tracking.MlflowClient()
+                    if self.mlflow_model_alias:
+                        model_version = client.get_model_version_by_alias(
+                            self.mlflow_model_name, self.mlflow_model_alias
+                        )
+                        run_id = model_version.run_id
+                    elif self.mlflow_model_version:
+                        model_version = client.get_model_version(
+                            self.mlflow_model_name, self.mlflow_model_version
+                        )
+                        run_id = model_version.run_id
+                    else:
+                        # Get latest version
+                        model_version = client.get_latest_versions(
+                            self.mlflow_model_name, stages=["None"]
+                        )[0]
+                        run_id = model_version.run_id
+
+                    # Download checkpoint artifact
+                    client.download_artifacts(
+                        run_id=run_id, path="gmf_weighted.pt", dst_path=temp_dir
+                    )
+                    checkpoint_path = Path(temp_dir) / "gmf_weighted.pt"
+                    if checkpoint_path.exists():
+                        import torch
+
+                        artifact_checkpoint = torch.load(checkpoint_path, map_location="cpu")
+                        # Merge popular_items from artifact checkpoint
+                        if "popular_items" in artifact_checkpoint:
+                            checkpoint["popular_items"] = artifact_checkpoint["popular_items"]
+                            logger.info(
+                                "Loaded popular_items from checkpoint artifact: %d items",
+                                len(checkpoint["popular_items"]),
+                            )
+                except Exception as e:
+                    logger.warning(
+                        "Failed to download checkpoint artifact for popular_items: %s", e
+                    )
+
             return checkpoint
 
         try:
@@ -434,12 +521,25 @@ class PredictionService:
             len(item2idx),
         )
 
+        # Load cold start components if configured
+        feature_extractor, content_recommender = self._load_cold_start_components()
+
+        # Create predictor with optional cold start components
+        predictor_kwargs = {
+            "popular_items": popular_items,
+        }
+
+        if feature_extractor is not None and content_recommender is not None:
+            predictor_kwargs["feature_extractor"] = feature_extractor
+            predictor_kwargs["content_recommender"] = content_recommender
+            logger.info("Cold start components added to predictor")
+
         self._predictor = PredictorFactory.create(
             predictor_type=self.predictor_type,
             model=model,
             user2idx=user2idx,
             item2idx=item2idx,
-            popular_items=popular_items,
+            **predictor_kwargs,
         )
 
         logger.info("PredictionService initialized successfully")

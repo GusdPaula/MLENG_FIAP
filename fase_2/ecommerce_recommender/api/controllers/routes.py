@@ -67,6 +67,10 @@ MODEL_PATH = os.getenv(
     "MODEL_PATH", "ecommerce_recommender/models/mlflow_experiments/gmf_binary.pt"
 )
 
+# Cold start configuration
+FEATURE_EXTRACTOR_PATH = os.getenv("FEATURE_EXTRACTOR_PATH")
+CONTENT_RECOMMENDER_PATH = os.getenv("CONTENT_RECOMMENDER_PATH")
+
 # Global variables for background task
 model_check_task: Optional[asyncio.Task] = None
 
@@ -94,6 +98,8 @@ async def periodic_model_check():
                         mlflow_model_name=MLFLOW_MODEL_NAME,
                         mlflow_model_version=MLFLOW_MODEL_VERSION,
                         mlflow_model_alias=MLFLOW_MODEL_ALIAS,
+                        feature_extractor_path=FEATURE_EXTRACTOR_PATH,
+                        content_recommender_path=CONTENT_RECOMMENDER_PATH,
                     )
                     prediction_service = new_service
                     logger.info(
@@ -223,14 +229,16 @@ async def lifespan(app: FastAPI):
     if PROMETHEUS_AVAILABLE:
         try:
             prometheus_metrics = PrometheusMetrics(port=9090)
-            prometheus_metrics.start_server()
             logger.info(
-                "Prometheus metrics server started on port 9090",
+                "Prometheus metrics initialized",
                 extra={"metrics": "prometheus"},
             )
+            # Mount metrics endpoint after initialization
+            app.mount("/metrics", prometheus_metrics.get_metrics_app())
+            logger.info("Prometheus metrics endpoint mounted at /metrics")
         except Exception as e:
             logger.warning(
-                f"Failed to start Prometheus metrics server: {e}",
+                f"Failed to initialize Prometheus metrics: {e}",
                 extra={"metrics": "failed"},
             )
             prometheus_metrics = None
@@ -256,6 +264,8 @@ async def lifespan(app: FastAPI):
             mlflow_model_name=MLFLOW_MODEL_NAME,
             mlflow_model_version=MLFLOW_MODEL_VERSION,
             mlflow_model_alias=MLFLOW_MODEL_ALIAS,
+            feature_extractor_path=FEATURE_EXTRACTOR_PATH,
+            content_recommender_path=CONTENT_RECOMMENDER_PATH,
         )
         logger.info(
             "Prediction service initialized successfully",
@@ -320,6 +330,7 @@ app.add_exception_handler(
         content={"detail": "Rate limit exceeded. Please try again later."},
     ),
 )
+
 
 
 @app.get("/health")

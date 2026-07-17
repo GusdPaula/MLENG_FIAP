@@ -26,7 +26,7 @@ http_port = 3000
 
 [security]
 admin_user = admin
-admin_password = ${GRAFANA_ADMIN_PASSWORD}
+admin_password = ${grafana_admin_password}
 allow_embedding = true
 cookie_secure = true
 cookie_samesite = lax
@@ -53,6 +53,187 @@ EOF
 
 # Install and configure Nginx as reverse proxy with SSL
 apt-get install -y nginx certbot python3-certbot-nginx
+
+# Create Grafana dashboards directory
+mkdir -p /etc/grafana/provisioning/dashboards
+mkdir -p /var/lib/grafana/dashboards
+
+# Copy dashboard configuration
+cat > /etc/grafana/provisioning/dashboards/dashboards.yml <<EOF
+apiVersion: 1
+
+providers:
+  - name: 'Drift Detection Dashboards'
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+EOF
+
+# Copy dashboard JSON (will be created via API)
+cat > /var/lib/grafana/dashboards/api_metrics_dashboard.json <<EOF
+{
+  "dashboard": {
+    "title": "API Metrics Dashboard",
+    "uid": "api-metrics-dashboard",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Drift Alerts Total",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "drift_alerts_total",
+            "refId": "A",
+            "legendFormat": "{{drift_type}} - {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 5}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Drift Score Over Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "drift_score",
+            "refId": "A",
+            "legendFormat": "Drift Score"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {"lineWidth": 2, "fillOpacity": 10}
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "API Request Rate",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "refId": "A",
+            "legendFormat": "{{method}} {{endpoint}}"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "API Error Rate",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{status=~\"5..\"}[5m])",
+            "refId": "A",
+            "legendFormat": "5xx Errors"
+          },
+          {
+            "expr": "rate(http_requests_total{status=~\"4..\"}[5m])",
+            "refId": "B",
+            "legendFormat": "4xx Errors"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Response Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(http_request_duration_seconds_sum[5m]) / rate(http_request_duration_seconds_count[5m])",
+            "refId": "A",
+            "legendFormat": "Average Response Time"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Active Requests",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "http_requests_active",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Request Count by Endpoint",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (endpoint) (http_requests_total)",
+            "refId": "A",
+            "legendFormat": "{{endpoint}}"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Request Count by Method",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (method) (http_requests_total)",
+            "refId": "A",
+            "legendFormat": "{{method}}"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "System CPU Usage",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(process_cpu_seconds_total[5m])",
+            "refId": "A",
+            "legendFormat": "CPU Usage"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Memory Usage",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "process_resident_memory_bytes",
+            "refId": "A",
+            "legendFormat": "Memory Bytes"
+          }
+        ]
+      }
+    ],
+    "refresh": "10s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    }
+  }
+}
+EOF
 
 # Generate self-signed SSL certificate for internal use
 mkdir -p /etc/nginx/ssl
@@ -141,37 +322,29 @@ GRAFANA_API_KEY=$(curl -s -X POST -H "Content-Type: application/json" \
 if [ -n "$GRAFANA_API_KEY" ] && [ "$GRAFANA_API_KEY" != "null" ]; then
   echo "API key created successfully"
 
-  # Configure CloudWatch Metrics data source
+  # Configure Prometheus data source
+  PROMETHEUS_URL="${prometheus_url}"
+
+  # Ensure URL has http:// prefix
+  if [[ ! "$PROMETHEUS_URL" =~ ^https?:// ]]; then
+    PROMETHEUS_URL="http://$$PROMETHEUS_URL"
+  fi
+
   curl -s -X POST -H "Authorization: Bearer $GRAFANA_API_KEY" \
     -H "Content-Type: application/json" \
-    -d '{
-      "name":"CloudWatch",
-      "type":"cloudwatch",
-      "access":"proxy",
-      "jsonData":{
-        "authType":"default",
-        "defaultRegion":"us-east-1"
+    -d "{
+      \"name\":\"Prometheus\",
+      \"type\":\"prometheus\",
+      \"access\":\"proxy\",
+      \"url\":\"$PROMETHEUS_URL\",
+      \"isDefault\":true,
+      \"jsonData\":{
+        \"timeInterval\":\"15s\"
       }
-    }' \
+    }" \
     $GRAFANA_URL/api/datasources
 
-  echo "CloudWatch data source configured"
-
-  # Configure CloudWatch Logs data source
-  curl -s -X POST -H "Authorization: Bearer $GRAFANA_API_KEY" \
-    -H "Content-Type: application/json" \
-    -d '{
-      "name":"CloudWatch Logs",
-      "type":"cloudwatch-logs",
-      "access":"proxy",
-      "jsonData":{
-        "authType":"default",
-        "defaultRegion":"us-east-1"
-      }
-    }' \
-    $GRAFANA_URL/api/datasources
-
-  echo "CloudWatch Logs data source configured"
+  echo "Prometheus data source configured at $PROMETHEUS_URL"
 else
   echo "Failed to create API key - data sources not configured"
   echo "You will need to configure them manually in Grafana"

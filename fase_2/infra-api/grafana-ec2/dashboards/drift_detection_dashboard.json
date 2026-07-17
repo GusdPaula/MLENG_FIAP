@@ -1,0 +1,120 @@
+{
+  "dashboard": {
+    "title": "Drift Detection Dashboard",
+    "uid": "drift-detection-dashboard",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Drift Alerts Total",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "drift_alerts_total",
+            "refId": "A",
+            "legendFormat": "{{drift_type}} - {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 1
+                },
+                {
+                  "color": "red",
+                  "value": 5
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Drift Score Over Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "drift_score",
+            "refId": "A",
+            "legendFormat": "Drift Score"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 10
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Drift Alerts by Severity",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (severity) (drift_alerts_total)",
+            "refId": "A",
+            "legendFormat": "{{severity}}"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Drift Alerts by Type",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (drift_type) (drift_alerts_total)",
+            "refId": "A",
+            "legendFormat": "{{drift_type}}"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "API Request Rate",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "refId": "A",
+            "legendFormat": "{{method}} {{endpoint}}"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "API Error Rate",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{status=~\"5..\"}[5m])",
+            "refId": "A",
+            "legendFormat": "5xx Errors"
+          }
+        ]
+      }
+    ],
+    "refresh": "10s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    }
+  },
+  "overwrite": true
+}

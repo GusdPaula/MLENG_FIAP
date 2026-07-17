@@ -8,7 +8,7 @@ import time
 from typing import Callable
 
 try:
-    from prometheus_client import Counter, Gauge, Histogram, start_http_server
+    from prometheus_client import Counter, Gauge, Histogram, start_http_server, make_asgi_app
 
     PROMETHEUS_AVAILABLE = True
 except ImportError:
@@ -90,6 +90,10 @@ class PrometheusMetrics:
     def start_server(self) -> None:
         """Start the Prometheus metrics HTTP server."""
         start_http_server(self.port)
+
+    def get_metrics_app(self):
+        """Get the ASGI app for metrics endpoint."""
+        return make_asgi_app()
 
     def record_prediction(
         self, predictor_type: str, model_version: str, duration: float

@@ -95,7 +95,7 @@ resource "aws_ecs_task_definition" "api" {
   container_definitions = jsonencode([
     {
       name      = "api"
-      image     = "${aws_ecr_repository.api.repository_url}:${var.docker_image_tag}"
+      image     = "gusdpaula404/fiap-recommendation-api:${var.docker_image_tag}"
       cpu       = var.cpu
       memory    = var.memory
       essential = true
@@ -117,8 +117,20 @@ resource "aws_ecs_task_definition" "api" {
           value = var.api_key
         },
         {
+          name  = "MLFLOW_MODEL_NAME"
+          value = "ecommerce_recommender"
+        },
+        {
           name  = "MLFLOW_MODEL_ALIAS"
           value = var.mlflow_model_alias
+        },
+        {
+          name  = "AWS_REGION"
+          value = var.aws_region
+        },
+        {
+          name  = "ENABLE_CLOUDWATCH_EXPORT"
+          value = "true"
         }
       ]
 
@@ -166,6 +178,14 @@ resource "aws_security_group" "api_sg" {
     to_port         = 8000
     protocol        = "tcp"
     prefix_list_ids = [data.aws_ec2_managed_prefix_list.cloudfront.id]
+  }
+
+  ingress {
+    description     = "Allow Prometheus to scrape metrics"
+    from_port       = 8000
+    to_port         = 8000
+    protocol        = "tcp"
+    cidr_blocks     = ["0.0.0.0/0"]
   }
 
   egress {

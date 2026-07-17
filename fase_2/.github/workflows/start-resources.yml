@@ -1,0 +1,74 @@
+name: Start AWS Resources
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_rds:
+        description: 'Start RDS instance'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  start-resources:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_API }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_API }}
+          aws-region: us-east-1
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install boto3
+
+      - name: Start MLflow EC2
+        run: python scripts/start_resources.py
+
+      - name: Update start script for RDS
+        if: github.event.inputs.start_rds == 'true'
+        run: |
+          sed -i 's/# start_rds()/start_rds()/' scripts/start_resources.py
+
+      - name: Start RDS (optional)
+        if: github.event.inputs.start_rds == 'true'
+        run: python scripts/start_resources.py
+
+      - name: Verify services are running
+        run: |
+          python -c "
+          import boto3
+          ec2 = boto3.client('ec2', region_name='us-east-1')
+
+          # Check MLflow
+          mlflow = ec2.describe_instances(Filters=[{'Name': 'tag:Name', 'Values': ['mlflow-fiap-server']}])
+          mlflow_state = mlflow['Reservations'][0]['Instances'][0]['State']['Name'] if mlflow['Reservations'] else 'not found'
+          print(f'MLflow EC2: {mlflow_state}')
+
+          # Check Grafana
+          grafana = ec2.describe_instances(Filters=[{'Name': 'tag:Name', 'Values': ['mlflow-fiap-grafana-server']}])
+          grafana_state = grafana['Reservations'][0]['Instances'][0]['State']['Name'] if grafana['Reservations'] else 'not found'
+          print(f'Grafana EC2: {grafana_state}')
+
+          # Check Prometheus
+          prometheus = ec2.describe_instances(Filters=[{'Name': 'tag:Name', 'Values': ['mlflow-fiap-prometheus']}])
+          prometheus_state = prometheus['Reservations'][0]['Instances'][0]['State']['Name'] if prometheus['Reservations'] else 'not found'
+          print(f'Prometheus EC2: {prometheus_state}')
+
+          # Check ECS
+          ecs = boto3.client('ecs', region_name='us-east-1')
+          ecs_service = ecs.describe_services(cluster='mlflow-fiap-api-cluster', services=['mlflow-fiap-api-service'])
+          ecs_count = ecs_service['services'][0]['desiredCount']
+          print(f'ECS Service desired count: {ecs_count}')
+          "

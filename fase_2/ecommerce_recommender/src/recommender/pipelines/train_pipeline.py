@@ -405,6 +405,12 @@ def run_training_pipeline(config_path: str = "configs/model.yaml") -> None:
                 "registered_model_name", "ecommerce_recommender"
             ),
         )
+
+        # Log the checkpoint file (which includes popular_items) as an artifact
+        logger.info("Logging checkpoint artifact (includes popular_items)...")
+        mlflow_toolkit.log_artifact(artifact_path)
+        logger.info("Checkpoint artifact logged successfully.")
+
         logger.info("MLflow logging completed successfully.")
 
         # --- 10. Promote model to Staging if best ------------------------

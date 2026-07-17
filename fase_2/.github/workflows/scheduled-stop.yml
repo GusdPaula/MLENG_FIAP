@@ -1,0 +1,43 @@
+name: Scheduled Stop (Cost Savings)
+
+on:
+  schedule:
+    # Stop resources at 8 PM UTC (5 PM EST) on weekdays
+    - cron: '0 20 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  stop-resources:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_API }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_API }}
+          aws-region: us-east-1
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install boto3
+
+      - name: Stop all resources
+        run: python scripts/stop_resources.py
+
+      - name: Create summary
+        run: |
+          echo "## Resources Stopped :stop_button:" >> $GITHUB_STEP_SUMMARY
+          echo "- ECS Service: Stopped" >> $GITHUB_STEP_SUMMARY
+          echo "- MLflow EC2: Stopped" >> $GITHUB_STEP_SUMMARY
+          echo "- Grafana EC2: Stopped" >> $GITHUB_STEP_SUMMARY
+          echo "- Prometheus EC2: Stopped" >> $GITHUB_STEP_SUMMARY
+          echo "- RDS: Kept running (data preservation)" >> $GITHUB_STEP_SUMMARY
