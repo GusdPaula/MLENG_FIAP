@@ -5,13 +5,13 @@ This script connects to the Grafana EC2 instance via SSM to get the admin passwo
 then configures CloudWatch Metrics and Logs datasources.
 """
 
-import requests
 import json
 import sys
 import time
-import base64
-import boto3
 from pathlib import Path
+
+import boto3
+import requests
 
 # Configuration
 GRAFANA_URL = "https://d3naqrkpy0vqtm.cloudfront.net"

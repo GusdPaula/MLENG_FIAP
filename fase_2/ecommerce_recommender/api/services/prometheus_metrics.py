@@ -8,7 +8,13 @@ import time
 from typing import Callable
 
 try:
-    from prometheus_client import Counter, Gauge, Histogram, start_http_server, make_asgi_app
+    from prometheus_client import (
+        Counter,
+        Gauge,
+        Histogram,
+        make_asgi_app,
+        start_http_server,
+    )
 
     PROMETHEUS_AVAILABLE = True
 except ImportError:

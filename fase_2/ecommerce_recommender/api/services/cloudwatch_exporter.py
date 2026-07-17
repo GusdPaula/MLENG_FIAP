@@ -8,8 +8,6 @@ import logging
 from datetime import datetime
 from typing import Any
 
-import boto3
-
 logger = logging.getLogger(__name__)
 
 
@@ -152,7 +150,7 @@ class CloudWatchMetricsExporter:
                 unit="Count",
             )
 
-        logger.info(f"Exported performance stats to CloudWatch")
+        logger.info("Exported performance stats to CloudWatch")
 
     def export_api_metrics(
         self,
@@ -205,4 +203,4 @@ class CloudWatchMetricsExporter:
             unit="Milliseconds",
         )
 
-        logger.info(f"Exported API metrics to CloudWatch")
+        logger.info("Exported API metrics to CloudWatch")

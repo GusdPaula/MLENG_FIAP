@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import numpy as np
-import torch
-import torch.nn as nn
 from typing import Dict, List, Optional, Tuple
 
+import torch
+
+from ..features.item_features import ContentBasedRecommender, ItemFeatureExtractor
 from .base import BaseRecommender
-from ..features.item_features import ItemFeatureExtractor, ContentBasedRecommender
 
 
 class HybridRecommender(BaseRecommender):
@@ -85,7 +84,7 @@ class HybridRecommender(BaseRecommender):
 
         # Compute content-based similarity scores
         scores = []
-        for user_id, item_id in zip(user_ids, item_ids):
+        for _user_id, item_id in zip(user_ids, item_ids, strict=False):
             # For content-based, use item popularity as baseline
             if item_id in self.feature_extractor.item_features:
                 features = self.feature_extractor.item_features[item_id]
@@ -110,10 +109,7 @@ class HybridRecommender(BaseRecommender):
             Weight tensor for collaborative filtering (0-1).
         """
         weights = []
-        for user_idx, item_idx in zip(users, items):
-            user_id = self.idx2user[user_idx.item()] if hasattr(self, 'idx2user') else None
-            item_id = self.idx2item[item_idx.item()]
-
+        for user_idx, item_idx in zip(users, items, strict=False):
             # Check if user and item are known
             user_known = user_idx < len(self.user2idx)
             item_known = item_idx < len(self.item2idx)
@@ -175,7 +171,7 @@ class HybridRecommender(BaseRecommender):
 
                 # Combine with content-based for unknown items
                 scores = {}
-                for item_id, score in zip(known_item_ids, cf_scores.squeeze().tolist()):
+                for item_id, score in zip(known_item_ids, cf_scores.squeeze().tolist(), strict=False):
                     scores[item_id] = score * self.alpha
 
                 # Handle unknown items with content-based
@@ -194,20 +190,20 @@ class HybridRecommender(BaseRecommender):
                     content_recs = self.content_recommender.recommend_for_user(
                         user_id, user_interactions, k=len(item_ids)
                     )
-                    return {item_id: score for item_id, score in content_recs}
+                    return dict(content_recs)
                 else:
                     # Fallback to popularity
-                    return {item_id: 0.5 for item_id in item_ids}
+                    return dict.fromkeys(item_ids, 0.5)
         else:
             # Unknown user: use content-based recommendations
             if user_interactions is not None:
                 content_recs = self.content_recommender.recommend_for_user(
                     user_id, user_interactions, k=len(item_ids)
                 )
-                return {item_id: score for item_id, score in content_recs}
+                return dict(content_recs)
             else:
                 # Fallback to popularity
-                return {item_id: 0.5 for item_id in item_ids}
+                return dict.fromkeys(item_ids, 0.5)
 
     def recommend(
         self,
@@ -236,7 +232,7 @@ class HybridRecommender(BaseRecommender):
                 cf_scores = self.cf_model(user_tensor, item_tensor)
 
             # Get top-k from CF
-            item_scores = list(zip(range(num_items), cf_scores.squeeze().tolist()))
+            item_scores = list(zip(range(num_items), cf_scores.squeeze().tolist(), strict=False))
             item_scores.sort(key=lambda x: x[1], reverse=True)
             top_k_cf = [(self.idx2item[idx], score) for idx, score in item_scores[:k]]
 

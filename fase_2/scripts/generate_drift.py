@@ -3,8 +3,9 @@
 
 import random
 import time
-import requests
 from typing import List
+
+import requests
 
 API_KEY = "hm8K1JkR2BY4-zn1VGsFO-1MP_xp39GjdoUUacfyEvk"
 BASE_URL = "https://d1b386spzciemm.cloudfront.net"

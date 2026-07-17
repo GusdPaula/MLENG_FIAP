@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
 """Train item feature extractor from interaction data for cold start solution."""
 
-import sys
 import os
 import pickle
+import sys
+
 import pandas as pd
 
 # Add the src directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'ecommerce_recommender', 'src'))
 
-from recommender.features.item_features import ItemFeatureExtractor, ContentBasedRecommender
+from recommender.features.item_features import (
+    ContentBasedRecommender,
+    ItemFeatureExtractor,
+)
+
 
 def main():
     """Train and save item feature extractor."""
@@ -34,7 +39,7 @@ def main():
             event_weights = {"view": 1, "addtocart": 2, "transaction": 3}
             interactions["weight"] = interactions["event"].map(event_weights).fillna(1.0)
     else:
-        print(f"❌ No interaction data found")
+        print("❌ No interaction data found")
         print(f"Tried: {interactions_path} and {raw_events_path}")
         return
 

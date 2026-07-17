@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Configure Grafana with Prometheus data source and API dashboard."""
 
-import json
 import time
+
 import requests
 from requests.auth import HTTPBasicAuth
 

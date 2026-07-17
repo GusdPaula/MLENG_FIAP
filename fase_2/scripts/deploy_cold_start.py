@@ -9,8 +9,8 @@ This script:
 4. Updates the ECS service to use the new task definition
 """
 
+
 import boto3
-import json
 
 REGION = "us-east-1"
 ECS_CLUSTER = "mlflow-fiap-api-cluster"
@@ -158,10 +158,10 @@ def main():
 
     if success:
         print("\n✨ Cold start deployment complete!")
-        print(f"📋 Environment variables added:")
+        print("📋 Environment variables added:")
         print(f"   - FEATURE_EXTRACTOR_PATH={FEATURE_EXTRACTOR_PATH}")
         print(f"   - CONTENT_RECOMMENDER_PATH={CONTENT_RECOMMENDER_PATH}")
-        print(f"\n⚠️  Make sure the cold start artifacts are copied to the ECS container:")
+        print("\n⚠️  Make sure the cold start artifacts are copied to the ECS container:")
         print(f"   - {FEATURE_EXTRACTOR_PATH}")
         print(f"   - {CONTENT_RECOMMENDER_PATH}")
     else:

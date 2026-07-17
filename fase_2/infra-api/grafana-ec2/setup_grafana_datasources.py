@@ -4,11 +4,12 @@ Script to configure Grafana CloudWatch datasources remotely.
 This script connects to Grafana via API and configures CloudWatch Metrics and Logs datasources.
 """
 
-import requests
 import json
 import sys
 import time
 from pathlib import Path
+
+import requests
 
 # Configuration
 GRAFANA_URL = "https://d3naqrkpy0vqtm.cloudfront.net"  # Update if different

@@ -94,12 +94,12 @@ def export_metrics():
             shift_results = get_shift_check(API_URL, API_KEY)
             if shift_results:
                 if "data_shift" in shift_results:
-                    print(f"Exporting data shift metrics")
+                    print("Exporting data shift metrics")
                     exporter.export_shift_detection_result(
                         shift_results["data_shift"], "DataShift"
                     )
                 if "performance_drift" in shift_results:
-                    print(f"Exporting performance drift metrics")
+                    print("Exporting performance drift metrics")
                     exporter.export_shift_detection_result(
                         shift_results["performance_drift"], "ModelDrift"
                     )

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Test script for cold start solution."""
 
+
 import requests
-import json
 
 API_KEY = "hm8K1JkR2BY4-zn1VGsFO-1MP_xp39GjdoUUacfyEvk"
 BASE_URL = "https://d1b386spzciemm.cloudfront.net"
@@ -23,7 +23,7 @@ def test_unknown_user():
 
         if response.status_code == 200:
             result = response.json()
-            print(f"✅ Unknown user prediction successful")
+            print("✅ Unknown user prediction successful")
             print(f"User ID: {result['user_id']}")
             print(f"Item scores: {result['item_scores']}")
             print(f"Metadata: {result.get('metadata', {})}")
@@ -56,7 +56,7 @@ def test_unknown_items():
 
         if response.status_code == 200:
             result = response.json()
-            print(f"✅ Unknown items prediction successful")
+            print("✅ Unknown items prediction successful")
             print(f"User ID: {result['user_id']}")
             print(f"Item scores: {result['item_scores']}")
             print(f"Metadata: {result.get('metadata', {})}")
@@ -88,7 +88,7 @@ def test_mixed_items():
 
         if response.status_code == 200:
             result = response.json()
-            print(f"✅ Mixed items prediction successful")
+            print("✅ Mixed items prediction successful")
             print(f"User ID: {result['user_id']}")
             print(f"Item scores: {result['item_scores']}")
             print(f"Metadata: {result.get('metadata', {})}")
@@ -124,7 +124,7 @@ def test_recommend_unknown_user():
 
         if response.status_code == 200:
             result = response.json()
-            print(f"✅ Unknown user recommendations successful")
+            print("✅ Unknown user recommendations successful")
             print(f"User ID: {result['user_id']}")
             print(f"Number of recommendations: {len(result.get('recommendations', []))}")
             print(f"Top 3 recommendations: {result.get('recommendations', [])[:3]}")

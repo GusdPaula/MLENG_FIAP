@@ -81,7 +81,7 @@ class SingleUserPredictor(BasePredictor):
         known_indices = []
         unknown_items = []
 
-        for item_id, item_idx in zip(request.item_ids, item_indices):
+        for item_id, item_idx in zip(request.item_ids, item_indices, strict=False):
             if item_idx is not None:
                 known_items.append(item_id)
                 known_indices.append(item_idx)
@@ -200,7 +200,7 @@ class TopKRecommendationPredictor(BasePredictor):
                 content_scores = self._get_content_based_scores(request.item_ids)
 
                 # Get known items for model prediction
-                known_items = [(idx, item_id) for idx, item_id in zip(item_indices, request.item_ids) if idx is not None]
+                known_items = [(idx, item_id) for idx, item_id in zip(item_indices, request.item_ids, strict=False) if idx is not None]
 
                 if known_items:
                     # Get model scores for known items
@@ -465,7 +465,7 @@ class BatchPredictor(BasePredictor):
         known_indices = []
         unknown_items = []
 
-        for item_id, item_idx in zip(request.item_ids, item_indices):
+        for item_id, item_idx in zip(request.item_ids, item_indices, strict=False):
             if item_idx is not None:
                 known_items.append(item_id)
                 known_indices.append(item_idx)

@@ -3,12 +3,13 @@
 Script to configure Prometheus datasource and import API dashboard to Grafana.
 """
 
-import requests
 import json
 import sys
 import time
-import boto3
 from pathlib import Path
+
+import boto3
+import requests
 
 # Configuration
 GRAFANA_URL = "https://d3naqrkpy0vqtm.cloudfront.net"

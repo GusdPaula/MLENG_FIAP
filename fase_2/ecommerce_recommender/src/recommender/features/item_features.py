@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from typing import Dict, List, Optional
+
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from typing import Dict, List, Optional
 
 
 class ItemFeatureExtractor:
@@ -88,8 +89,6 @@ class ItemFeatureExtractor:
         """
         for item_id, stats in item_stats.items():
             if item_id in item_metadata.index:
-                metadata = item_metadata.loc[item_id]
-
                 # Combine interaction stats with metadata
                 features = np.array([
                     stats['popularity'],
@@ -142,7 +141,7 @@ class ItemFeatureExtractor:
 
         similarity = cosine_similarity(
             self.feature_matrix[idx1:idx2+1],
-            self.feature_matrix[idx2:idx3+1]
+            self.feature_matrix[idx2:idx2+1]
         )[0, 0]
 
         return float(similarity)

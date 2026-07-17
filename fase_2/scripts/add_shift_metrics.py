@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Add shift/drift metrics to existing Grafana dashboard."""
 
-import json
 import requests
 from requests.auth import HTTPBasicAuth
 
