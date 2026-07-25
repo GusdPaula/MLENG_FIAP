@@ -167,51 +167,76 @@ class Trainer:
             Dictionary of metric names to computed values.
         """
         self.model.eval()
+        collect_ndcg = "ndcg_at_k" in metrics and num_items is not None
+        all_preds, all_labels, positive_samples = self._collect_predictions(
+            dataloader, collect_ndcg
+        )
+        return {
+            metric: self._compute_metric(
+                metric, all_preds, all_labels, positive_samples, num_items, k
+            )
+            for metric in metrics
+        }
+
+    def _collect_predictions(
+        self,
+        dataloader: DataLoader,
+        collect_ndcg: bool,
+    ) -> tuple[list[float], list[float], list[tuple[int, int]]]:
+        """Run inference and collect predictions, labels, and positive samples."""
         all_preds: list[float] = []
         all_labels: list[float] = []
-
-        # Collect positive samples for NDCG computation
         positive_samples: list[tuple[int, int]] = []
 
         with torch.no_grad():
             for users, items, labels in dataloader:
-                users = users.to(self.device)
-                items = items.to(self.device)
-
+                users, items = users.to(self.device), items.to(self.device)
                 predictions = self.model(users, items)
                 all_preds.extend(predictions.cpu().numpy())
                 all_labels.extend(labels.numpy())
+                if collect_ndcg:
+                    self._append_positive_samples(
+                        positive_samples, users, items, labels
+                    )
+        return all_preds, all_labels, positive_samples
 
-                # Collect positive samples for NDCG
-                if "ndcg_at_k" in metrics and num_items is not None:
-                    for user, item, label in zip(
-                        users.cpu().numpy(),
-                        items.cpu().numpy(),
-                        labels.numpy(),
-                        strict=True,
-                    ):
-                        if label == 1.0:
-                            positive_samples.append((int(user), int(item)))
+    @staticmethod
+    def _append_positive_samples(
+        positive_samples: list[tuple[int, int]],
+        users: torch.Tensor,
+        items: torch.Tensor,
+        labels: torch.Tensor,
+    ) -> None:
+        """Append positive (user, item) pairs to the accumulator."""
+        for user, item, label in zip(
+            users.cpu().numpy(), items.cpu().numpy(), labels.numpy(), strict=True
+        ):
+            if label == 1.0:
+                positive_samples.append((int(user), int(item)))
 
-        result: dict[str, float] = {}
-        for metric in metrics:
-            if metric == "auc_roc":
-                result[metric] = float(roc_auc_score(all_labels, all_preds))
-            elif metric == "avg_precision":
-                result[metric] = float(average_precision_score(all_labels, all_preds))
-            elif metric == "loss":
-                preds_tensor = torch.tensor(all_preds, dtype=torch.float32)
-                labels_tensor = torch.tensor(all_labels, dtype=torch.float32)
-                result[metric] = float(self.criterion(preds_tensor, labels_tensor))
-            elif metric == "ndcg_at_k":
-                if num_items is None:
-                    raise ValueError("num_items must be provided for ndcg_at_k metric")
-                result[metric] = self._compute_ndcg_at_k_sampled(
-                    positive_samples, num_items, k
-                )
-            else:
-                raise ValueError(f"Unknown evaluation metric: {metric!r}")
-        return result
+    def _compute_metric(
+        self,
+        metric: str,
+        all_preds: list[float],
+        all_labels: list[float],
+        positive_samples: list[tuple[int, int]],
+        num_items: int | None,
+        k: int,
+    ) -> float:
+        """Dispatch computation for a single evaluation metric."""
+        if metric == "auc_roc":
+            return float(roc_auc_score(all_labels, all_preds))
+        if metric == "avg_precision":
+            return float(average_precision_score(all_labels, all_preds))
+        if metric == "loss":
+            preds_t = torch.tensor(all_preds, dtype=torch.float32)
+            labels_t = torch.tensor(all_labels, dtype=torch.float32)
+            return float(self.criterion(preds_t, labels_t))
+        if metric == "ndcg_at_k":
+            if num_items is None:
+                raise ValueError("num_items must be provided for ndcg_at_k metric")
+            return self._compute_ndcg_at_k_sampled(positive_samples, num_items, k)
+        raise ValueError(f"Unknown evaluation metric: {metric!r}")
 
     # ------------------------------------------------------------------
     # higher-level orchestration
@@ -244,42 +269,64 @@ class Trainer:
         Returns:
             List of EpochResult objects for each epoch.
         """
+        if metric_for_best is not None and mode not in ("min", "max"):
+            raise ValueError(f"mode must be 'min' or 'max', got {mode!r}")
+
         results: list[EpochResult] = []
         best_value: float | None = None
         best_state: dict | None = None
 
-        if metric_for_best is not None and mode not in ("min", "max"):
-            raise ValueError(f"mode must be 'min' or 'max', got {mode!r}")
-
         for epoch in range(epochs):
-            description = f"Epoch {epoch + 1}/{epochs}"
-            train_loss = self.train_epoch(
-                train_loader,
-                show_progress=show_progress,
-                description=description,
-            )
-            eval_metrics = self.evaluate(val_loader)
-            lr = self.optimizer.param_groups[0]["lr"]
-            result = EpochResult(
-                epoch=epoch + 1,
-                train_loss=train_loss,
-                eval_metrics=eval_metrics,
-                learning_rate=lr,
+            result = self._run_epoch(
+                train_loader, val_loader, epoch, epochs, show_progress
             )
             results.append(result)
-
-            if metric_for_best is not None and metric_for_best in eval_metrics:
-                current = eval_metrics[metric_for_best]
-                if best_value is None or self._is_better(current, best_value, mode):
-                    best_value = current
-                    best_state = deepcopy(self.model.state_dict())
-
+            best_value, best_state = self._update_best_model(
+                result, metric_for_best, mode, best_value, best_state
+            )
             if log_callback is not None:
                 log_callback(result)
 
         if metric_for_best is not None and best_state is not None:
             self.model.load_state_dict(best_state)
         return results
+
+    def _run_epoch(
+        self,
+        train_loader: DataLoader,
+        val_loader: DataLoader,
+        epoch: int,
+        total_epochs: int,
+        show_progress: bool,
+    ) -> EpochResult:
+        """Execute one train + eval cycle and return the result."""
+        description = f"Epoch {epoch + 1}/{total_epochs}"
+        train_loss = self.train_epoch(
+            train_loader, show_progress=show_progress, description=description
+        )
+        eval_metrics = self.evaluate(val_loader)
+        return EpochResult(
+            epoch=epoch + 1,
+            train_loss=train_loss,
+            eval_metrics=eval_metrics,
+            learning_rate=self.optimizer.param_groups[0]["lr"],
+        )
+
+    def _update_best_model(
+        self,
+        result: EpochResult,
+        metric_for_best: str | None,
+        mode: str,
+        best_value: float | None,
+        best_state: dict | None,
+    ) -> tuple[float | None, dict | None]:
+        """Conditionally deep-copy model state if a new best metric is found."""
+        if metric_for_best is None or metric_for_best not in result.eval_metrics:
+            return best_value, best_state
+        current = result.eval_metrics[metric_for_best]
+        if best_value is None or self._is_better(current, best_value, mode):
+            return current, deepcopy(self.model.state_dict())
+        return best_value, best_state
 
     def fit_with_early_stopping(
         self,
@@ -312,90 +359,103 @@ class Trainer:
             - history: List of EpochResult objects for every executed epoch.
             - best: Dictionary containing value, epoch, and state_dict of the best model.
         """
-
         history: list[EpochResult] = []
-
-        best: dict[str, Any] = {
-            "value": None,
-            "epoch": None,
-            "state_dict": None,
-        }
+        best: dict[str, Any] = {"value": None, "epoch": None, "state_dict": None}
 
         for epoch in range(epochs):
-            description = f"Epoch {epoch + 1}/{epochs}"
-
-            train_loss = self.train_epoch(
-                train_loader,
-                show_progress=show_progress,
-                description=description,
+            result = self._run_early_stopping_epoch(
+                train_loader, val_loader, epoch, epochs,
+                show_progress, monitor, num_items, ranking_k,
             )
-
-            # Pass num_items and k if monitoring NDCG, and include metric in evaluation
-            eval_kwargs = {}
-            eval_metrics_tuple = ("auc_roc", "avg_precision")
-            if monitor == "ndcg_at_k" and num_items is not None:
-                eval_kwargs["num_items"] = num_items
-                eval_kwargs["k"] = ranking_k
-                eval_metrics_tuple = ("auc_roc", "avg_precision", "ndcg_at_k")
-            elif monitor.startswith("ndcg_at") and num_items is not None:
-                eval_kwargs["num_items"] = num_items
-                eval_kwargs["k"] = ranking_k
-                eval_metrics_tuple = ("auc_roc", "avg_precision", monitor)
-
-            eval_metrics = self.evaluate(
-                val_loader, metrics=eval_metrics_tuple, **eval_kwargs
-            )
-
-            result = EpochResult(
-                epoch=epoch + 1,
-                train_loss=train_loss,
-                eval_metrics=eval_metrics,
-                learning_rate=self.optimizer.param_groups[0]["lr"],
-            )
-
-            logger.info(
-                f"Epoch {result.epoch:02d}/{epochs} | "
-                f"loss={result.train_loss:.4f} | "
-                f"auc={result.eval_metrics['auc_roc']:.4f} | "
-                f"ap={result.eval_metrics['avg_precision']:.4f}"
-            )
-
             history.append(result)
-
-            # Optional logging (MLflow, console, etc.)
             if log_callback is not None:
                 log_callback(result)
 
-            # Metric used for early stopping
             monitored_value = self._resolve_monitor(monitor, result)
+            best = self._check_and_update_best(best, monitored_value, result.epoch, early_stopping.mode)
 
-            # Save best model BEFORE checking whether to stop
-            if best["value"] is None or self._is_better(
-                monitored_value,
-                best["value"],
-                early_stopping.mode,
-            ):
-                best["value"] = monitored_value
-                best["epoch"] = result.epoch
-                best["state_dict"] = deepcopy(self.model.state_dict())
-
-            # Ask EarlyStopping whether training should stop
-            if early_stopping(
-                monitored_value,
-                epoch=result.epoch,
-            ):
-                logger.info(
-                    f"Early stopping triggered at epoch {result.epoch}. "
-                    f"Best {monitor}: {best['value']:.4f} "
-                    f"(epoch {best['epoch']})"
-                )
+            if early_stopping(monitored_value, epoch=result.epoch):
+                self._log_early_stopping(result.epoch, monitor, best, epochs)
                 break
 
-        # Restore best model
         if best["state_dict"] is not None:
             self.model.load_state_dict(best["state_dict"])
-
         return history, best
+
+    def _run_early_stopping_epoch(
+        self,
+        train_loader: DataLoader,
+        val_loader: DataLoader,
+        epoch: int,
+        total_epochs: int,
+        show_progress: bool,
+        monitor: str,
+        num_items: int | None,
+        ranking_k: int,
+    ) -> EpochResult:
+        """Execute one train + eval cycle for early-stopping training."""
+        description = f"Epoch {epoch + 1}/{total_epochs}"
+        train_loss = self.train_epoch(
+            train_loader, show_progress=show_progress, description=description
+        )
+        eval_metrics_tuple, eval_kwargs = self._build_eval_kwargs(
+            monitor, num_items, ranking_k
+        )
+        eval_metrics = self.evaluate(val_loader, metrics=eval_metrics_tuple, **eval_kwargs)
+        result = EpochResult(
+            epoch=epoch + 1,
+            train_loss=train_loss,
+            eval_metrics=eval_metrics,
+            learning_rate=self.optimizer.param_groups[0]["lr"],
+        )
+        logger.info(
+            f"Epoch {result.epoch:02d}/{total_epochs} | "
+            f"loss={result.train_loss:.4f} | "
+            f"auc={result.eval_metrics['auc_roc']:.4f} | "
+            f"ap={result.eval_metrics['avg_precision']:.4f}"
+        )
+        return result
+
+    @staticmethod
+    def _build_eval_kwargs(
+        monitor: str, num_items: int | None, ranking_k: int
+    ) -> tuple[tuple[str, ...], dict]:
+        """Build evaluation metrics tuple and kwargs based on the monitored metric."""
+        base_metrics = ("auc_roc", "avg_precision")
+        if num_items is None:
+            return base_metrics, {}
+        if monitor == "ndcg_at_k":
+            return (*base_metrics, "ndcg_at_k"), {"num_items": num_items, "k": ranking_k}
+        if monitor.startswith("ndcg_at"):
+            return (*base_metrics, monitor), {"num_items": num_items, "k": ranking_k}
+        return base_metrics, {}
+
+    def _check_and_update_best(
+        self,
+        best: dict[str, Any],
+        monitored_value: float,
+        epoch: int,
+        mode: str,
+    ) -> dict[str, Any]:
+        """Update best model state if monitored value improves."""
+        if best["value"] is None or self._is_better(monitored_value, best["value"], mode):
+            return {
+                "value": monitored_value,
+                "epoch": epoch,
+                "state_dict": deepcopy(self.model.state_dict()),
+            }
+        return best
+
+    @staticmethod
+    def _log_early_stopping(
+        epoch: int, monitor: str, best: dict[str, Any], total_epochs: int
+    ) -> None:
+        """Log early stopping trigger information."""
+        logger.info(
+            f"Early stopping triggered at epoch {epoch}. "
+            f"Best {monitor}: {best['value']:.4f} "
+            f"(epoch {best['epoch']})"
+        )
 
     # ------------------------------------------------------------------
     # helpers
@@ -422,45 +482,62 @@ class Trainer:
         if not positive_samples:
             return 0.0
 
-        # Sample users for efficiency
         import numpy as np
 
-        sampled_indices = np.random.choice(
-            len(positive_samples),
-            min(sample_limit, len(positive_samples)),
-            replace=False,
-        )
-        sampled = [positive_samples[i] for i in sampled_indices]
-
-        # Group by user
-        users_items: dict[int, list[int]] = {}
-        for user, item in sampled:
-            users_items.setdefault(user, []).append(item)
+        sampled = self._sample_positive_interactions(positive_samples, sample_limit)
+        users_items = self._group_by_user(sampled)
 
         ndcg_scores = []
         with torch.no_grad():
             for user_idx, true_items in users_items.items():
-                user_tensor = torch.full((num_items,), user_idx, dtype=torch.long).to(
-                    self.device
-                )
-                item_tensor = torch.arange(num_items, dtype=torch.long).to(self.device)
-
-                scores = self.model(user_tensor, item_tensor)
-                _, top_k_indices = torch.topk(scores, k)
-                top_k_list = top_k_indices.cpu().numpy()
-
-                dcg = 0.0
-                for rank, item_id in enumerate(top_k_list):
-                    if item_id in true_items:
-                        dcg += 1.0 / np.log2(rank + 2)
-
-                ideal_dcg = sum(
-                    1.0 / np.log2(i + 2) for i in range(min(len(true_items), k))
-                )
-                ndcg = dcg / ideal_dcg if ideal_dcg > 0 else 0.0
+                ndcg = self._compute_user_ndcg(user_idx, true_items, num_items, k)
                 ndcg_scores.append(ndcg)
 
         return float(np.mean(ndcg_scores)) if ndcg_scores else 0.0
+
+    @staticmethod
+    def _sample_positive_interactions(
+        positive_samples: list[tuple[int, int]], sample_limit: int
+    ) -> list[tuple[int, int]]:
+        """Randomly sample a subset of positive interactions."""
+        import numpy as np
+
+        indices = np.random.choice(
+            len(positive_samples),
+            min(sample_limit, len(positive_samples)),
+            replace=False,
+        )
+        return [positive_samples[i] for i in indices]
+
+    @staticmethod
+    def _group_by_user(
+        interactions: list[tuple[int, int]],
+    ) -> dict[int, list[int]]:
+        """Group (user, item) pairs by user."""
+        users_items: dict[int, list[int]] = {}
+        for user, item in interactions:
+            users_items.setdefault(user, []).append(item)
+        return users_items
+
+    def _compute_user_ndcg(
+        self, user_idx: int, true_items: list[int], num_items: int, k: int
+    ) -> float:
+        """Compute NDCG@K for a single user."""
+        import numpy as np
+
+        user_tensor = torch.full((num_items,), user_idx, dtype=torch.long).to(self.device)
+        item_tensor = torch.arange(num_items, dtype=torch.long).to(self.device)
+        scores = self.model(user_tensor, item_tensor)
+        _, top_k_indices = torch.topk(scores, k)
+        top_k_list = top_k_indices.cpu().numpy()
+
+        dcg = sum(
+            1.0 / np.log2(rank + 2)
+            for rank, item_id in enumerate(top_k_list)
+            if item_id in true_items
+        )
+        ideal_dcg = sum(1.0 / np.log2(i + 2) for i in range(min(len(true_items), k)))
+        return dcg / ideal_dcg if ideal_dcg > 0 else 0.0
 
     @staticmethod
     def _is_better(current: float, best: float, mode: str) -> bool:

@@ -47,14 +47,7 @@ def load_events(path: str) -> pd.DataFrame:
 def create_interaction_matrix(
     events: pd.DataFrame,
 ) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
-    """Create user/item to index mappings and positive interaction pairs.
-
-    Args:
-        events: DataFrame containing user and item interactions.
-
-    Returns:
-        Tuple of (events with indices, user2idx mapping, item2idx mapping).
-    """
+    """Create user/item index mappings and positive interaction pairs."""
     user_ids = events["visitorid"].unique()
     item_ids = events["itemid"].unique()
 
@@ -93,17 +86,29 @@ class BatchCollator:
         return users.to(self.device), items.to(self.device), labels.to(self.device)
 
 
-def make_batches(
+def _collect_batch(
     dataset: "RecommenderDataset",
-    batch_size: int,
-    drop_last: bool = False,
-) -> Iterator[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
-    """Iterate over ``dataset`` in fixed-size batches.
+    start: int,
+    end: int,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Collect samples from *start* to *end* into a tensor triple."""
+    users, items, labels = [], [], []
+    for idx in range(start, end):
+        u, i, l = dataset[idx]  # noqa: E741
+        users.append(u)
+        items.append(i)
+        labels.append(l)
+    return (
+        torch.as_tensor(np.stack(users), dtype=torch.long),
+        torch.as_tensor(np.stack(items), dtype=torch.long),
+        torch.as_tensor(np.stack(labels), dtype=torch.float32),
+    )
 
-    Convenience helper for callers that want explicit batch
-    iteration (e.g. notebooks, debugging) without instantiating a
-    :class:`torch.utils.data.DataLoader`.
-    """
+
+def make_batches(
+    dataset: "RecommenderDataset", batch_size: int, drop_last: bool = False
+) -> Iterator[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
+    """Iterate over ``dataset`` in fixed-size batches."""
     if batch_size <= 0:
         raise ValueError(f"batch_size must be > 0, got {batch_size}")
 
@@ -112,19 +117,7 @@ def make_batches(
         end = start + batch_size
         if drop_last and end > n:
             break
-        users = []
-        items = []
-        labels = []
-        for idx in range(start, min(end, n)):
-            u, i, l = dataset[idx]  # noqa: E741
-            users.append(u)
-            items.append(i)
-            labels.append(l)
-        yield (
-            torch.as_tensor(np.stack(users), dtype=torch.long),
-            torch.as_tensor(np.stack(items), dtype=torch.long),
-            torch.as_tensor(np.stack(labels), dtype=torch.float32),
-        )
+        yield _collect_batch(dataset, start, min(end, n))
 
 
 class RecommenderDataset(Dataset):
@@ -177,74 +170,74 @@ class RecommenderDataset(Dataset):
         samples: list[tuple[int, int, float]] = []
         for user_idx, item_idx in self.interactions:
             samples.append((int(user_idx), int(item_idx), 1.0))
-            for _ in range(self.num_negatives):
-                neg_item = int(self._rng.integers(0, self.num_items))
-                while (int(user_idx), neg_item) in self.positive_set:
-                    neg_item = int(self._rng.integers(0, self.num_items))
-                samples.append((int(user_idx), neg_item, 0.0))
+            self._append_negatives(samples, int(user_idx), self._rng)
         return samples
+
+    def _append_negatives(
+        self,
+        samples: list[tuple[int, int, float]],
+        user_idx: int,
+        rng: np.random.Generator,
+    ) -> None:
+        """Sample *num_negatives* negative items and append to *samples*."""
+        for _ in range(self.num_negatives):
+            neg_item = int(rng.integers(0, self.num_items))
+            while (user_idx, neg_item) in self.positive_set:
+                neg_item = int(rng.integers(0, self.num_items))
+            samples.append((user_idx, neg_item, 0.0))
 
     # ------------------------------------------------------------------
     # Streaming / batch-processing helpers
     # ------------------------------------------------------------------
 
-    def stream_batches(
-        self,
-        batch_size: int,
-        shuffle: bool = False,
-        drop_last: bool = False,
-        seed: int | None = None,
-    ) -> Iterator[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
-        """Yield batches of ``(users, items, labels)`` lazily.
+    @staticmethod
+    def _build_batch_tensors(
+        users: list[int],
+        items: list[int],
+        labels: list[float],
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Convert accumulator lists into a tensor triple."""
+        return (
+            torch.as_tensor(users, dtype=torch.long),
+            torch.as_tensor(items, dtype=torch.long),
+            torch.as_tensor(labels, dtype=torch.float32),
+        )
 
-        Each call produces a fresh negative sample for every
-        positive, which is what makes it memory-efficient batch
-        processing.
-        """
+    def stream_batches(
+        self, batch_size: int, shuffle: bool = False, drop_last: bool = False, seed: int | None = None
+    ) -> Iterator[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
+        """Yield batches of ``(users, items, labels)`` lazily."""
         if batch_size <= 0:
             raise ValueError(f"batch_size must be > 0, got {batch_size}")
-
         rng = np.random.default_rng(seed)
-        n = len(self.interactions)
-        order = rng.permutation(n) if shuffle else np.arange(n)
-
-        batch_users: list[int] = []
-        batch_items: list[int] = []
-        batch_labels: list[float] = []
-
-        def _flush() -> Iterator[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
-            if not batch_users:
-                return
-            yield (
-                torch.as_tensor(batch_users, dtype=torch.long),
-                torch.as_tensor(batch_items, dtype=torch.long),
-                torch.as_tensor(batch_labels, dtype=torch.float32),
-            )
-
+        order = rng.permutation(len(self.interactions)) if shuffle else np.arange(len(self.interactions))
+        threshold = batch_size * (1 + self.num_negatives)
+        users, items, labels = [], [], []
         for idx in order:
-            user_idx, item_idx = self.interactions[idx]
-            user_idx = int(user_idx)
-            item_idx = int(item_idx)
-            batch_users.append(user_idx)
-            batch_items.append(item_idx)
-            batch_labels.append(1.0)
+            self._stream_one(idx, users, items, labels, rng)
+            if len(users) >= threshold:
+                yield self._build_batch_tensors(users, items, labels)
+                users, items, labels = [], [], []
+        if not drop_last and users:
+            yield self._build_batch_tensors(users, items, labels)
 
-            for _ in range(self.num_negatives):
-                neg_item = int(rng.integers(0, self.num_items))
-                while (user_idx, neg_item) in self.positive_set:
-                    neg_item = int(rng.integers(0, self.num_items))
-                batch_users.append(user_idx)
-                batch_items.append(neg_item)
-                batch_labels.append(0.0)
+    def _stream_one(
+        self, idx: int, users: list[int], items: list[int], labels: list[float], rng: np.random.Generator
+    ) -> None:
+        """Append one positive and its negatives to the accumulators."""
+        user_idx, item_idx = self.interactions[idx]
+        user_idx, item_idx = int(user_idx), int(item_idx)
+        users.append(user_idx)
+        items.append(item_idx)
+        labels.append(1.0)
 
-            if len(batch_users) >= batch_size * (1 + self.num_negatives):
-                yield from _flush()
-                batch_users = []
-                batch_items = []
-                batch_labels = []
-
-        if not drop_last:
-            yield from _flush()
+        for _ in range(self.num_negatives):
+            neg = int(rng.integers(0, self.num_items))
+            while (user_idx, neg) in self.positive_set:
+                neg = int(rng.integers(0, self.num_items))
+            users.append(user_idx)
+            items.append(neg)
+            labels.append(0.0)
 
     # ------------------------------------------------------------------
     # Dataset protocol
@@ -258,26 +251,20 @@ class RecommenderDataset(Dataset):
     def __getitem__(self, idx: int) -> tuple[np.int64, np.int64, np.float32]:
         if not self.streaming:
             user, item, label = self.samples[idx]
-            return (
-                np.int64(user),
-                np.int64(item),
-                np.float32(label),
-            )
+            return np.int64(user), np.int64(item), np.float32(label)
+        return self._getitem_streaming(idx)
 
-        # Streaming / batch processing mode: lazily generate the
-        # (idx // (1 + num_negatives))-th positive plus its negatives.
+    def _getitem_streaming(self, idx: int) -> tuple[np.int64, np.int64, np.float32]:
+        """Lazy sample generation for streaming mode."""
         num_per_positive = 1 + self.num_negatives
         positive_idx = idx // num_per_positive
         slot = idx % num_per_positive
 
         if positive_idx >= len(self.interactions):
-            raise IndexError(
-                f"Index {idx} out of range for dataset of size {len(self)}"
-            )
+            raise IndexError(f"Index {idx} out of range for dataset of size {len(self)}")
 
         user_idx, item_idx = self.interactions[positive_idx]
-        user_idx = int(user_idx)
-        item_idx = int(item_idx)
+        user_idx, item_idx = int(user_idx), int(item_idx)
 
         if slot == 0:
             return np.int64(user_idx), np.int64(item_idx), np.float32(1.0)

@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import torch
 from src.recommender.data.dataset import (
     RecommenderDataset,
     create_interaction_matrix,
@@ -83,3 +84,60 @@ def test_recommender_dataset_item_returns_correct_types() -> None:
     assert isinstance(item, np.int64)
     assert isinstance(label, np.float32)
     assert label in (0.0, 1.0)
+
+
+def test_collect_batch() -> None:
+    events = pd.DataFrame({"user_idx": [0, 1], "item_idx": [0, 1]})
+    dataset = RecommenderDataset(events, num_items=3, num_negatives=1)
+    from src.recommender.data.dataset import _collect_batch
+    users, items, labels = _collect_batch(dataset, 0, 2)
+    assert users.shape == (2,)
+    assert items.shape == (2,)
+    assert labels.shape == (2,)
+
+
+def test_append_negatives() -> None:
+    events = pd.DataFrame({"user_idx": [0], "item_idx": [0]})
+    dataset = RecommenderDataset(events, num_items=5, num_negatives=2)
+    rng = np.random.default_rng(42)
+    samples = [(0, 0, 1.0)]
+    dataset._append_negatives(samples, 0, rng)
+    assert len(samples) == 3
+    assert all(label == 0.0 for _, _, label in samples[1:])
+    assert all((0, neg) not in dataset.positive_set for _, neg, _ in samples[1:])
+
+
+def test_build_batch_tensors() -> None:
+    users, items, labels = RecommenderDataset._build_batch_tensors(
+        [0, 1], [1, 2], [1.0, 0.0]
+    )
+    assert isinstance(users, torch.Tensor)
+    assert isinstance(items, torch.Tensor)
+    assert isinstance(labels, torch.Tensor)
+    assert users.tolist() == [0, 1]
+    assert items.tolist() == [1, 2]
+    assert labels.tolist() == [1.0, 0.0]
+
+
+def test_stream_one() -> None:
+    events = pd.DataFrame({"user_idx": [0], "item_idx": [1]})
+    dataset = RecommenderDataset(events, num_items=5, num_negatives=2, streaming=True)
+    rng = np.random.default_rng(42)
+    users, items, labels = [], [], []
+    dataset._stream_one(0, users, items, labels, rng)
+    assert len(users) == 3
+    assert labels == [1.0, 0.0, 0.0]
+    assert users == [0, 0, 0]
+
+
+def test_getitem_streaming() -> None:
+    events = pd.DataFrame({"user_idx": [0], "item_idx": [1]})
+    dataset = RecommenderDataset(events, num_items=5, num_negatives=2, streaming=True)
+    user, item, label = dataset._getitem_streaming(0)
+    assert user == 0
+    assert item == 1
+    assert label == 1.0
+    u_neg, i_neg, l_neg = dataset._getitem_streaming(1)
+    assert u_neg == 0
+    assert l_neg == 0.0
+
