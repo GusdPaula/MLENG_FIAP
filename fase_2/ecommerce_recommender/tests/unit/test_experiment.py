@@ -59,7 +59,9 @@ def test_prepare_data_loaders(mock_dataset_class, mock_random_split, mock_resolv
     mock_dataset_class.return_value = mock_dataset
 
     mock_train_dataset = MagicMock()
+    mock_train_dataset.__len__.return_value = 80
     mock_val_dataset = MagicMock()
+    mock_val_dataset.__len__.return_value = 20
     mock_random_split.return_value = (mock_train_dataset, mock_val_dataset)
 
     mock_resolve_device.return_value = "cpu"

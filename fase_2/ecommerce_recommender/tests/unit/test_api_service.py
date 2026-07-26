@@ -5,10 +5,11 @@ Tests the PredictionService for model loading and prediction orchestration.
 
 import pytest
 import torch
+import torch.nn as nn
+from pathlib import Path
 from api.exceptions import InvalidInputError, ModelLoadError
 from api.models.schemas import PredictionRequest
 from api.services.prediction_service import PredictionService
-from torch import nn
 
 
 class MockModel(nn.Module):
@@ -392,6 +393,23 @@ class TestPredictionService:
             def search_registered_models(self):
                 model = type("obj", (object,), {"name": "test_model"})
                 return [model]
+                
+            def download_artifacts(self, run_id, path, dst_path):
+                import torch
+                from pathlib import Path
+                model = MockModel()
+                checkpoint = {
+                    "model_type": "mock",
+                    "num_users": 100,
+                    "num_items": 50,
+                    "hyperparams": {},
+                    "model_state_dict": model.state_dict(),
+                    "user2idx": {},
+                    "item2idx": {},
+                }
+                model_path = Path(dst_path) / "model.pt"
+                torch.save(checkpoint, model_path)
+                return dst_path
 
         monkeypatch.setattr("mlflow.tracking.MlflowClient", lambda: DummyClient())
         monkeypatch.setattr("mlflow.set_tracking_uri", lambda uri: None)
