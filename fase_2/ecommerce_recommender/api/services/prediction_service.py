@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import Any
 
 import torch
-
+import mlflow
+import os
 from ..domain.base_predictor import BasePredictor
 from ..domain.predictor_factory import PredictorFactory
 from ..exceptions import ModelLoadError
@@ -153,7 +154,7 @@ class PredictionService:
         Raises:
             Exception: If MLflow loading fails.
         """
-        import mlflow
+        
 
         mlflow.set_tracking_uri(self.mlflow_tracking_uri)
         model_uri = self._build_model_uri()
@@ -179,8 +180,6 @@ class PredictionService:
 
     def _download_mlflow_artifact(self, temp_dir: str) -> dict[str, Any]:
         """Download model artifact from MLflow when PyTorch loading fails."""
-        import mlflow
-        import os
 
         client = mlflow.tracking.MlflowClient()
         model_version = self._resolve_mlflow_model_version(client)
@@ -221,7 +220,7 @@ class PredictionService:
         Raises:
             Exception: If no model with the alias is found.
         """
-        import mlflow
+        
 
         client = mlflow.tracking.MlflowClient()
         registered_models = client.search_registered_models()
@@ -247,7 +246,7 @@ class PredictionService:
         Raises:
             Exception: If no model with the alias is found.
         """
-        import mlflow
+        
 
         client = mlflow.tracking.MlflowClient()
 
