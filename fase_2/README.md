@@ -231,8 +231,7 @@ Vídeo de apresentação do projeto disponível no STAR:
 - Explicação da arquitetura
 - Resultados obtidos
 - Comparação entre modelos
-
-[Link do vídeo - Placeholder]
+[Tech Challenger - Fase 2 - Sistema de Recomendação [ FIAP ]](https://www.youtube.com/watch?v=6eNcDD2LSgo)
 
 ### Slides
 
@@ -242,7 +241,7 @@ Slides de apresentação do projeto:
 - Arquitetura técnica
 - Resultados e conclusões
 
-[Link dos slides - Placeholder]
+[Apresentação do Projeto (HTML)](presentation.html)
 
 ## Infraestrutura
 
