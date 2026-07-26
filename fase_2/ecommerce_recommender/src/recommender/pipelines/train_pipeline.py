@@ -135,42 +135,30 @@ class TrainingPipeline:
         raw_path = self.cfg.get("raw_events_path", "data/raw/events.csv")
         logger.info("Loading events from %s", raw_path)
         events = load_events(raw_path)
-        logger.info("Total events: %d", len(events))
-
         processor_cfg = self.cfg.get("processor", "weighted")
-        processor_kwargs = self.cfg.get("processor_kwargs", {}) or {}
-        processor = DataProcessorContext(processor_cfg, **processor_kwargs)
-        logger.info("Data processor: %s", processor.strategy_name)
-
+        processor = DataProcessorContext(processor_cfg, **(self.cfg.get("processor_kwargs", {}) or {}))
+        
         interactions, user2idx, item2idx = processor.process(
             events, min_interactions=self.cfg.get("min_interactions", 1)
         )
+        popular_items = self._calculate_popular_items(interactions)
 
-        # Calculate popular items for cold start fallback
+        return (
+            interactions, user2idx, item2idx, processor_cfg,
+            processor.strategy_name, raw_path, popular_items,
+        )
+
+    def _calculate_popular_items(self, interactions) -> dict:
+        """Calculate popular items for cold start fallback."""
         if "weight" in interactions.columns:
             popular_items = interactions.groupby("itemid")["weight"].sum().to_dict()
         else:
             popular_items = interactions.groupby("itemid").size().to_dict()
-
-        # Normalize popularity scores to [0, 1] range
         if popular_items:
             max_pop = max(popular_items.values())
             if max_pop > 0:
                 popular_items = {k: v / max_pop for k, v in popular_items.items()}
-
-        logger.info(
-            "Calculated %d popular items for cold start fallback", len(popular_items)
-        )
-
-        return (
-            interactions,
-            user2idx,
-            item2idx,
-            processor_cfg,
-            processor.strategy_name,
-            raw_path,
-            popular_items,
-        )
+        return popular_items
 
     def _create_dataset(self, interactions, num_items):
         """Create dataset with negative sampling."""
@@ -268,48 +256,30 @@ class TrainingPipeline:
 
         logger.info("\nStarting training (%d epochs)...", self.cfg["epochs"])
         logger.info("-" * 60)
-
         mlflow_logger = create_mlflow_logger(mlflow_toolkit)
 
         if use_early_stopping:
             return self._train_with_early_stopping(
-                trainer,
-                train_loader,
-                val_loader,
-                mlflow_logger,
-                early_stopping_cfg,
-                num_items,
+                trainer, train_loader, val_loader, mlflow_logger, early_stopping_cfg, num_items
             )
-        else:
-            return self._train_without_early_stopping(
-                trainer, train_loader, val_loader, mlflow_logger
-            )
+        return self._train_without_early_stopping(
+            trainer, train_loader, val_loader, mlflow_logger
+        )
 
     def _train_with_early_stopping(
-        self,
-        trainer,
-        train_loader,
-        val_loader,
-        mlflow_logger,
-        early_stopping_cfg,
-        num_items,
+        self, trainer, train_loader, val_loader, mlflow_logger, early_stopping_cfg, num_items
     ):
         """Train model with early stopping."""
-
         stopper = self._create_early_stopper(early_stopping_cfg)
         monitor = early_stopping_cfg.get("monitor", "val_loss")
         ranking_k = self.cfg.get("ranking_k", 10)
+        num_it = num_items if monitor.startswith("ndcg") else None
 
         history, best = trainer.fit_with_early_stopping(
-            train_loader=train_loader,
-            val_loader=val_loader,
-            epochs=self.cfg["epochs"],
-            early_stopping=stopper,
-            monitor=monitor,
+            train_loader=train_loader, val_loader=val_loader, epochs=self.cfg["epochs"],
+            early_stopping=stopper, monitor=monitor,
             show_progress=self.cfg.get("show_progress", True),
-            log_callback=mlflow_logger,
-            num_items=num_items if monitor.startswith("ndcg") else None,
-            ranking_k=ranking_k,
+            log_callback=mlflow_logger, num_items=num_it, ranking_k=ranking_k,
         )
 
         self._log_early_stopping_results(monitor, stopper, best, history)
@@ -341,22 +311,16 @@ class TrainingPipeline:
     ):
         """Train model without early stopping."""
         history = trainer.fit(
-            train_loader=train_loader,
-            val_loader=val_loader,
-            epochs=self.cfg["epochs"],
-            show_progress=self.cfg.get("show_progress", True),
+            train_loader=train_loader, val_loader=val_loader,
+            epochs=self.cfg["epochs"], show_progress=self.cfg.get("show_progress", True),
             log_callback=mlflow_logger,
         )
         if history:
             metrics = history[-1].eval_metrics
-            train_loss = history[-1].train_loss
             logger.info(
                 "Epoch %02d/%d | Loss: %.4f | AUC: %.4f | AP: %.4f",
-                len(history),
-                self.cfg["epochs"],
-                train_loss,
-                metrics["auc_roc"],
-                metrics["avg_precision"],
+                len(history), self.cfg["epochs"], history[-1].train_loss,
+                metrics["auc_roc"], metrics["avg_precision"]
             )
         return history, None, None
 
@@ -364,54 +328,28 @@ class TrainingPipeline:
         """Compute ranking metrics on validation set."""
         logger.info("-" * 60)
         logger.info("Calculating ranking metrics...")
-
         ranking = compute_ranking_metrics(
-            model=model,
-            val_dataset=val_dataset,
-            dataset=dataset,
-            num_items=num_items,
-            device=self.device,
-            k=10,
-            sample_limit=10000,
-            positive_limit=1000,
+            model=model, val_dataset=val_dataset, dataset=dataset,
+            num_items=num_items, device=self.device, k=10,
+            sample_limit=10000, positive_limit=1000
         )
-
-        logger.info("  Hit Rate@10:    %.4f", ranking.hit_rate)
-        logger.info("  NDCG@10:        %.4f", ranking.ndcg)
-        logger.info("  Precision@10:   %.4f", ranking.precision)
-        logger.info("  Recall@10:      %.4f", ranking.recall)
-        logger.info("  MRR@10:         %.4f", ranking.mrr)
+        logger.info("  Hit Rate@10:    %.4f\n  NDCG@10:        %.4f\n  Precision@10:   %.4f\n  Recall@10:      %.4f\n  MRR@10:         %.4f",
+                    ranking.hit_rate, ranking.ndcg, ranking.precision, ranking.recall, ranking.mrr)
         return ranking
 
     def _save_model(
-        self,
-        model,
-        model_type,
-        processor_name,
-        user2idx,
-        item2idx,
-        metrics,
-        popular_items=None,
+        self, model, model_type, processor_name, user2idx, item2idx, metrics, popular_items=None
     ):
         """Save model checkpoint locally."""
         artifact_dir = Path(self.cfg.get("artifact_dir", "models"))
         artifact_dir.mkdir(parents=True, exist_ok=True)
-
         early_stopping_info = {"best_epoch": len(metrics), "epochs_run": len(metrics)}
-        metrics_dict = self._create_metrics_dict(metrics)
 
         artifact_path = self._save_checkpoint(
-            model,
-            model_type,
-            processor_name,
-            user2idx,
-            item2idx,
-            metrics_dict,
-            early_stopping_info,
-            artifact_dir,
-            popular_items,
+            model, model_type, processor_name, user2idx, item2idx,
+            self._create_metrics_dict(metrics), early_stopping_info,
+            artifact_dir, popular_items
         )
-
         self._copy_for_dvc(artifact_path, artifact_dir)
         return artifact_path
 
@@ -426,29 +364,15 @@ class TrainingPipeline:
         }
 
     def _save_checkpoint(
-        self,
-        model,
-        model_type,
-        processor_name,
-        user2idx,
-        item2idx,
-        metrics_dict,
-        early_stopping_info,
-        artifact_dir,
-        popular_items=None,
+        self, model, model_type, processor_name, user2idx, item2idx,
+        metrics_dict, early_stopping_info, artifact_dir, popular_items=None
     ):
         """Save model checkpoint."""
         artifact_path = save_checkpoint(
-            model=model,
-            model_type=model_type,
-            processor_name=processor_name,
-            user2idx=user2idx,
-            item2idx=item2idx,
-            config=self.cfg,
-            metrics=metrics_dict,
-            early_stopping_info=early_stopping_info,
-            artifact_dir=artifact_dir,
-            popular_items=popular_items,
+            model=model, model_type=model_type, processor_name=processor_name,
+            user2idx=user2idx, item2idx=item2idx, config=self.cfg, metrics=metrics_dict,
+            early_stopping_info=early_stopping_info, artifact_dir=artifact_dir,
+            popular_items=popular_items
         )
         logger.info("Model saved locally to %s", artifact_path)
         return artifact_path
@@ -466,19 +390,14 @@ class TrainingPipeline:
     ):
         """Log metrics and model to MLflow."""
         os.environ["AWS_PROFILE"] = "aws"
-
         final_metrics = {
             "final_train_loss": metrics[-1].train_loss if metrics else 0.0,
             "final_auc_roc": metrics[-1].eval_metrics["auc_roc"] if metrics else 0.0,
-            "final_avg_precision": metrics[-1].eval_metrics["avg_precision"]
-            if metrics
-            else 0.0,
+            "final_avg_precision": metrics[-1].eval_metrics["avg_precision"] if metrics else 0.0,
             **ranking.to_dict(10),
         }
-
         mlflow_toolkit.log_metrics(final_metrics)
         logger.info("Logging PyTorch model to MLflow server...")
-
         mlflow_toolkit.log_pytorch_model(
             model=model, name="model", registered_model_name=registered_model_name
         )
@@ -540,15 +459,7 @@ class TrainingPipeline:
         """Train single model from config."""
         self._setup_threads_and_seed()
         data = self._load_or_process_data()
-        (
-            interactions,
-            user2idx,
-            item2idx,
-            processor_cfg,
-            processor_name,
-            raw_path,
-            popular_items,
-        ) = data
+        interactions, user2idx, item2idx, processor_cfg, processor_name, raw_path, popular_items = data
         logger.info("Users: %d, Items: %d", len(user2idx), len(item2idx))
 
         dataset = self._create_dataset(interactions, len(item2idx))
@@ -559,144 +470,62 @@ class TrainingPipeline:
         model = self._create_model(len(user2idx), len(item2idx), model_type)
 
         self._train_and_log_single_model(
-            model,
-            model_type,
-            processor_cfg,
-            processor_name,
-            raw_path,
-            dataset,
-            train_dataset,
-            val_dataset,
-            train_loader,
-            val_loader,
-            user2idx,
-            item2idx,
-            interactions,
-            popular_items,
+            model, model_type, processor_cfg, processor_name, raw_path, dataset,
+            train_dataset, val_dataset, train_loader, val_loader, user2idx, item2idx,
+            interactions, popular_items
         )
 
     def _train_and_log_single_model(
-        self,
-        model,
-        model_type,
-        processor_cfg,
-        processor_name,
-        raw_path,
-        dataset,
-        train_dataset,
-        val_dataset,
-        train_loader,
-        val_loader,
-        user2idx,
-        item2idx,
-        interactions,
-        popular_items,
+        self, model, model_type, processor_cfg, processor_name, raw_path, dataset,
+        train_dataset, val_dataset, train_loader, val_loader, user2idx, item2idx,
+        interactions, popular_items
     ):
         """Train and log single model to MLflow."""
         mlflow_toolkit = self._setup_mlflow()
-        run_name = f"{model_type}-{processor_cfg}"
-
         with mlflow_toolkit.start_run(
-            run_name=run_name,
+            run_name=f"{model_type}-{processor_cfg}",
             tags={"model_type": model_type, "processor": processor_cfg},
         ) as run:
             self._log_params(mlflow_toolkit, model_type, processor_cfg)
             self._log_dataset(mlflow_toolkit, interactions, processor_cfg, raw_path)
-            self._log_train_val_samples(
-                mlflow_toolkit, dataset, train_dataset, val_dataset, processor_cfg
-            )
+            self._log_train_val_samples(mlflow_toolkit, dataset, train_dataset, val_dataset, processor_cfg)
 
-            history, best, monitor = self._train_model(
-                model, train_loader, val_loader, mlflow_toolkit
-            )
+            history, best, monitor = self._train_model(model, train_loader, val_loader, mlflow_toolkit, len(item2idx))
+            ranking = self._compute_ranking_metrics(model, val_dataset, dataset, len(item2idx))
+            
+            self._save_model(model, model_type, processor_name, user2idx, item2idx, history, popular_items)
+            self._log_metrics_and_model(mlflow_toolkit, model, history, ranking, self.cfg.get("registered_model_name", "ecommerce_recommender"))
+            self._promote_to_staging(mlflow_toolkit, run.info.run_id, self.cfg.get("registered_model_name", "ecommerce_recommender"), monitor)
 
-            ranking = self._compute_ranking_metrics(
-                model, val_dataset, dataset, len(item2idx)
-            )
-            self._save_model(
-                model,
-                model_type,
-                processor_name,
-                user2idx,
-                item2idx,
-                history,
-                popular_items,
-            )
-
-            self._log_metrics_and_model(
-                mlflow_toolkit,
-                model,
-                history,
-                ranking,
-                self.cfg.get("registered_model_name", "ecommerce_recommender"),
-            )
-
-            self._promote_to_staging(
-                mlflow_toolkit,
-                run.info.run_id,
-                self.cfg.get("registered_model_name", "ecommerce_recommender"),
-                monitor,
-            )
-
-    def _train_model_combination(
-        self, model_type, processor_type, events, mlflow_toolkit
-    ):
+    def _train_model_combination(self, model_type, processor_type, events, mlflow_toolkit):
         """Train a single model combination."""
-        run_name = f"{model_type}_{processor_type}"
-        logger.info(
-            "\n%s\nTraining %s with %s processor\n%s",
-            "=" * 60,
-            model_type,
-            processor_type,
-            "=" * 60,
-        )
-
-        with mlflow_toolkit.start_run(run_name=run_name):
+        logger.info("\n%s\nTraining %s with %s processor\n%s", "=" * 60, model_type, processor_type, "=" * 60)
+        with mlflow_toolkit.start_run(run_name=f"{model_type}_{processor_type}"):
             self._log_combination_params(mlflow_toolkit, model_type, processor_type)
-
             try:
-                interactions, user2idx, item2idx = self._process_events_for_combination(
-                    processor_type, events
-                )
-                raw_path = self.cfg.get("raw_events_path", "data/raw/events.csv")
-                self._log_dataset(
-                    mlflow_toolkit, interactions, processor_type, raw_path
-                )
-
-                dataset = self._create_dataset(interactions, len(item2idx))
-                train_dataset, val_dataset = self._split_dataset(dataset)
-
-                # Log train and validation samples
-                self._log_train_val_samples(
-                    mlflow_toolkit, dataset, train_dataset, val_dataset, processor_type
-                )
-
-                train_loader, val_loader = self._create_data_loaders(
-                    train_dataset, val_dataset
-                )
-
-                model = self._create_model(len(user2idx), len(item2idx), model_type)
-                history, _, _ = self._train_model(
-                    model, train_loader, val_loader, mlflow_toolkit, len(item2idx)
-                )
-
-                if history:
-                    self._log_combination_results(
-                        mlflow_toolkit,
-                        model,
-                        history,
-                        model_type,
-                        processor_type,
-                        val_dataset,
-                        dataset,
-                        len(item2idx),
-                    )
-
+                self._run_combination_training(model_type, processor_type, events, mlflow_toolkit)
             except Exception as e:
-                logger.error(
-                    "Failed to train %s with %s: %s", model_type, processor_type, e
-                )
+                logger.error("Failed to train %s with %s: %s", model_type, processor_type, e)
                 mlflow_toolkit.log_params({"error": str(e)})
+
+    def _run_combination_training(self, model_type, processor_type, events, mlflow_toolkit):
+        """Inner logic for combination training."""
+        interactions, user2idx, item2idx = self._process_events_for_combination(processor_type, events)
+        self._log_dataset(mlflow_toolkit, interactions, processor_type, self.cfg.get("raw_events_path", "data/raw/events.csv"))
+
+        dataset = self._create_dataset(interactions, len(item2idx))
+        train_dataset, val_dataset = self._split_dataset(dataset)
+        self._log_train_val_samples(mlflow_toolkit, dataset, train_dataset, val_dataset, processor_type)
+
+        train_loader, val_loader = self._create_data_loaders(train_dataset, val_dataset)
+        model = self._create_model(len(user2idx), len(item2idx), model_type)
+        
+        history, _, _ = self._train_model(model, train_loader, val_loader, mlflow_toolkit, len(item2idx))
+        if history:
+            self._log_combination_results(
+                mlflow_toolkit, model, history, model_type, processor_type,
+                val_dataset, dataset, len(item2idx)
+            )
 
     def _log_combination_params(self, mlflow_toolkit, model_type, processor_type):
         """Log parameters for model combination."""
@@ -712,33 +541,23 @@ class TrainingPipeline:
             }
         )
 
-    def _log_train_val_samples(
-        self, mlflow_toolkit, dataset, train_dataset, val_dataset, processor_type
-    ):
+    def _log_train_val_samples(self, mlflow_toolkit, dataset, train_dataset, val_dataset, processor_type):
         """Log train and validation samples to MLflow."""
         import pandas as pd
-
-        train_samples = np.array([dataset.samples[i] for i in train_dataset.indices])
-        val_samples = np.array([dataset.samples[i] for i in val_dataset.indices])
-
-        train_df = pd.DataFrame(train_samples, columns=["user_id", "item_id", "label"])
-        val_df = pd.DataFrame(val_samples, columns=["user_id", "item_id", "label"])
-
+        
+        train_df = pd.DataFrame(np.array([dataset.samples[i] for i in train_dataset.indices]), columns=["user_id", "item_id", "label"])
+        val_df = pd.DataFrame(np.array([dataset.samples[i] for i in val_dataset.indices]), columns=["user_id", "item_id", "label"])
+        
         logging.getLogger(__name__).info(f"Logging train samples: {len(train_df)} rows")
         logging.getLogger(__name__).info(f"Logging val samples: {len(val_df)} rows")
 
         mlflow_toolkit.log_dataset(
-            train_df,
-            name=f"{processor_type}_train_samples",
-            source=f"{processor_type}_interactions",
-            context="training",
+            train_df, name=f"{processor_type}_train_samples",
+            source=f"{processor_type}_interactions", context="training"
         )
-
         mlflow_toolkit.log_dataset(
-            val_df,
-            name=f"{processor_type}_val_samples",
-            source=f"{processor_type}_interactions",
-            context="validation",
+            val_df, name=f"{processor_type}_val_samples",
+            source=f"{processor_type}_interactions", context="validation"
         )
 
     def _process_events_for_combination(self, processor_type, events):
@@ -752,36 +571,23 @@ class TrainingPipeline:
         return interactions, user2idx, item2idx
 
     def _log_combination_results(
-        self,
-        mlflow_toolkit,
-        model,
-        history,
-        model_type,
-        processor_type,
-        val_dataset,
-        dataset,
-        num_items,
+        self, mlflow_toolkit, model, history, model_type, processor_type, val_dataset, dataset, num_items
     ):
         """Log results for model combination."""
         metrics = history[-1].eval_metrics
-        train_loss = history[-1].train_loss
         ranking = self._compute_ranking_metrics(model, val_dataset, dataset, num_items)
 
-        mlflow_toolkit.log_metrics(
-            {
-                "final_train_loss": train_loss,
-                "final_auc_roc": metrics["auc_roc"],
-                "final_avg_precision": metrics["avg_precision"],
-                **ranking.to_dict(10),
-            }
-        )
+        mlflow_toolkit.log_metrics({
+            "final_train_loss": history[-1].train_loss,
+            "final_auc_roc": metrics["auc_roc"],
+            "final_avg_precision": metrics["avg_precision"],
+            **ranking.to_dict(10),
+        })
 
         mlflow_toolkit.log_pytorch_model(
-            model=model,
-            name=f"{model_type}_{processor_type}",
-            registered_model_name=f"ecommerce_recommender_{model_type}_{processor_type}",
+            model=model, name=f"{model_type}_{processor_type}",
+            registered_model_name=f"ecommerce_recommender_{model_type}_{processor_type}"
         )
-
         logger.info("Successfully trained and logged %s_%s", model_type, processor_type)
 
     def _get_existing_runs(self, mlflow_toolkit):
@@ -806,37 +612,27 @@ class TrainingPipeline:
 
     def _train_comprehensive_mode(self, mlflow_toolkit):
         """Train all model combinations."""
-        logger.info(
-            "\n%s\nCOMPREHENSIVE MODE: Training all model combinations\n%s",
-            "=" * 80,
-            "=" * 80,
-        )
-
+        logger.info("\n%s\nCOMPREHENSIVE MODE: Training all model combinations\n%s", "=" * 80, "=" * 80)
         os.environ["AWS_PROFILE"] = "aws"
-
+        
         existing_runs = self._get_existing_runs(mlflow_toolkit)
         logger.info(f"Found {len(existing_runs)} existing runs in MLflow")
 
-        model_types = ["ncf", "gmf", "matrix_factorization"]
-        processors = ["weighted", "binary", "implicit"]
+        events = load_events(self.cfg.get("raw_events_path", "data/raw/events.csv"))
+        logger.info("Loaded %d events from %s", len(events), self.cfg.get("raw_events_path", "data/raw/events.csv"))
 
-        raw_path = self.cfg.get("raw_events_path", "data/raw/events.csv")
-        events = load_events(raw_path)
-        logger.info("Loaded %d events from %s", len(events), raw_path)
-
-        for model_type in model_types:
-            for processor_type in processors:
-                run_name = f"{model_type}_{processor_type}"
-                if run_name in existing_runs:
-                    logger.info(f"Skipping {run_name} - already trained")
+        for model_type in ["ncf", "gmf", "matrix_factorization"]:
+            for processor_type in ["weighted", "binary", "implicit"]:
+                if f"{model_type}_{processor_type}" in existing_runs:
+                    logger.info(f"Skipping {model_type}_{processor_type} - already trained")
                     continue
+                self._train_model_combination(model_type, processor_type, events, mlflow_toolkit)
 
-                self._train_model_combination(
-                    model_type, processor_type, events, mlflow_toolkit
-                )
+        self._copy_best_model_for_dvc(["ncf", "gmf", "matrix_factorization"], ["weighted", "binary", "implicit"])
+        logger.info("\n%s\nCOMPREHENSIVE TRAINING COMPLETED\n%s", "=" * 80, "=" * 80)
 
-        # Copy best model to model.pt for DVC tracking
-        # Default to ncf_weighted if it exists, otherwise use the first trained model
+    def _copy_best_model_for_dvc(self, model_types, processors):
+        """Copy best model to model.pt for DVC tracking."""
         model_path = Path("models/ncf_weighted.pt")
         if not model_path.exists():
             for model_type in model_types:
@@ -847,14 +643,10 @@ class TrainingPipeline:
                         break
                 if model_path.exists():
                     break
-
         if model_path.exists():
             import shutil
-
             shutil.copy(model_path, Path("models/model.pt"))
             logger.info(f"Copied {model_path} to models/model.pt for DVC tracking")
-
-        logger.info("\n%s\nCOMPREHENSIVE TRAINING COMPLETED\n%s", "=" * 80, "=" * 80)
 
     def _train_baseline_models(self, mlflow_toolkit, events):
         """Train baseline models."""
@@ -864,204 +656,100 @@ class TrainingPipeline:
         interactions, user2idx, item2idx = processor.process(
             events, min_interactions=self.cfg.get("min_interactions", 1)
         )
-
-        raw_path = self.cfg.get("raw_events_path", "data/raw/events.csv")
-
         dataset = self._create_dataset(interactions, len(item2idx))
         train_dataset, val_dataset = self._split_dataset(dataset)
+        raw_path = self.cfg.get("raw_events_path", "data/raw/events.csv")
 
-        # End current run before starting baseline runs
         import mlflow
-
         if mlflow.active_run():
             mlflow.end_run()
 
-        # Start baseline runs with explicit names
         self._train_popularity_baseline(
-            interactions,
-            dataset,
-            train_dataset,
-            val_dataset,
-            user2idx,
-            item2idx,
-            mlflow_toolkit,
-            raw_path,
+            interactions, dataset, train_dataset, val_dataset, user2idx, item2idx, mlflow_toolkit, raw_path
         )
         self._train_logistic_regression_baseline(
-            dataset,
-            train_dataset,
-            val_dataset,
-            user2idx,
-            item2idx,
-            mlflow_toolkit,
-            raw_path,
+            dataset, train_dataset, val_dataset, user2idx, item2idx, mlflow_toolkit, raw_path
         )
-
         logger.info("\n%s\nCOMPREHENSIVE TRAINING COMPLETED\n%s", "=" * 80, "=" * 80)
 
     def _train_popularity_baseline(
-        self,
-        interactions,
-        dataset,
-        train_dataset,
-        val_dataset,
-        user2idx,
-        item2idx,
-        mlflow_toolkit,
-        raw_path,
+        self, interactions, dataset, train_dataset, val_dataset, user2idx, item2idx, mlflow_toolkit, raw_path
     ):
         """Train popularity baseline model."""
         logger.info("Training Popularity Baseline...")
-
         with mlflow_toolkit.start_run(run_name="baseline_popularity"):
-            mlflow_toolkit.log_params(
-                {"model_type": "popularity_baseline", "processor": "weighted"}
-            )
+            mlflow_toolkit.log_params({"model_type": "popularity_baseline", "processor": "weighted"})
             self._log_dataset(mlflow_toolkit, interactions, "weighted", raw_path)
-            self._log_train_val_samples(
-                mlflow_toolkit, dataset, train_dataset, val_dataset, "weighted"
-            )
+            self._log_train_val_samples(mlflow_toolkit, dataset, train_dataset, val_dataset, "weighted")
 
             try:
                 pop_recommender = PopularityRecommender()
-                train_interactions = interactions[
-                    interactions.index.isin(train_dataset.indices)
-                ]
-                pop_recommender.fit(train_interactions)
+                pop_recommender.fit(interactions[interactions.index.isin(train_dataset.indices)])
+                
+                val_samples = np.array([dataset.samples[i] for i in val_dataset.indices])
+                pop_metrics = self._compute_baseline_metrics(pop_recommender, val_samples, len(item2idx))
 
-                val_samples = np.array(
-                    [dataset.samples[i] for i in val_dataset.indices]
-                )
-                pop_metrics = self._compute_baseline_metrics(
-                    pop_recommender, val_samples, len(item2idx)
-                )
-
-                mlflow_toolkit.log_metrics(
-                    {
-                        "final_auc_roc": pop_metrics["auc"],
-                        "final_avg_precision": pop_metrics["ap"],
-                        **pop_metrics["ranking"].to_dict(10),
-                    }
-                )
-
-                logger.info(
-                    "Popularity Baseline - AUC: %.4f, AP: %.4f",
-                    pop_metrics["auc"],
-                    pop_metrics["ap"],
-                )
-
-                # Log baseline model as artifact
-                import joblib
-
-                model_path = Path("models/baseline_popularity.joblib")
-                model_path.parent.mkdir(parents=True, exist_ok=True)
-                joblib.dump(pop_recommender, model_path)
-                mlflow_toolkit.log_artifact(str(model_path))
-
+                mlflow_toolkit.log_metrics({
+                    "final_auc_roc": pop_metrics["auc"], "final_avg_precision": pop_metrics["ap"],
+                    **pop_metrics["ranking"].to_dict(10),
+                })
+                logger.info("Popularity Baseline - AUC: %.4f, AP: %.4f", pop_metrics["auc"], pop_metrics["ap"])
+                self._save_and_log_baseline(pop_recommender, "baseline_popularity", mlflow_toolkit)
             except Exception as e:
                 logger.error("Failed to train popularity baseline: %s", e)
                 mlflow_toolkit.log_params({"error": str(e)})
 
-    def _compute_baseline_metrics(
-        self, recommender, val_samples, num_items, sample_users=1000
-    ):
+    def _save_and_log_baseline(self, recommender, name, mlflow_toolkit):
+        """Save and log baseline model as artifact."""
+        import joblib
+        model_path = Path(f"models/{name}.joblib")
+        model_path.parent.mkdir(parents=True, exist_ok=True)
+        joblib.dump(recommender, model_path)
+        mlflow_toolkit.log_artifact(str(model_path))
+
+    def _compute_baseline_metrics(self, recommender, val_samples, num_items, sample_users=1000):
         """Compute baseline metrics with user sampling for speed."""
         from sklearn.metrics import average_precision_score, roc_auc_score
-
-        # Sample users for faster evaluation if dataset is large
         unique_users = np.unique(val_samples[:, 0])
         if len(unique_users) > sample_users:
             sampled_users = np.random.choice(unique_users, sample_users, replace=False)
-            mask = np.isin(val_samples[:, 0], sampled_users)
-            val_samples = val_samples[mask]
-            logging.getLogger(__name__).info(
-                f"Sampled {sample_users} users for baseline evaluation"
-            )
+            val_samples = val_samples[np.isin(val_samples[:, 0], sampled_users)]
+            logging.getLogger(__name__).info(f"Sampled {sample_users} users for baseline evaluation")
 
-        val_users = val_samples[:, 0].astype(np.int64)
-        val_items = val_samples[:, 1].astype(np.int64)
-        val_labels = val_samples[:, 2]
-
-        preds = recommender.predict(val_users, val_items)
-        auc = float(roc_auc_score(val_labels, preds))
-        ap = float(average_precision_score(val_labels, preds))
-
-        positive_only = val_samples[val_samples[:, 2] == 1.0][:, :2].astype(np.int64)
+        preds = recommender.predict(val_samples[:, 0].astype(np.int64), val_samples[:, 1].astype(np.int64))
+        auc, ap = float(roc_auc_score(val_samples[:, 2], preds)), float(average_precision_score(val_samples[:, 2], preds))
 
         from .evaluate_pipeline import compute_baseline_ranking_metrics
-
+        positive_only = val_samples[val_samples[:, 2] == 1.0][:, :2].astype(np.int64)
         ranking = compute_baseline_ranking_metrics(
-            lambda users, items: recommender.predict(users, items),
-            positive_only,
-            num_items,
-            k=10,
+            lambda users, items: recommender.predict(users, items), positive_only, num_items, k=10,
         )
-
         return {"auc": auc, "ap": ap, "ranking": ranking}
 
     def _train_logistic_regression_baseline(
-        self,
-        dataset,
-        train_dataset,
-        val_dataset,
-        user2idx,
-        item2idx,
-        mlflow_toolkit,
-        raw_path,
+        self, dataset, train_dataset, val_dataset, user2idx, item2idx, mlflow_toolkit, raw_path
     ):
         """Train logistic regression baseline model."""
         logger.info("Training Logistic Regression Baseline...")
-
         with mlflow_toolkit.start_run(run_name="baseline_logistic_regression"):
-            mlflow_toolkit.log_params(
-                {"model_type": "logistic_regression_baseline", "processor": "weighted"}
-            )
-            self._log_train_val_samples(
-                mlflow_toolkit, dataset, train_dataset, val_dataset, "weighted"
-            )
+            mlflow_toolkit.log_params({"model_type": "logistic_regression_baseline", "processor": "weighted"})
+            self._log_train_val_samples(mlflow_toolkit, dataset, train_dataset, val_dataset, "weighted")
 
             try:
-                lr_recommender = LogisticRegressionRecommender(
-                    len(user2idx), len(item2idx)
-                )
-                train_samples = np.array(
-                    [dataset.samples[i] for i in train_dataset.indices]
-                )
+                lr_recommender = LogisticRegressionRecommender(len(user2idx), len(item2idx))
+                train_samples = np.array([dataset.samples[i] for i in train_dataset.indices])
                 lr_recommender.fit(
-                    train_samples[:, 0].astype(np.int64),
-                    train_samples[:, 1].astype(np.int64),
-                    train_samples[:, 2],
+                    train_samples[:, 0].astype(np.int64), train_samples[:, 1].astype(np.int64), train_samples[:, 2]
                 )
+                val_samples = np.array([dataset.samples[i] for i in val_dataset.indices])
+                lr_metrics = self._compute_baseline_metrics(lr_recommender, val_samples, len(item2idx))
 
-                val_samples = np.array(
-                    [dataset.samples[i] for i in val_dataset.indices]
-                )
-                lr_metrics = self._compute_baseline_metrics(
-                    lr_recommender, val_samples, len(item2idx)
-                )
-
-                mlflow_toolkit.log_metrics(
-                    {
-                        "final_auc_roc": lr_metrics["auc"],
-                        "final_avg_precision": lr_metrics["ap"],
-                        **lr_metrics["ranking"].to_dict(10),
-                    }
-                )
-
-                logger.info(
-                    "Logistic Regression Baseline - AUC: %.4f, AP: %.4f",
-                    lr_metrics["auc"],
-                    lr_metrics["ap"],
-                )
-
-                # Log baseline model as artifact
-                import joblib
-
-                model_path = Path("models/baseline_logistic_regression.joblib")
-                model_path.parent.mkdir(parents=True, exist_ok=True)
-                joblib.dump(lr_recommender, model_path)
-                mlflow_toolkit.log_artifact(str(model_path))
-
+                mlflow_toolkit.log_metrics({
+                    "final_auc_roc": lr_metrics["auc"], "final_avg_precision": lr_metrics["ap"],
+                    **lr_metrics["ranking"].to_dict(10),
+                })
+                logger.info("Logistic Regression Baseline - AUC: %.4f, AP: %.4f", lr_metrics["auc"], lr_metrics["ap"])
+                self._save_and_log_baseline(lr_recommender, "baseline_logistic_regression", mlflow_toolkit)
             except Exception as e:
                 logger.error("Failed to train logistic regression baseline: %s", e)
                 mlflow_toolkit.log_params({"error": str(e)})

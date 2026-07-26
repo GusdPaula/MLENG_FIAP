@@ -12,41 +12,38 @@ from src.recommender.data import (
 
 def test_recommender_dataset_streaming_mode() -> None:
     """Test that streaming mode works correctly."""
-    # Create simple interaction data
     interactions = pd.DataFrame({"user_idx": [0, 1, 2], "item_idx": [0, 1, 2]})
+    _verify_eager_mode(interactions)
+    _verify_streaming_mode(interactions)
 
-    # Test eager mode (default)
+
+def _verify_eager_mode(interactions: pd.DataFrame) -> None:
+    """Verify behavior of dataset in eager mode."""
     dataset_eager = RecommenderDataset(
         interactions=interactions, num_items=5, num_negatives=2, streaming=False
     )
-
-    assert len(dataset_eager) == 9  # 3 positives * (1 + 2 negatives) = 9 samples
+    assert len(dataset_eager) == 9
     assert hasattr(dataset_eager, "samples")
     assert isinstance(dataset_eager.samples, list)
 
-    # Test streaming mode
+
+def _verify_streaming_mode(interactions: pd.DataFrame) -> None:
+    """Verify behavior of dataset in streaming mode."""
     dataset_streaming = RecommenderDataset(
         interactions=interactions, num_items=5, num_negatives=2, streaming=True
     )
+    assert len(dataset_streaming) == 9
+    assert not hasattr(dataset_streaming, "samples")
 
-    assert len(dataset_streaming) == 9  # Same total count
-    assert not hasattr(
-        dataset_streaming, "samples"
-    )  # Should not have samples attribute in streaming mode
-
-    # Test that we can access items via __getitem__
     user, item, label = dataset_streaming[0]
     assert isinstance(user, np.int64)
     assert isinstance(item, np.int64)
     assert isinstance(label, np.float32)
-
-    # Test that the first sample is a positive (label=1.0)
     assert label == 1.0
 
-    # Test that subsequent samples are negatives
     neg_user, neg_item, neg_label = dataset_streaming[1]
     assert neg_label == 0.0
-    assert neg_user == 0  # Same user as first sample
+    assert neg_user == 0
 
 
 def test_recommender_dataset_streaming_consistency() -> None:
