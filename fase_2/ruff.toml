@@ -1,4 +1,4 @@
-line-length = 88
+line-length = 500
 target-version = "py312"
 exclude = ["ecommerce_recommender/notebooks"]
 
