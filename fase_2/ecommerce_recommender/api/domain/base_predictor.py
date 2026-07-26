@@ -77,9 +77,7 @@ class BasePredictor(ABC):
         """
 
     @abstractmethod
-    def predict_batch(
-        self, requests: list[PredictionRequest]
-    ) -> list[PredictionResponse]:
+    def predict_batch(self, requests: list[PredictionRequest]) -> list[PredictionResponse]:
         """Generate predictions for multiple users.
 
         Args:
@@ -115,9 +113,7 @@ class BasePredictor(ABC):
                 from ..exceptions import InvalidInputError
 
                 logger.error("User ID %d not found in training data", user_id)
-                raise InvalidInputError(
-                    f"User ID {user_id} not found in training data."
-                )
+                raise InvalidInputError(f"User ID {user_id} not found in training data.")
         return self.user2idx[user_id]
 
     def _get_item_idx(self, item_id: int) -> int:
@@ -157,9 +153,7 @@ class BasePredictor(ABC):
         for item_id in item_ids:
             if item_id not in self.item2idx:
                 logger.error("Item ID %d not found in training data", item_id)
-                raise InvalidInputError(
-                    f"Item ID {item_id} not found in training data."
-                )
+                raise InvalidInputError(f"Item ID {item_id} not found in training data.")
             indices.append(self.item2idx[item_id])
         return indices
 
@@ -176,9 +170,7 @@ class BasePredictor(ABC):
             return []
 
         # Sort items by popularity score and return top-k
-        sorted_items = sorted(
-            self.popular_items.items(), key=lambda x: x[1], reverse=True
-        )
+        sorted_items = sorted(self.popular_items.items(), key=lambda x: x[1], reverse=True)
         return sorted_items[:k]
 
     def _get_popular_item_scores(self, item_ids: list[int]) -> dict[int, float]:

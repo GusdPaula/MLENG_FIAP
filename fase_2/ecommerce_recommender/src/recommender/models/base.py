@@ -44,9 +44,7 @@ class BaseRecommenderModel(nn.Module, ABC):
                 elif init_type == "zeros":
                     nn.init.zeros_(module.weight)
 
-    def _init_linear_layers(
-        self, init_type: str = "xavier_uniform", nonlinearity: str = "relu"
-    ) -> None:
+    def _init_linear_layers(self, init_type: str = "xavier_uniform", nonlinearity: str = "relu") -> None:
         """Initialize linear layers using specified initialization method.
 
         Args:

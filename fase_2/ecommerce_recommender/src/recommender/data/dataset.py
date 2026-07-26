@@ -75,9 +75,7 @@ class BatchCollator:
     def __init__(self, device: str | torch.device = "cpu") -> None:
         self.device = torch.device(device)
 
-    def __call__(
-        self, batch: list[tuple[np.int64, np.int64, np.float32]]
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def __call__(self, batch: list[tuple[np.int64, np.int64, np.float32]]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         if not batch:
             raise ValueError("Cannot collate an empty list of samples")
         users = torch.as_tensor(np.stack([b[0] for b in batch]), dtype=torch.long)
@@ -105,9 +103,7 @@ def _collect_batch(
     )
 
 
-def make_batches(
-    dataset: "RecommenderDataset", batch_size: int, drop_last: bool = False
-) -> Iterator[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
+def make_batches(dataset: "RecommenderDataset", batch_size: int, drop_last: bool = False) -> Iterator[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
     """Iterate over ``dataset`` in fixed-size batches."""
     if batch_size <= 0:
         raise ValueError(f"batch_size must be > 0, got {batch_size}")
@@ -204,7 +200,11 @@ class RecommenderDataset(Dataset):
         )
 
     def stream_batches(
-        self, batch_size: int, shuffle: bool = False, drop_last: bool = False, seed: int | None = None
+        self,
+        batch_size: int,
+        shuffle: bool = False,
+        drop_last: bool = False,
+        seed: int | None = None,
     ) -> Iterator[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
         """Yield batches of ``(users, items, labels)`` lazily."""
         if batch_size <= 0:
@@ -222,7 +222,12 @@ class RecommenderDataset(Dataset):
             yield self._build_batch_tensors(users, items, labels)
 
     def _stream_one(
-        self, idx: int, users: list[int], items: list[int], labels: list[float], rng: np.random.Generator
+        self,
+        idx: int,
+        users: list[int],
+        items: list[int],
+        labels: list[float],
+        rng: np.random.Generator,
     ) -> None:
         """Append one positive and its negatives to the accumulators."""
         user_idx, item_idx = self.interactions[idx]

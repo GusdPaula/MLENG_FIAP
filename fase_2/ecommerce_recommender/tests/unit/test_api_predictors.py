@@ -40,6 +40,63 @@ class TestBasePredictor:
         with pytest.raises(TypeError):
             BasePredictor(MockModel(), {}, {})
 
+    def test_base_predictor_cold_start_fallback(self):
+        """Test base predictor methods with cold start fallback."""
+        model = MockModel()
+
+        # We need a concrete subclass to test BasePredictor methods
+        class ConcretePredictor(BasePredictor):
+            def predict(self, request):
+                pass
+
+            def predict_batch(self, requests):
+                pass
+
+        predictor = ConcretePredictor(
+            model=model,
+            user2idx={1: 0},
+            item2idx={10: 0, 20: 1},
+            popular_items={10: 5.0, 20: 3.0},
+        )
+
+        assert predictor.enable_cold_start_fallback is True
+
+        # _get_user_idx fallback
+        assert predictor._get_user_idx(999) is None
+        assert predictor._get_user_idx(1) == 0
+
+        # _get_popular_items
+        popular = predictor._get_popular_items(k=1)
+        assert popular == [(10, 5.0)]
+
+        # _get_popular_item_scores
+        scores = predictor._get_popular_item_scores([10, 20, 30])
+        assert scores == {10: 5.0, 20: 3.0, 30: 0.0}
+
+    def test_base_predictor_without_cold_start(self):
+        """Test base predictor methods without cold start fallback."""
+        model = MockModel()
+
+        class ConcretePredictor(BasePredictor):
+            def predict(self, request):
+                pass
+
+            def predict_batch(self, requests):
+                pass
+
+        predictor = ConcretePredictor(model=model, user2idx={1: 0}, item2idx={10: 0})
+
+        assert predictor.enable_cold_start_fallback is False
+
+        # _get_user_idx without fallback raises InvalidInputError
+        from api.exceptions import InvalidInputError
+
+        with pytest.raises(InvalidInputError):
+            predictor._get_user_idx(999)
+
+        assert predictor._get_popular_items() == []
+        assert predictor._get_popular_item_scores([10]) == {10: 0.0}
+
 
 class TestSingleUserPredictor:
     """Tests for SingleUserPredictor."""
@@ -65,6 +122,7 @@ class TestSingleUserPredictor:
 
         # Test with valid user and items using new API
         from api.models.schemas import PredictionRequest
+
         request = PredictionRequest(user_id=5, item_ids=[1, 2, 3])
         result = predictor.predict(request)
 
@@ -82,6 +140,7 @@ class TestSingleUserPredictor:
 
         # Test with invalid user
         from api.models.schemas import PredictionRequest
+
         with pytest.raises(InvalidInputError):
             request = PredictionRequest(user_id=999, item_ids=[1, 2, 3])
             predictor.predict(request)
@@ -96,6 +155,7 @@ class TestSingleUserPredictor:
 
         # Test with invalid item
         from api.models.schemas import PredictionRequest
+
         with pytest.raises(InvalidInputError):
             request = PredictionRequest(user_id=5, item_ids=[999])
             predictor.predict(request)
@@ -110,6 +170,7 @@ class TestSingleUserPredictor:
 
         # Test with empty item list
         from api.models.schemas import PredictionRequest
+
         with pytest.raises(InvalidInputError):
             request = PredictionRequest(user_id=5, item_ids=[])
             predictor.predict(request)

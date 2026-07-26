@@ -148,11 +148,7 @@ class DataShiftDetector(BaseShiftDetector):
         has_shift = p_value < self.threshold
         shift_type = "data_shift"
 
-        message = (
-            f"Data shift {'detected' if has_shift else 'not detected'}: "
-            f"KS statistic={statistic:.4f}, p-value={p_value:.4f}, "
-            f"threshold={self.threshold}"
-        )
+        message = f"Data shift {'detected' if has_shift else 'not detected'}: KS statistic={statistic:.4f}, p-value={p_value:.4f}, threshold={self.threshold}"
 
         logger.info(message)
 
@@ -220,7 +216,7 @@ class ModelPerformanceMonitor:
 
         # Keep only the most recent predictions
         if len(self._prediction_history) > self.window_size:
-            self._prediction_history = self._prediction_history[-self.window_size:]
+            self._prediction_history = self._prediction_history[-self.window_size :]
 
         logger.debug(
             "Recorded %d predictions, total history size: %d",
@@ -264,9 +260,7 @@ class ModelPerformanceMonitor:
             "count": len(arr),
         }
 
-    def detect_performance_drift(
-        self, threshold: float = 2.0
-    ) -> ShiftDetectionResult:
+    def detect_performance_drift(self, threshold: float = 2.0) -> ShiftDetectionResult:
         """Detect performance drift using z-score.
 
         Args:
@@ -290,11 +284,7 @@ class ModelPerformanceMonitor:
         has_drift = z_score > threshold
 
         shift_type = "model_drift"
-        message = (
-            f"Performance drift {'detected' if has_drift else 'not detected'}: "
-            f"z-score={z_score:.4f}, threshold={threshold}, "
-            f"baseline_mean={self._baseline_mean:.4f}, current_mean={current_mean:.4f}"
-        )
+        message = f"Performance drift {'detected' if has_drift else 'not detected'}: z-score={z_score:.4f}, threshold={threshold}, baseline_mean={self._baseline_mean:.4f}, current_mean={current_mean:.4f}"
 
         logger.info(message)
 
@@ -356,9 +346,7 @@ class MonitoringService:
         Returns:
             The recorded MonitoringMetrics object.
         """
-        return self.performance_monitor.record_predictions(
-            scores, user_ids, item_ids, custom_metrics
-        )
+        return self.performance_monitor.record_predictions(scores, user_ids, item_ids, custom_metrics)
 
     def set_baselines(self) -> None:
         """Set baselines for both data shift and performance monitoring."""
@@ -382,9 +370,7 @@ class MonitoringService:
         # Check performance drift
         if self.performance_monitor._baseline_mean is not None:
             try:
-                results["performance_drift"] = (
-                    self.performance_monitor.detect_performance_drift(self.drift_threshold)
-                )
+                results["performance_drift"] = self.performance_monitor.detect_performance_drift(self.drift_threshold)
             except RuntimeError:
                 logger.warning("Performance drift check skipped: baseline not set")
 

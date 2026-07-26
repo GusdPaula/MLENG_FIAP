@@ -39,9 +39,7 @@ class ModelFactory:
     }
 
     @classmethod
-    def register(
-        cls, name: str
-    ) -> Callable[[type[BaseRecommenderModel]], type[BaseRecommenderModel]]:
+    def register(cls, name: str) -> Callable[[type[BaseRecommenderModel]], type[BaseRecommenderModel]]:
         """Class decorator that registers a model under ``name``."""
 
         def decorator(
@@ -53,15 +51,11 @@ class ModelFactory:
         return decorator
 
     @classmethod
-    def create(
-        cls, model_type: str, num_users: int, num_items: int, **hyperparams: Any
-    ) -> BaseRecommenderModel:
+    def create(cls, model_type: str, num_users: int, num_items: int, **hyperparams: Any) -> BaseRecommenderModel:
         """Instantiate a model registered under ``model_type``."""
         if model_type not in cls._registry:
             available = ", ".join(sorted(cls._registry)) or "<empty>"
-            raise ValueError(
-                f"Unknown model type '{model_type}'. Available models: {available}."
-            )
+            raise ValueError(f"Unknown model type '{model_type}'. Available models: {available}.")
 
         # Filter hyperparameters to only include those allowed for this model type
         allowed_params = cls.MODEL_PARAM_MAP.get(model_type, set())
@@ -73,9 +67,7 @@ class ModelFactory:
             import warnings
 
             warnings.warn(
-                f"Unexpected hyperparameters for model type '{model_type}' "
-                f"were filtered out: {unexpected_params}. "
-                f"Allowed parameters: {allowed_params}.",
+                f"Unexpected hyperparameters for model type '{model_type}' were filtered out: {unexpected_params}. Allowed parameters: {allowed_params}.",
                 UserWarning,
                 stacklevel=2,
             )

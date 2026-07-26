@@ -3,7 +3,6 @@
 Tests the PredictionService for model loading and prediction orchestration.
 """
 
-
 import pytest
 import torch
 from api.exceptions import InvalidInputError, ModelLoadError
@@ -65,6 +64,7 @@ class TestPredictionService:
 
         def mock_predictor_create(predictor_type, model, user2idx, item2idx, **kwargs):
             from api.domain.predictors import SingleUserPredictor
+
             return SingleUserPredictor(model, user2idx, item2idx)
 
         ModelFactory.create = mock_model_create
@@ -130,6 +130,7 @@ class TestPredictionService:
 
         def mock_predictor_create(predictor_type, model, user2idx, item2idx, **kwargs):
             from api.domain.predictors import SingleUserPredictor
+
             return SingleUserPredictor(model, user2idx, item2idx)
 
         ModelFactory.create = mock_model_create
@@ -185,6 +186,7 @@ class TestPredictionService:
 
         def mock_predictor_create(predictor_type, model, user2idx, item2idx, **kwargs):
             from api.domain.predictors import SingleUserPredictor
+
             return SingleUserPredictor(model, user2idx, item2idx)
 
         ModelFactory.create = mock_model_create
@@ -238,6 +240,7 @@ class TestPredictionService:
 
         def mock_predictor_create(predictor_type, model, user2idx, item2idx, **kwargs):
             from api.domain.predictors import BatchPredictor
+
             return BatchPredictor(model, user2idx, item2idx)
 
         ModelFactory.create = mock_model_create
@@ -297,6 +300,7 @@ class TestPredictionService:
 
         def mock_predictor_create(predictor_type, model, user2idx, item2idx, **kwargs):
             from api.domain.predictors import TopKRecommendationPredictor
+
             return TopKRecommendationPredictor(model, user2idx, item2idx)
 
         ModelFactory.create = mock_model_create
@@ -351,6 +355,7 @@ class TestPredictionService:
 
         def mock_predictor_create(predictor_type, model, user2idx, item2idx, **kwargs):
             from api.domain.predictors import SingleUserPredictor
+
             return SingleUserPredictor(model, user2idx, item2idx)
 
         ModelFactory.create = mock_model_create
@@ -365,6 +370,173 @@ class TestPredictionService:
             )
 
             assert service._monitoring_service is not None
+        finally:
+            ModelFactory.create = original_model_create
+            factory_module.PredictorFactory.create = original_predictor_create
+
+    def test_prediction_service_mlflow_loading(self, tmp_path, monkeypatch):
+        """Test PredictionService loading from MLflow."""
+        import api.domain.predictor_factory as factory_module
+        from src.recommender.models.factory import ModelFactory
+
+        # Mock MLflow
+        class DummyVersion:
+            def __init__(self):
+                self.version = "1"
+                self.run_id = "run-1"
+
+        class DummyClient:
+            def get_model_version_by_alias(self, name, alias):
+                return DummyVersion()
+
+            def search_registered_models(self):
+                model = type("obj", (object,), {"name": "test_model"})
+                return [model]
+
+        monkeypatch.setattr("mlflow.tracking.MlflowClient", lambda: DummyClient())
+        monkeypatch.setattr("mlflow.set_tracking_uri", lambda uri: None)
+
+        # Mock load
+        def mock_load_model(uri, dst_path):
+            model = MockModel()
+            checkpoint = {
+                "model_type": "mock",
+                "num_users": 100,
+                "num_items": 50,
+                "hyperparams": {},
+                "model_state_dict": model.state_dict(),
+                "user2idx": {},
+                "item2idx": {},
+            }
+            path = Path(dst_path) / "model.pt"
+            torch.save(checkpoint, path)
+            return str(path)
+
+        monkeypatch.setattr("mlflow.pytorch.load_model", mock_load_model)
+
+        original_model_create = ModelFactory.create
+        original_predictor_create = factory_module.PredictorFactory.create
+
+        def mock_model_create(*args, **kwargs):
+            return MockModel()
+
+        def mock_predictor_create(*args, **kwargs):
+            return "dummy_predictor"
+
+        ModelFactory.create = mock_model_create
+        factory_module.PredictorFactory.create = mock_predictor_create
+
+        try:
+            service = PredictionService(
+                model_path=tmp_path / "dummy.pt",
+                mlflow_tracking_uri="http://localhost:5000",
+                mlflow_model_alias="staging",
+            )
+            assert service._predictor == "dummy_predictor"
+        finally:
+            ModelFactory.create = original_model_create
+            factory_module.PredictorFactory.create = original_predictor_create
+
+    def test_prediction_service_mlflow_artifact_download_fallback(self, tmp_path, monkeypatch):
+        """Test PredictionService fallback to artifact download."""
+
+        import api.domain.predictor_factory as factory_module
+        from src.recommender.models.factory import ModelFactory
+
+        class DummyVersion:
+            def __init__(self):
+                self.version = "1"
+                self.run_id = "run-1"
+
+        class DummyClient:
+            def get_model_version_by_alias(self, name, alias):
+                return DummyVersion()
+
+            def search_registered_models(self):
+                model = type("obj", (object,), {"name": "test_model"})
+                return [model]
+
+            def download_artifacts(self, run_id, path, dst_path):
+                model = MockModel()
+                checkpoint = {
+                    "model_type": "mock",
+                    "num_users": 100,
+                    "num_items": 50,
+                    "hyperparams": {},
+                    "model_state_dict": model.state_dict(),
+                    "user2idx": {},
+                    "item2idx": {},
+                }
+                model_path = Path(dst_path) / "model.pt"
+                torch.save(checkpoint, model_path)
+                return dst_path
+
+        monkeypatch.setattr("mlflow.tracking.MlflowClient", lambda: DummyClient())
+        monkeypatch.setattr("mlflow.set_tracking_uri", lambda uri: None)
+
+        def failing_load_model(*args, **kwargs):
+            raise Exception("Failed")
+
+        monkeypatch.setattr("mlflow.pytorch.load_model", failing_load_model)
+
+        original_model_create = ModelFactory.create
+        original_predictor_create = factory_module.PredictorFactory.create
+
+        ModelFactory.create = lambda *args, **kwargs: MockModel()
+        factory_module.PredictorFactory.create = lambda *args, **kwargs: "dummy"
+
+        try:
+            service = PredictionService(
+                model_path=tmp_path / "dummy.pt",
+                mlflow_tracking_uri="http://localhost:5000",
+                mlflow_model_alias="staging",
+            )
+            assert service._predictor == "dummy"
+        finally:
+            ModelFactory.create = original_model_create
+            factory_module.PredictorFactory.create = original_predictor_create
+
+    def test_prediction_service_monitoring_methods(self, tmp_path):
+        """Test monitoring related methods in PredictionService."""
+        model = MockModel()
+        checkpoint = {
+            "model_type": "mock",
+            "num_users": 100,
+            "num_items": 50,
+            "hyperparams": {},
+            "model_state_dict": model.state_dict(),
+        }
+        model_path = tmp_path / "model.pt"
+        torch.save(checkpoint, model_path)
+
+        import api.domain.predictor_factory as factory_module
+        from src.recommender.models.factory import ModelFactory
+
+        original_model_create = ModelFactory.create
+        original_predictor_create = factory_module.PredictorFactory.create
+
+        ModelFactory.create = lambda *args, **kwargs: MockModel()
+        factory_module.PredictorFactory.create = lambda *args, **kwargs: "dummy"
+
+        try:
+            service = PredictionService(
+                model_path=model_path,
+                enable_monitoring=True,
+            )
+
+            service.set_monitoring_baselines()
+            shifts = service.check_shifts()
+            assert isinstance(shifts, dict)
+
+            summary = service.get_monitoring_summary()
+            assert isinstance(summary, dict)
+
+            info = service.get_model_info()
+            assert info["device"] == "cpu"
+
+            service.reload_predictor("batch")
+            assert service.predictor_type == "batch"
+
         finally:
             ModelFactory.create = original_model_create
             factory_module.PredictorFactory.create = original_predictor_create

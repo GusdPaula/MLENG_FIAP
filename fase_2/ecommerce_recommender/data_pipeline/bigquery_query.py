@@ -39,14 +39,8 @@ class BigQueryQuery:
         self.dataset_id = dataset_id
         self.output_dir = Path(output_dir).resolve()
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.dvc_repo_path = (
-            Path(dvc_repo_path).resolve() if dvc_repo_path else Path.cwd().resolve()
-        )
-        self.dvc_repo_root = (
-            self.dvc_repo_path
-            if dvc_repo_path is not None
-            else _find_dvc_root(self.dvc_repo_path)
-        )
+        self.dvc_repo_path = Path(dvc_repo_path).resolve() if dvc_repo_path else Path.cwd().resolve()
+        self.dvc_repo_root = self.dvc_repo_path if dvc_repo_path is not None else _find_dvc_root(self.dvc_repo_path)
         self.client = bigquery.Client(project=self.project_id)
 
     def extract_table(
@@ -60,16 +54,11 @@ class BigQueryQuery:
         query = f"SELECT * FROM `{self.project_id}.{self.dataset_id}.{table_name}`"
         return self.extract_query(query, destination_name, force=force)
 
-    def extract_query(
-        self, query: str, destination_name: str, force: bool = False
-    ) -> Path:
+    def extract_query(self, query: str, destination_name: str, force: bool = False) -> Path:
         """Run an arbitrary SQL query, write the results to CSV, and version the output."""
         destination_path = self.output_dir / destination_name
         if destination_path.exists() and not force:
-            logger.info(
-                f"Skipping BigQuery export for '{destination_name}' because the file already exists. "
-                "Pass force=True to overwrite and create a new DVC version."
-            )
+            logger.info(f"Skipping BigQuery export for '{destination_name}' because the file already exists. Pass force=True to overwrite and create a new DVC version.")
             return destination_path
 
         self._write_query_results_to_csv(query, destination_path)
@@ -84,15 +73,16 @@ class BigQueryQuery:
             writer = csv.writer(output_file)
             writer.writerow(headers)
             progress_bar = tqdm(
-                result, total=row_count, unit="row",
-                desc=f"Exporting {destination_path.name}", dynamic_ncols=True,
+                result,
+                total=row_count,
+                unit="row",
+                desc=f"Exporting {destination_path.name}",
+                dynamic_ncols=True,
             )
             for row in progress_bar:
                 writer.writerow([row[field] for field in headers])
 
-        logger.info(
-            f"Finished writing {destination_path.name}: {progress_bar.n} rows x {len(headers)} columns"
-        )
+        logger.info(f"Finished writing {destination_path.name}: {progress_bar.n} rows x {len(headers)} columns")
 
     def _execute_and_describe_query(self, query: str) -> tuple:
         """Execute a BigQuery query and return (result_iterator, header_list)."""
@@ -100,9 +90,7 @@ class BigQueryQuery:
         result = query_job.result()
         headers = [field.name for field in result.schema]
         row_count = int(result.total_rows) if result.total_rows is not None else None
-        logger.info(
-            f"Downloading BigQuery result: {row_count if row_count is not None else 'unknown'} rows x {len(headers)} columns"
-        )
+        logger.info(f"Downloading BigQuery result: {row_count if row_count is not None else 'unknown'} rows x {len(headers)} columns")
         return result, headers
 
     def _version_with_dvc(self, destination_path: Path) -> None:
@@ -113,23 +101,13 @@ class BigQueryQuery:
     def _validate_dvc_path(self, destination_path: Path) -> Path:
         """Validate the DVC repo root and file existence, return relative path."""
         if self.dvc_repo_root is None:
-            raise RuntimeError(
-                "DVC repository was not found. "
-                f"Checked '{self.dvc_repo_path}' and its parents, but no .dvc directory was found. "
-                "Initialize DVC with `dvc init` in your repository root or pass a valid `dvc_repo_path`."
-            )
+            raise RuntimeError(f"DVC repository was not found. Checked '{self.dvc_repo_path}' and its parents, but no .dvc directory was found. Initialize DVC with `dvc init` in your repository root or pass a valid `dvc_repo_path`.")
         if not destination_path.exists():
-            raise RuntimeError(
-                f"DVC cannot add '{destination_path}' because it does not exist. "
-                "Ensure the query output was written successfully before versioning."
-            )
+            raise RuntimeError(f"DVC cannot add '{destination_path}' because it does not exist. Ensure the query output was written successfully before versioning.")
         try:
             return destination_path.relative_to(self.dvc_repo_root)
         except ValueError as exc:
-            raise RuntimeError(
-                f"DVC output path '{destination_path}' is outside the DVC repository root '{self.dvc_repo_root}'. "
-                "Use an output directory inside the DVC repo or pass a correct dvc_repo_path."
-            ) from exc
+            raise RuntimeError(f"DVC output path '{destination_path}' is outside the DVC repository root '{self.dvc_repo_root}'. Use an output directory inside the DVC repo or pass a correct dvc_repo_path.") from exc
 
     def _run_dvc_add(self, relative_destination: Path, destination_path: Path) -> None:
         """Run `dvc add` on a file and handle errors."""
@@ -137,15 +115,12 @@ class BigQueryQuery:
             completed = subprocess.run(
                 ["dvc", "add", str(relative_destination)],
                 cwd=str(self.dvc_repo_root),
-                capture_output=True, text=True, check=False,
+                capture_output=True,
+                text=True,
+                check=False,
             )
         except FileNotFoundError as exc:
-            raise RuntimeError(
-                "DVC executable was not found. Ensure DVC is installed and on PATH."
-            ) from exc
+            raise RuntimeError("DVC executable was not found. Ensure DVC is installed and on PATH.") from exc
 
         if completed.returncode != 0:
-            raise RuntimeError(
-                f"DVC add failed for {destination_path}: {completed.stderr.strip() or completed.stdout.strip()}"
-            )
-
+            raise RuntimeError(f"DVC add failed for {destination_path}: {completed.stderr.strip() or completed.stdout.strip()}")

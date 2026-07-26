@@ -59,7 +59,10 @@ class PredictionResponse(BaseModel):
     """
 
     user_id: int = Field(..., description="The user ID")
-    item_scores: dict[int, float] = Field(default_factory=dict, description="Dictionary mapping item IDs to predicted scores")
+    item_scores: dict[int, float] = Field(
+        default_factory=dict,
+        description="Dictionary mapping item IDs to predicted scores",
+    )
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata about the prediction")
 
 
@@ -72,7 +75,10 @@ class BatchPredictionResponse(BaseModel):
     """
 
     predictions: list[PredictionResponse] = Field(default_factory=list, description="List of prediction responses")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata about the batch prediction")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata about the batch prediction",
+    )
 
 
 class RecommendationResponse(BaseModel):
@@ -85,5 +91,8 @@ class RecommendationResponse(BaseModel):
     """
 
     user_id: int = Field(..., description="The user ID")
-    recommendations: list[tuple[int, float]] = Field(default_factory=list, description="List of (item_id, score) tuples, sorted by score")
+    recommendations: list[tuple[int, float]] = Field(
+        default_factory=list,
+        description="List of (item_id, score) tuples, sorted by score",
+    )
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata about the recommendation")

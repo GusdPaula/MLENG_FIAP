@@ -37,10 +37,7 @@ class MLflowToolkit:
         try:
             import mlflow  # type: ignore
         except ImportError as exc:  # pragma: no cover - dependency issue
-            raise ImportError(
-                "mlflow is not installed. Add it to the environment before using "
-                "MLflowToolkit."
-            ) from exc
+            raise ImportError("mlflow is not installed. Add it to the environment before using MLflowToolkit.") from exc
         self._mlflow_module = mlflow
         return mlflow
 
@@ -67,9 +64,7 @@ class MLflowToolkit:
         notebook can keep running offline.
         """
         mlflow = self._require_mlflow()
-        allow_fallback = (
-            self.allow_offline_fallback if allow_fallback is None else allow_fallback
-        )
+        allow_fallback = self.allow_offline_fallback if allow_fallback is None else allow_fallback
 
         try:
             self._apply_tracking_uri(mlflow, self.tracking_uri)
@@ -180,13 +175,9 @@ class MLflowToolkit:
                 logger.info(f"Logged dataset {name} using mlflow.data.from_pandas")
                 return
             except Exception as e:
-                logger.warning(
-                    f"mlflow.data.from_pandas failed for {name}: {e}, falling back to artifact logging"
-                )
+                logger.warning(f"mlflow.data.from_pandas failed for {name}: {e}, falling back to artifact logging")
 
-        with tempfile.NamedTemporaryFile(
-            prefix=f"{name}_", suffix=".csv", delete=False
-        ) as tmp:
+        with tempfile.NamedTemporaryFile(prefix=f"{name}_", suffix=".csv", delete=False) as tmp:
             csv_path = Path(tmp.name)
         dataset.to_csv(csv_path, index=False)
         mlflow.log_artifact(str(csv_path))
@@ -271,14 +262,10 @@ class MLflowToolkit:
         except Exception as e:
             import logging
 
-            logging.getLogger(__name__).warning(
-                "Error finding model version for run %s: %s", run_id, e
-            )
+            logging.getLogger(__name__).warning("Error finding model version for run %s: %s", run_id, e)
         return None
 
-    def set_model_version_alias(
-        self, model_name: str, version: str, alias: str
-    ) -> None:
+    def set_model_version_alias(self, model_name: str, version: str, alias: str) -> None:
         """Assign an alias to a registered model version."""
         if self._is_offline:
             return
@@ -334,18 +321,22 @@ class MLflowToolkit:
             return self._promote_unconditionally(model_name, new_version)
 
         return self._fetch_and_compare_metrics(
-            client, model_name, run_id, new_version,
-            staging_version_obj, metric_name, higher_is_better,
+            client,
+            model_name,
+            run_id,
+            new_version,
+            staging_version_obj,
+            metric_name,
+            higher_is_better,
         )
 
     def _get_new_version(self, run_id: str) -> str | None:
         """Find the registered model version for a run, or return None."""
-        new_version = self.get_model_version_by_run_id(
-            self.experiment_name.replace("_experiments", ""), run_id
-        )
+        new_version = self.get_model_version_by_run_id(self.experiment_name.replace("_experiments", ""), run_id)
         if not new_version:
             logger.warning(
-                "Could not find a registered model version for run %s. Skipping promotion.", run_id,
+                "Could not find a registered model version for run %s. Skipping promotion.",
+                run_id,
             )
         return new_version
 
@@ -373,8 +364,13 @@ class MLflowToolkit:
             new_metric = client.get_run(run_id).data.metrics.get(metric_name)
             staging_metric = client.get_run(staging_version_obj.run_id).data.metrics.get(metric_name)
             return self._compare_and_promote(
-                model_name, new_version, staging_version_obj,
-                metric_name, new_metric, staging_metric, higher_is_better,
+                model_name,
+                new_version,
+                staging_version_obj,
+                metric_name,
+                new_metric,
+                staging_metric,
+                higher_is_better,
             )
         except Exception as e:
             logger.error("Failed to compare metrics and promote model: %s", e)
@@ -395,7 +391,11 @@ class MLflowToolkit:
             logger.warning("New run does not have metric %s. Skipping promotion.", metric_name)
             return False
         if staging_metric is None:
-            logger.info("Staging run does not have metric %s. Promoting new version %s.", metric_name, new_version)
+            logger.info(
+                "Staging run does not have metric %s. Promoting new version %s.",
+                metric_name,
+                new_version,
+            )
             self.set_model_version_alias(model_name, new_version, "staging")
             return True
 
@@ -403,14 +403,21 @@ class MLflowToolkit:
         if is_better:
             logger.info(
                 "New version %s is better than staging %s (%s: %s vs %s). Assigning 'staging'.",
-                new_version, staging_version_obj.version, metric_name, new_metric, staging_metric,
+                new_version,
+                staging_version_obj.version,
+                metric_name,
+                new_metric,
+                staging_metric,
             )
             self.set_model_version_alias(model_name, new_version, "staging")
             return True
 
         logger.info(
             "New version %s is NOT better than staging %s (%s: %s vs %s). Keeping current staging.",
-            new_version, staging_version_obj.version, metric_name, new_metric, staging_metric,
+            new_version,
+            staging_version_obj.version,
+            metric_name,
+            new_metric,
+            staging_metric,
         )
         return False
-

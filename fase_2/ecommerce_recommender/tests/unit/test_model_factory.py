@@ -81,10 +81,7 @@ def test_factory_models_output_in_range(model_type: str, extra: dict) -> None:
 def test_each_model_exposes_model_name() -> None:
     assert NCFModel(num_users=2, num_items=2, embedding_dim=4).model_name == "ncf"
     assert GMFModel(num_users=2, num_items=2, embedding_dim=4).model_name == "gmf"
-    assert (
-        MatrixFactorizationModel(num_users=2, num_items=2, embedding_dim=4).model_name
-        == "matrix_factorization"
-    )
+    assert MatrixFactorizationModel(num_users=2, num_items=2, embedding_dim=4).model_name == "matrix_factorization"
 
 
 def test_factory_register_decorator() -> None:
@@ -230,6 +227,4 @@ def test_factory_accepts_valid_params_mf() -> None:
 def test_factory_param_map_coverage() -> None:
     """Ensure all registered models have parameter mappings."""
     for model_type in ModelFactory.available_models():
-        assert model_type in ModelFactory.MODEL_PARAM_MAP, (
-            f"Model type '{model_type}' is registered but not in MODEL_PARAM_MAP"
-        )
+        assert model_type in ModelFactory.MODEL_PARAM_MAP, f"Model type '{model_type}' is registered but not in MODEL_PARAM_MAP"

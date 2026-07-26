@@ -121,3 +121,75 @@ def test_save_checkpoint_creates_directory() -> None:
 
         assert checkpoint_path.exists()
         assert artifact_dir.exists()
+
+
+def test_save_checkpoint_with_popular_items() -> None:
+    """Test checkpoint saving with popular items."""
+    model = ModelFactory.create(
+        "gmf",
+        num_users=10,
+        num_items=5,
+        embedding_dim=8,
+    )
+
+    user2idx = {i: i for i in range(10)}
+    item2idx = {i: i for i in range(5)}
+    config = {"model_type": "gmf"}
+    metrics = {"auc_roc": 0.85}
+    popular_items = {1: 100.0, 2: 50.0}
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        artifact_dir = Path(tmpdir)
+
+        checkpoint_path = save_checkpoint(
+            model=model,
+            model_type="gmf",
+            processor_name="weighted",
+            user2idx=user2idx,
+            item2idx=item2idx,
+            config=config,
+            metrics=metrics,
+            early_stopping_info={},
+            artifact_dir=artifact_dir,
+            popular_items=popular_items,
+        )
+
+        assert checkpoint_path.exists()
+        checkpoint = torch.load(checkpoint_path, weights_only=False)
+        assert "popular_items" in checkpoint
+        assert checkpoint["popular_items"] == popular_items
+
+
+def test_load_checkpoint() -> None:
+    """Test loading a checkpoint."""
+    model = ModelFactory.create(
+        "gmf",
+        num_users=10,
+        num_items=5,
+        embedding_dim=8,
+    )
+
+    user2idx = {i: i for i in range(10)}
+    item2idx = {i: i for i in range(5)}
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        artifact_dir = Path(tmpdir)
+
+        checkpoint_path = save_checkpoint(
+            model=model,
+            model_type="gmf",
+            processor_name="weighted",
+            user2idx=user2idx,
+            item2idx=item2idx,
+            config={},
+            metrics={},
+            early_stopping_info={},
+            artifact_dir=artifact_dir,
+        )
+
+        from src.recommender.training.checkpoint import load_checkpoint
+
+        loaded = load_checkpoint(checkpoint_path)
+        assert loaded["model_type"] == "gmf"
+        assert loaded["processor"] == "weighted"
+        assert loaded["user2idx"] == user2idx

@@ -31,9 +31,7 @@ class PredictorFactory:
     _registry: dict[str, type[BasePredictor]] = {}
 
     @classmethod
-    def register(
-        cls, name: str
-    ) -> Callable[[type[BasePredictor]], type[BasePredictor]]:
+    def register(cls, name: str) -> Callable[[type[BasePredictor]], type[BasePredictor]]:
         """Class decorator that registers a predictor under ``name``.
 
         Args:
@@ -81,10 +79,7 @@ class PredictorFactory:
         if predictor_type not in cls._registry:
             available = ", ".join(sorted(cls._registry)) or "<empty>"
             logger.error("Unknown predictor type '%s'. Available: %s", predictor_type, available)
-            raise PredictorNotFoundError(
-                f"Unknown predictor type '{predictor_type}'. "
-                f"Available predictors: {available}."
-            )
+            raise PredictorNotFoundError(f"Unknown predictor type '{predictor_type}'. Available predictors: {available}.")
 
         predictor_cls = cls._registry[predictor_type]
         predictor = predictor_cls(model=model, user2idx=user2idx, item2idx=item2idx, **kwargs)

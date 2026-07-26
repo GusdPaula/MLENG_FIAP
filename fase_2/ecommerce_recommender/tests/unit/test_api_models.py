@@ -65,9 +65,7 @@ class TestPredictionResponse:
 
     def test_prediction_response_with_empty_metadata(self):
         """Test creating a prediction response with empty metadata."""
-        response = PredictionResponse(
-            user_id=123, item_scores={"1": 0.95, "2": 0.87}
-        )
+        response = PredictionResponse(user_id=123, item_scores={"1": 0.95, "2": 0.87})
         assert response.user_id == 123
         assert response.item_scores == {1: 0.95, 2: 0.87}
         assert response.metadata == {}
@@ -104,16 +102,12 @@ class TestBatchPredictionRequest:
     def test_invalid_k_negative(self):
         """Test that negative k raises validation error."""
         with pytest.raises(ValidationError):
-            BatchPredictionRequest(
-                user_item_pairs=[[123, [1, 2, 3]]], k=-1
-            )
+            BatchPredictionRequest(user_item_pairs=[[123, [1, 2, 3]]], k=-1)
 
     def test_invalid_k_zero(self):
         """Test that zero k raises validation error."""
         with pytest.raises(ValidationError):
-            BatchPredictionRequest(
-                user_item_pairs=[[123, [1, 2, 3]]], k=0
-            )
+            BatchPredictionRequest(user_item_pairs=[[123, [1, 2, 3]]], k=0)
 
 
 class TestBatchPredictionResponse:

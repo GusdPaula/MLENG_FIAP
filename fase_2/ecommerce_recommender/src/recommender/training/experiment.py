@@ -129,28 +129,48 @@ def train_one_experiment(
         context="training",
     )
 
-    train_loader, val_loader, dataset, val_dataset = _prepare_data_loaders(
-        interactions, num_items, config, seed
-    )
+    train_loader, val_loader, dataset, val_dataset = _prepare_data_loaders(interactions, num_items, config, seed)
 
     model, history, best = _train_model_with_early_stopping(
-        model_type, len(user2idx), num_items, config, train_loader, val_loader, mlflow_toolkit
+        model_type,
+        len(user2idx),
+        num_items,
+        config,
+        train_loader,
+        val_loader,
+        mlflow_toolkit,
     )
 
-    best_loss, best_metrics, ranking = _compute_final_metrics(
-        model, history, best, val_dataset, dataset, num_items, config, mlflow_toolkit
-    )
+    best_loss, best_metrics, ranking = _compute_final_metrics(model, history, best, val_dataset, dataset, num_items, config, mlflow_toolkit)
 
     ranking_k = config.get("ranking_k", 10)
     checkpoint_path = _save_and_log_artifacts(
-        model, model_type, processor_name, user2idx, item2idx, config,
-        best_loss, best_metrics, ranking, best, history,
-        artifact_dir, mlflow_toolkit, ranking_k,
+        model,
+        model_type,
+        processor_name,
+        user2idx,
+        item2idx,
+        config,
+        best_loss,
+        best_metrics,
+        ranking,
+        best,
+        history,
+        artifact_dir,
+        mlflow_toolkit,
+        ranking_k,
     )
 
     return _build_experiment_result(
-        model_type, processor_name, checkpoint_path, processed_path,
-        best_loss, best_metrics, ranking, best, history,
+        model_type,
+        processor_name,
+        checkpoint_path,
+        processed_path,
+        best_loss,
+        best_metrics,
+        ranking,
+        best,
+        history,
     )
 
 
@@ -162,7 +182,9 @@ def _prepare_data_loaders(
 ) -> tuple:
     """Create dataset, split it, and return train/val DataLoaders."""
     dataset = RecommenderDataset(
-        interactions, num_items, num_negatives=config["num_negatives"],
+        interactions,
+        num_items,
+        num_negatives=config["num_negatives"],
     )
 
     train_size = int(config["train_split_ratio"] * len(dataset))
@@ -175,10 +197,7 @@ def _prepare_data_loaders(
     )
 
     device = resolve_device()
-    logger.info(
-        f"Device: {device} | samples={len(dataset):,} | "
-        f"train={train_size:,} | val={val_size:,}"
-    )
+    logger.info(f"Device: {device} | samples={len(dataset):,} | train={train_size:,} | val={val_size:,}")
 
     train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=config["batch_size"])
@@ -197,7 +216,9 @@ def _train_model_with_early_stopping(
 ) -> tuple:
     """Create model, trainer, and run training with early stopping."""
     model = ModelFactory.create(
-        model_type, num_users=num_users, num_items=num_items,
+        model_type,
+        num_users=num_users,
+        num_items=num_items,
         **config.get("hyperparams", {}),
     )
     trainer = Trainer(model, config, device=resolve_device())
@@ -238,11 +259,13 @@ def _compute_final_metrics(
     best_loss = float(best_result.train_loss)
     best_metrics = best_result.eval_metrics
 
-    mlflow_toolkit.log_metrics({
-        "best_epoch": int(best["epoch"]),
-        "best_auc_roc": float(best["value"]),
-        "epochs_run": len(history),
-    })
+    mlflow_toolkit.log_metrics(
+        {
+            "best_epoch": int(best["epoch"]),
+            "best_auc_roc": float(best["value"]),
+            "epochs_run": len(history),
+        }
+    )
 
     ranking_k = config.get("ranking_k", 10)
     ranking = compute_ranking_metrics(
@@ -284,8 +307,13 @@ def _save_and_log_artifacts(
     }
 
     checkpoint_path = save_checkpoint(
-        model=model, model_type=model_type, processor_name=processor_name,
-        user2idx=user2idx, item2idx=item2idx, config=config, metrics=metrics,
+        model=model,
+        model_type=model_type,
+        processor_name=processor_name,
+        user2idx=user2idx,
+        item2idx=item2idx,
+        config=config,
+        metrics=metrics,
         early_stopping_info={
             "best_epoch": best["epoch"],
             "best_auc_roc": best["value"],
@@ -295,12 +323,14 @@ def _save_and_log_artifacts(
     )
 
     mlflow_toolkit.log_artifact(checkpoint_path)
-    mlflow_toolkit.log_metrics({
-        "final_train_loss": best_loss,
-        "final_auc_roc": float(best_metrics["auc_roc"]),
-        "final_avg_precision": float(best_metrics["avg_precision"]),
-        **ranking.to_dict(ranking_k),
-    })
+    mlflow_toolkit.log_metrics(
+        {
+            "final_train_loss": best_loss,
+            "final_auc_roc": float(best_metrics["auc_roc"]),
+            "final_avg_precision": float(best_metrics["avg_precision"]),
+            **ranking.to_dict(ranking_k),
+        }
+    )
 
     logger.info(f"Experiment completed. Artifact saved to: {checkpoint_path}")
     return checkpoint_path
@@ -334,4 +364,3 @@ def _build_experiment_result(
         "best_epoch": best["epoch"],
         "epochs_run": len(history),
     }
-

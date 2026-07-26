@@ -38,9 +38,7 @@ class DataPipeline:
         }
 
         if self.table_prefix:
-            prefixed_source_files = {
-                f"{self.table_prefix}_{key}": path for key, path in source_files.items()
-            }
+            prefixed_source_files = {f"{self.table_prefix}_{key}": path for key, path in source_files.items()}
         else:
             prefixed_source_files = source_files
 

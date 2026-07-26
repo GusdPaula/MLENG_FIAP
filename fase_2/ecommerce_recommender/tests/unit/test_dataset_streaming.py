@@ -19,9 +19,7 @@ def test_recommender_dataset_streaming_mode() -> None:
 
 def _verify_eager_mode(interactions: pd.DataFrame) -> None:
     """Verify behavior of dataset in eager mode."""
-    dataset_eager = RecommenderDataset(
-        interactions=interactions, num_items=5, num_negatives=2, streaming=False
-    )
+    dataset_eager = RecommenderDataset(interactions=interactions, num_items=5, num_negatives=2, streaming=False)
     assert len(dataset_eager) == 9
     assert hasattr(dataset_eager, "samples")
     assert isinstance(dataset_eager.samples, list)
@@ -29,9 +27,7 @@ def _verify_eager_mode(interactions: pd.DataFrame) -> None:
 
 def _verify_streaming_mode(interactions: pd.DataFrame) -> None:
     """Verify behavior of dataset in streaming mode."""
-    dataset_streaming = RecommenderDataset(
-        interactions=interactions, num_items=5, num_negatives=2, streaming=True
-    )
+    dataset_streaming = RecommenderDataset(interactions=interactions, num_items=5, num_negatives=2, streaming=True)
     assert len(dataset_streaming) == 9
     assert not hasattr(dataset_streaming, "samples")
 
@@ -52,13 +48,9 @@ def test_recommender_dataset_streaming_consistency() -> None:
     interactions = pd.DataFrame({"user_idx": [0, 1], "item_idx": [0, 1]})
 
     # Test with fixed seed for reproducibility
-    dataset1 = RecommenderDataset(
-        interactions=interactions, num_items=5, num_negatives=2, streaming=True, seed=42
-    )
+    dataset1 = RecommenderDataset(interactions=interactions, num_items=5, num_negatives=2, streaming=True, seed=42)
 
-    dataset2 = RecommenderDataset(
-        interactions=interactions, num_items=5, num_negatives=2, streaming=True, seed=42
-    )
+    dataset2 = RecommenderDataset(interactions=interactions, num_items=5, num_negatives=2, streaming=True, seed=42)
 
     # Should produce same results with same seed
     sample1 = dataset1[0]
@@ -82,9 +74,7 @@ def test_recommender_dataset_streaming_batching() -> None:
     """Test batch processing with streaming mode."""
     interactions = pd.DataFrame({"user_idx": [0, 1, 2], "item_idx": [0, 1, 2]})
 
-    dataset = RecommenderDataset(
-        interactions=interactions, num_items=5, num_negatives=2, streaming=True
-    )
+    dataset = RecommenderDataset(interactions=interactions, num_items=5, num_negatives=2, streaming=True)
 
     # Test batch iteration
     batches = list(dataset.stream_batches(batch_size=2))
@@ -127,9 +117,7 @@ def test_make_batches() -> None:
     """Test the make_batches utility function."""
     interactions = pd.DataFrame({"user_idx": [0, 1, 2], "item_idx": [0, 1, 2]})
 
-    dataset = RecommenderDataset(
-        interactions=interactions, num_items=5, num_negatives=1, streaming=False
-    )
+    dataset = RecommenderDataset(interactions=interactions, num_items=5, num_negatives=1, streaming=False)
 
     batches = list(make_batches(dataset, batch_size=2))
     assert len(batches) > 0
@@ -146,18 +134,14 @@ def test_recommender_dataset_streaming_edge_cases() -> None:
     # Empty interactions
     interactions = pd.DataFrame({"user_idx": [], "item_idx": []})
 
-    dataset = RecommenderDataset(
-        interactions=interactions, num_items=5, num_negatives=2, streaming=True
-    )
+    dataset = RecommenderDataset(interactions=interactions, num_items=5, num_negatives=2, streaming=True)
 
     assert len(dataset) == 0
 
     # Single interaction
     interactions = pd.DataFrame({"user_idx": [0], "item_idx": [1]})
 
-    dataset = RecommenderDataset(
-        interactions=interactions, num_items=5, num_negatives=2, streaming=True
-    )
+    dataset = RecommenderDataset(interactions=interactions, num_items=5, num_negatives=2, streaming=True)
 
     assert len(dataset) == 3  # 1 positive + 2 negatives
 

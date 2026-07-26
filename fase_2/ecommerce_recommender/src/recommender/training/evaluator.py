@@ -64,9 +64,7 @@ def compute_ranking_metrics(
 
     val_indices = val_dataset.indices
 
-    val_samples = np.array(
-        [dataset.samples[i] for i in val_indices[: min(sample_limit, len(val_indices))]]
-    )
+    val_samples = np.array([dataset.samples[i] for i in val_indices[: min(sample_limit, len(val_indices))]])
 
     positive_only = val_samples[val_samples[:, 2] == 1.0][:, :2].astype(np.int64)
     limited = positive_only[:positive_limit]
@@ -77,10 +75,7 @@ def compute_ranking_metrics(
     rec = recall_at_k(model, limited, num_items, k=k, device=device)
     mean_rr = mrr(model, limited, num_items, k=k, device=device)
 
-    logger.info(
-        f"Hit Rate@{k}: {hr:.4f}, NDCG@{k}: {ndcg:.4f}, "
-        f"Precision@{k}: {prec:.4f}, Recall@{k}: {rec:.4f}, MRR@{k}: {mean_rr:.4f}"
-    )
+    logger.info(f"Hit Rate@{k}: {hr:.4f}, NDCG@{k}: {ndcg:.4f}, Precision@{k}: {prec:.4f}, Recall@{k}: {rec:.4f}, MRR@{k}: {mean_rr:.4f}")
 
     return RankingMetrics(
         hit_rate=hr,

@@ -16,9 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Run the ecommerce data pipeline: download from Kaggle and upload to BigQuery."
-    )
+    parser = argparse.ArgumentParser(description="Run the ecommerce data pipeline: download from Kaggle and upload to BigQuery.")
     parser.add_argument(
         "--kaggle-dataset",
         default=os.getenv("KAGGLE_DATASET", "retailrocket/ecommerce-dataset"),
@@ -31,9 +29,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--gcp-dataset",
-        default=os.getenv(
-            "BIGQUERY_DATASET", os.getenv("GCP_DATASET", "ecommerce_dataset")
-        ),
+        default=os.getenv("BIGQUERY_DATASET", os.getenv("GCP_DATASET", "ecommerce_dataset")),
         help="BigQuery dataset id where tables will be loaded.",
     )
     parser.add_argument(

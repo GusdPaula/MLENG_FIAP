@@ -64,9 +64,7 @@ class Trainer:
         self.config = config
 
         self.criterion = nn.BCELoss()
-        self.optimizer = torch.optim.Adam(
-            model.parameters(), lr=config["learning_rate"]
-        )
+        self.optimizer = torch.optim.Adam(model.parameters(), lr=config["learning_rate"])
 
     # ------------------------------------------------------------------
     # batch-level primitives
@@ -127,11 +125,7 @@ class Trainer:
         total_loss = 0.0
         num_samples = 0
 
-        batches = (
-            tqdm(dataloader, desc=description, leave=False)
-            if show_progress
-            else dataloader
-        )
+        batches = tqdm(dataloader, desc=description, leave=False) if show_progress else dataloader
         for users, items, labels in batches:
             batch_size = users.shape[0]
             batch_loss = self.train_batch(users, items, labels)
@@ -168,15 +162,8 @@ class Trainer:
         """
         self.model.eval()
         collect_ndcg = "ndcg_at_k" in metrics and num_items is not None
-        all_preds, all_labels, positive_samples = self._collect_predictions(
-            dataloader, collect_ndcg
-        )
-        return {
-            metric: self._compute_metric(
-                metric, all_preds, all_labels, positive_samples, num_items, k
-            )
-            for metric in metrics
-        }
+        all_preds, all_labels, positive_samples = self._collect_predictions(dataloader, collect_ndcg)
+        return {metric: self._compute_metric(metric, all_preds, all_labels, positive_samples, num_items, k) for metric in metrics}
 
     def _collect_predictions(
         self,
@@ -195,9 +182,7 @@ class Trainer:
                 all_preds.extend(predictions.cpu().numpy())
                 all_labels.extend(labels.numpy())
                 if collect_ndcg:
-                    self._append_positive_samples(
-                        positive_samples, users, items, labels
-                    )
+                    self._append_positive_samples(positive_samples, users, items, labels)
         return all_preds, all_labels, positive_samples
 
     @staticmethod
@@ -208,9 +193,7 @@ class Trainer:
         labels: torch.Tensor,
     ) -> None:
         """Append positive (user, item) pairs to the accumulator."""
-        for user, item, label in zip(
-            users.cpu().numpy(), items.cpu().numpy(), labels.numpy(), strict=True
-        ):
+        for user, item, label in zip(users.cpu().numpy(), items.cpu().numpy(), labels.numpy(), strict=True):
             if label == 1.0:
                 positive_samples.append((int(user), int(item)))
 
@@ -277,13 +260,9 @@ class Trainer:
         best_state: dict | None = None
 
         for epoch in range(epochs):
-            result = self._run_epoch(
-                train_loader, val_loader, epoch, epochs, show_progress
-            )
+            result = self._run_epoch(train_loader, val_loader, epoch, epochs, show_progress)
             results.append(result)
-            best_value, best_state = self._update_best_model(
-                result, metric_for_best, mode, best_value, best_state
-            )
+            best_value, best_state = self._update_best_model(result, metric_for_best, mode, best_value, best_state)
             if log_callback is not None:
                 log_callback(result)
 
@@ -301,9 +280,7 @@ class Trainer:
     ) -> EpochResult:
         """Execute one train + eval cycle and return the result."""
         description = f"Epoch {epoch + 1}/{total_epochs}"
-        train_loss = self.train_epoch(
-            train_loader, show_progress=show_progress, description=description
-        )
+        train_loss = self.train_epoch(train_loader, show_progress=show_progress, description=description)
         eval_metrics = self.evaluate(val_loader)
         return EpochResult(
             epoch=epoch + 1,
@@ -364,8 +341,14 @@ class Trainer:
 
         for epoch in range(epochs):
             result = self._run_early_stopping_epoch(
-                train_loader, val_loader, epoch, epochs,
-                show_progress, monitor, num_items, ranking_k,
+                train_loader,
+                val_loader,
+                epoch,
+                epochs,
+                show_progress,
+                monitor,
+                num_items,
+                ranking_k,
             )
             history.append(result)
             if log_callback is not None:
@@ -395,12 +378,8 @@ class Trainer:
     ) -> EpochResult:
         """Execute one train + eval cycle for early-stopping training."""
         description = f"Epoch {epoch + 1}/{total_epochs}"
-        train_loss = self.train_epoch(
-            train_loader, show_progress=show_progress, description=description
-        )
-        eval_metrics_tuple, eval_kwargs = self._build_eval_kwargs(
-            monitor, num_items, ranking_k
-        )
+        train_loss = self.train_epoch(train_loader, show_progress=show_progress, description=description)
+        eval_metrics_tuple, eval_kwargs = self._build_eval_kwargs(monitor, num_items, ranking_k)
         eval_metrics = self.evaluate(val_loader, metrics=eval_metrics_tuple, **eval_kwargs)
         result = EpochResult(
             epoch=epoch + 1,
@@ -408,24 +387,20 @@ class Trainer:
             eval_metrics=eval_metrics,
             learning_rate=self.optimizer.param_groups[0]["lr"],
         )
-        logger.info(
-            f"Epoch {result.epoch:02d}/{total_epochs} | "
-            f"loss={result.train_loss:.4f} | "
-            f"auc={result.eval_metrics['auc_roc']:.4f} | "
-            f"ap={result.eval_metrics['avg_precision']:.4f}"
-        )
+        logger.info(f"Epoch {result.epoch:02d}/{total_epochs} | loss={result.train_loss:.4f} | auc={result.eval_metrics['auc_roc']:.4f} | ap={result.eval_metrics['avg_precision']:.4f}")
         return result
 
     @staticmethod
-    def _build_eval_kwargs(
-        monitor: str, num_items: int | None, ranking_k: int
-    ) -> tuple[tuple[str, ...], dict]:
+    def _build_eval_kwargs(monitor: str, num_items: int | None, ranking_k: int) -> tuple[tuple[str, ...], dict]:
         """Build evaluation metrics tuple and kwargs based on the monitored metric."""
         base_metrics = ("auc_roc", "avg_precision")
         if num_items is None:
             return base_metrics, {}
         if monitor == "ndcg_at_k":
-            return (*base_metrics, "ndcg_at_k"), {"num_items": num_items, "k": ranking_k}
+            return (*base_metrics, "ndcg_at_k"), {
+                "num_items": num_items,
+                "k": ranking_k,
+            }
         if monitor.startswith("ndcg_at"):
             return (*base_metrics, monitor), {"num_items": num_items, "k": ranking_k}
         return base_metrics, {}
@@ -447,15 +422,9 @@ class Trainer:
         return best
 
     @staticmethod
-    def _log_early_stopping(
-        epoch: int, monitor: str, best: dict[str, Any], total_epochs: int
-    ) -> None:
+    def _log_early_stopping(epoch: int, monitor: str, best: dict[str, Any], total_epochs: int) -> None:
         """Log early stopping trigger information."""
-        logger.info(
-            f"Early stopping triggered at epoch {epoch}. "
-            f"Best {monitor}: {best['value']:.4f} "
-            f"(epoch {best['epoch']})"
-        )
+        logger.info(f"Early stopping triggered at epoch {epoch}. Best {monitor}: {best['value']:.4f} (epoch {best['epoch']})")
 
     # ------------------------------------------------------------------
     # helpers
@@ -496,9 +465,7 @@ class Trainer:
         return float(np.mean(ndcg_scores)) if ndcg_scores else 0.0
 
     @staticmethod
-    def _sample_positive_interactions(
-        positive_samples: list[tuple[int, int]], sample_limit: int
-    ) -> list[tuple[int, int]]:
+    def _sample_positive_interactions(positive_samples: list[tuple[int, int]], sample_limit: int) -> list[tuple[int, int]]:
         """Randomly sample a subset of positive interactions."""
         import numpy as np
 
@@ -519,9 +486,7 @@ class Trainer:
             users_items.setdefault(user, []).append(item)
         return users_items
 
-    def _compute_user_ndcg(
-        self, user_idx: int, true_items: list[int], num_items: int, k: int
-    ) -> float:
+    def _compute_user_ndcg(self, user_idx: int, true_items: list[int], num_items: int, k: int) -> float:
         """Compute NDCG@K for a single user."""
         import numpy as np
 
@@ -531,11 +496,7 @@ class Trainer:
         _, top_k_indices = torch.topk(scores, k)
         top_k_list = top_k_indices.cpu().numpy()
 
-        dcg = sum(
-            1.0 / np.log2(rank + 2)
-            for rank, item_id in enumerate(top_k_list)
-            if item_id in true_items
-        )
+        dcg = sum(1.0 / np.log2(rank + 2) for rank, item_id in enumerate(top_k_list) if item_id in true_items)
         ideal_dcg = sum(1.0 / np.log2(i + 2) for i in range(min(len(true_items), k)))
         return dcg / ideal_dcg if ideal_dcg > 0 else 0.0
 
@@ -549,7 +510,4 @@ class Trainer:
             return result.train_loss
         if monitor in result.eval_metrics:
             return result.eval_metrics[monitor]
-        raise ValueError(
-            f"Monitored value '{monitor}' not found. Available: "
-            f"'val_loss' or {sorted(result.eval_metrics)}"
-        )
+        raise ValueError(f"Monitored value '{monitor}' not found. Available: 'val_loss' or {sorted(result.eval_metrics)}")

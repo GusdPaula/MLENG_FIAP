@@ -28,6 +28,7 @@ MODEL_FILES = [
     "ncf_weighted.pt",
 ]
 
+
 def register_model(model_file: str) -> None:
     """Register a single model in MLflow model registry as an artifact.
 
@@ -51,6 +52,7 @@ def register_model(model_file: str) -> None:
 
             # Log model metadata
             import torch
+
             checkpoint = torch.load(model_path, map_location="cpu")
             model_type = checkpoint.get("model_type", "unknown")
             mlflow.log_param("model_type", model_type)
@@ -71,11 +73,7 @@ def register_model(model_file: str) -> None:
 
             # Create a new model version
             try:
-                model_version = client.create_model_version(
-                    name=model_name,
-                    source=artifact_uri,
-                    run_id=run_id
-                )
+                model_version = client.create_model_version(name=model_name, source=artifact_uri, run_id=run_id)
                 print(f"✅ Created model version {model_version.version} for: {model_name}")
             except Exception as e:
                 print(f"⚠️  Failed to create model version: {e}")

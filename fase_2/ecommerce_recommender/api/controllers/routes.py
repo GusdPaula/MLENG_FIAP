@@ -79,6 +79,7 @@ async def verify_api_key(api_key: str = Depends(api_key_header)) -> str:
 
     return api_key
 
+
 # Global prediction service instance
 prediction_service: PredictionService | None = None
 

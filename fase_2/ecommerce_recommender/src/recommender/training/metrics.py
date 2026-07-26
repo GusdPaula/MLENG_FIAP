@@ -90,15 +90,9 @@ def ndcg_at_k(
     return float(np.mean(ndcg_scores)) if ndcg_scores else 0.0
 
 
-def _compute_user_dcg(
-    top_k_list: np.ndarray, true_items: list[int], k: int
-) -> float:
+def _compute_user_dcg(top_k_list: np.ndarray, true_items: list[int], k: int) -> float:
     """Compute normalized DCG for a single user's top-K list."""
-    dcg = sum(
-        1.0 / np.log2(rank + 2)
-        for rank, item_id in enumerate(top_k_list)
-        if item_id in true_items
-    )
+    dcg = sum(1.0 / np.log2(rank + 2) for rank, item_id in enumerate(top_k_list) if item_id in true_items)
     ideal_dcg = sum(1.0 / np.log2(i + 2) for i in range(min(len(true_items), k)))
     return dcg / ideal_dcg if ideal_dcg > 0 else 0.0
 

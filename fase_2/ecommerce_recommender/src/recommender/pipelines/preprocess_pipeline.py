@@ -42,9 +42,7 @@ class PreprocessPipeline:
         processor = DataProcessorContext(processor_cfg, **processor_kwargs)
         logger.info("Applying data processor strategy: %s", processor.strategy_name)
 
-        interactions, user2idx, item2idx = processor.process(
-            events, min_interactions=self.cfg.get("min_interactions", 1)
-        )
+        interactions, user2idx, item2idx = processor.process(events, min_interactions=self.cfg.get("min_interactions", 1))
 
         logger.info("Preprocessing completed.")
         logger.info("  Unique Users: %d", len(user2idx))
@@ -126,9 +124,7 @@ def run_preprocess_pipeline(config_path: str = "configs/model.yaml") -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Executa o pipeline de pré-processamento."
-    )
+    parser = argparse.ArgumentParser(description="Executa o pipeline de pré-processamento.")
     parser.add_argument(
         "--config",
         default="configs/model.yaml",

@@ -56,12 +56,7 @@ class MatrixFactorizationModel(BaseRecommenderModel):
         item_emb = self.item_embedding(item_ids)
 
         dot = (user_emb * item_emb).sum(dim=-1)
-        score = (
-            self.global_bias
-            + self.user_bias(user_ids).squeeze(-1)
-            + self.item_bias(item_ids).squeeze(-1)
-            + dot
-        )
+        score = self.global_bias + self.user_bias(user_ids).squeeze(-1) + self.item_bias(item_ids).squeeze(-1) + dot
         return self.sigmoid(score)
 
     @property

@@ -156,9 +156,7 @@ class TestModelPerformanceMonitor:
 
         # Record more predictions than window size
         for i in range(10):
-            monitor.record_predictions(
-                scores=[0.8], user_ids=[i], item_ids=[i * 10]
-            )
+            monitor.record_predictions(scores=[0.8], user_ids=[i], item_ids=[i * 10])
 
         assert len(monitor._prediction_history) == 5
 
@@ -347,4 +345,8 @@ class TestMonitoringService:
 
         # Check that predictions were recorded
         assert len(service.performance_monitor._metrics_history) == 1
-        assert service.performance_monitor._metrics_history[0].prediction_scores == [0.8, 0.9, 0.7]
+        assert service.performance_monitor._metrics_history[0].prediction_scores == [
+            0.8,
+            0.9,
+            0.7,
+        ]

@@ -210,9 +210,7 @@ def test_trainer_fit() -> None:
     val_loader = DataLoader(val_dataset, batch_size=2, shuffle=False)
 
     # Should return a list of EpochResult
-    history = trainer.fit(
-        train_loader=train_loader, val_loader=val_loader, epochs=2, show_progress=False
-    )
+    history = trainer.fit(train_loader=train_loader, val_loader=val_loader, epochs=2, show_progress=False)
 
     assert isinstance(history, list)
     assert len(history) == 2

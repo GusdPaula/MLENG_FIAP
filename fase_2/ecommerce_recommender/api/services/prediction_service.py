@@ -9,12 +9,13 @@ by depending on abstractions (BasePredictor) rather than concrete implementation
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
-import torch
 import mlflow
-import os
+import torch
+
 from ..domain.base_predictor import BasePredictor
 from ..domain.predictor_factory import PredictorFactory
 from ..exceptions import ModelLoadError
@@ -108,9 +109,7 @@ class PredictionService:
             ModelLoadError: If the model cannot be loaded.
         """
         # Try loading from MLflow first if configured
-        if self.mlflow_tracking_uri and (
-            self.mlflow_model_name or self.mlflow_model_alias
-        ):
+        if self.mlflow_tracking_uri and (self.mlflow_model_name or self.mlflow_model_alias):
             logger.info(
                 "Attempting to load model from MLflow: URI=%s, Model=%s, Version=%s, Alias=%s",
                 self.mlflow_tracking_uri,
@@ -154,7 +153,6 @@ class PredictionService:
         Raises:
             Exception: If MLflow loading fails.
         """
-        
 
         mlflow.set_tracking_uri(self.mlflow_tracking_uri)
         model_uri = self._build_model_uri()
@@ -184,14 +182,8 @@ class PredictionService:
         client = mlflow.tracking.MlflowClient()
         model_version = self._resolve_mlflow_model_version(client)
 
-        model_name = (
-            self._find_model_name_by_alias(self.mlflow_model_alias)
-            if self.mlflow_model_alias
-            else self.mlflow_model_name
-        )
-        artifacts_dir = client.download_artifacts(
-            model_version.run_id, model_name, temp_dir
-        )
+        model_name = self._find_model_name_by_alias(self.mlflow_model_alias) if self.mlflow_model_alias else self.mlflow_model_name
+        artifacts_dir = client.download_artifacts(model_version.run_id, model_name, temp_dir)
 
         pt_files = [f for f in os.listdir(artifacts_dir) if f.endswith(".pt")]
         if not pt_files:
@@ -220,7 +212,6 @@ class PredictionService:
         Raises:
             Exception: If no model with the alias is found.
         """
-        
 
         client = mlflow.tracking.MlflowClient()
         registered_models = client.search_registered_models()
@@ -246,16 +237,13 @@ class PredictionService:
         Raises:
             Exception: If no model with the alias is found.
         """
-        
 
         client = mlflow.tracking.MlflowClient()
 
         # Get all registered models
         registered_models = client.search_registered_models()
 
-        logger.info(
-            f"Searching for model with alias '{alias}' across {len(registered_models)} registered models"
-        )
+        logger.info(f"Searching for model with alias '{alias}' across {len(registered_models)} registered models")
 
         # Search for the alias across all models
         for model in registered_models:
@@ -264,9 +252,7 @@ class PredictionService:
                 # Get latest version with the specified alias
                 model_version = client.get_model_version_by_alias(model_name, alias)
                 model_uri = f"models:/{model_name}@{alias}"
-                logger.info(
-                    f"Found model '{model_name}' with alias '{alias}' (version {model_version.version})"
-                )
+                logger.info(f"Found model '{model_name}' with alias '{alias}' (version {model_version.version})")
                 return model_uri
             except Exception:
                 # This model doesn't have the alias, continue searching
@@ -303,12 +289,16 @@ class PredictionService:
 
         logger.info(
             "Reconstructing model of type %s with %d users and %d items",
-            model_type, num_users, num_items,
+            model_type,
+            num_users,
+            num_items,
         )
 
         model = ModelFactory.create(
-            model_type=model_type, num_users=num_users,
-            num_items=num_items, **hyperparams,
+            model_type=model_type,
+            num_users=num_users,
+            num_items=num_items,
+            **hyperparams,
         )
         model.load_state_dict(checkpoint["model_state_dict"])
         model.to(self.device)
@@ -325,7 +315,11 @@ class PredictionService:
         item2idx = checkpoint.get("item2idx")
 
         if user2idx is not None and item2idx is not None:
-            return len(user2idx), len(item2idx), checkpoint.get("config", {}).get("hyperparams", {})
+            return (
+                len(user2idx),
+                len(item2idx),
+                checkpoint.get("config", {}).get("hyperparams", {}),
+            )
 
         num_users = checkpoint.get("num_users")
         num_items = checkpoint.get("num_items")
@@ -340,7 +334,9 @@ class PredictionService:
 
         logger.info(
             "Creating predictor of type '%s' with %d users and %d items",
-            self.predictor_type, len(user2idx), len(item2idx),
+            self.predictor_type,
+            len(user2idx),
+            len(item2idx),
         )
 
         popular_items = checkpoint.get("popular_items", {})
@@ -351,8 +347,10 @@ class PredictionService:
 
         self._predictor = PredictorFactory.create(
             predictor_type=self.predictor_type,
-            model=model, user2idx=user2idx,
-            item2idx=item2idx, popular_items=popular_items,
+            model=model,
+            user2idx=user2idx,
+            item2idx=item2idx,
+            popular_items=popular_items,
         )
 
     def predict(self, request: PredictionRequest) -> PredictionResponse:
@@ -384,9 +382,7 @@ class PredictionService:
 
         return response
 
-    def predict_batch(
-        self, requests: list[PredictionRequest]
-    ) -> BatchPredictionResponse:
+    def predict_batch(self, requests: list[PredictionRequest]) -> BatchPredictionResponse:
         """Generate predictions for multiple users.
 
         Args:
@@ -415,9 +411,7 @@ class PredictionService:
             },
         )
 
-    def _record_batch_monitoring(
-        self, predictions: list[PredictionResponse]
-    ) -> None:
+    def _record_batch_monitoring(self, predictions: list[PredictionResponse]) -> None:
         """Record batch predictions to monitoring service."""
         if not (self.enable_monitoring and self._monitoring_service):
             return
@@ -429,7 +423,9 @@ class PredictionService:
             all_user_ids.extend([pred.user_id] * len(pred.item_scores))
             all_item_ids.extend(pred.item_scores.keys())
         self._monitoring_service.record_predictions(
-            scores=all_scores, user_ids=all_user_ids, item_ids=all_item_ids,
+            scores=all_scores,
+            user_ids=all_user_ids,
+            item_ids=all_item_ids,
         )
 
     def recommend(self, user_id: int, k: int = 10) -> RecommendationResponse:
@@ -457,25 +453,23 @@ class PredictionService:
                 "Predictor type '%s' does not support recommendations",
                 self.predictor_type,
             )
-            raise InvalidInputError(
-                f"Predictor type '{self.predictor_type}' does not support recommendations."
-            )
+            raise InvalidInputError(f"Predictor type '{self.predictor_type}' does not support recommendations.")
 
         logger.info("Generating top-%d recommendations for user %d", k, user_id)
         response = self._predictor.recommend(user_id, k)
         self._record_recommendation_monitoring(response, user_id)
         return response
 
-    def _record_recommendation_monitoring(
-        self, response: RecommendationResponse, user_id: int
-    ) -> None:
+    def _record_recommendation_monitoring(self, response: RecommendationResponse, user_id: int) -> None:
         """Record recommendation predictions to monitoring service."""
         if not (self.enable_monitoring and self._monitoring_service):
             return
         scores = [score for _, score in response.recommendations]
         item_ids = [item_id for item_id, _ in response.recommendations]
         self._monitoring_service.record_predictions(
-            scores=scores, user_ids=[user_id], item_ids=item_ids,
+            scores=scores,
+            user_ids=[user_id],
+            item_ids=item_ids,
         )
 
     def get_model_info(self) -> dict[str, Any]:
@@ -502,9 +496,7 @@ class PredictionService:
         Raises:
             PredictorNotFoundError: If the predictor type is not available.
         """
-        logger.info(
-            "Reloading predictor from '%s' to '%s'", self.predictor_type, predictor_type
-        )
+        logger.info("Reloading predictor from '%s' to '%s'", self.predictor_type, predictor_type)
         self.predictor_type = predictor_type
         self._load_model()
 

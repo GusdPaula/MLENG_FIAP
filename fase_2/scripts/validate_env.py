@@ -6,10 +6,10 @@ This script checks Python version, required packages, environment variables
 and AWS credentials.
 """
 
-import sys
 import os
-import urllib.request
+import sys
 import urllib.error
+import urllib.request
 
 # ANSI Escape Sequences for premium console outputs
 GREEN = "\033[92m"
@@ -19,17 +19,22 @@ BLUE = "\033[94m"
 BOLD = "\033[1m"
 RESET = "\033[0m"
 
+
 def print_header(title):
     print(f"\n{BOLD}{BLUE}=== {title} ==={RESET}")
+
 
 def print_success(message):
     print(f"  {GREEN}✔{RESET} {message}")
 
+
 def print_failure(message):
     print(f"  {RED}✘{RESET} {message}")
 
+
 def print_warning(message):
     print(f"  {YELLOW}⚠{RESET} {message}")
+
 
 def _check_python_version():
     print_header("1. Python Version Check")
@@ -42,13 +47,20 @@ def _check_python_version():
     print_success(f"Python version satisfies requirements (>= {req_major}.{req_minor})")
     return False
 
+
 def _check_package_imports():
     print_header("2. Package Dependency Check")
     required_packages = [
-        ("dotenv", "python-dotenv"), ("pydantic_settings", "pydantic-settings"),
-        ("pandas", "pandas"), ("numpy", "numpy"), ("sklearn", "scikit-learn"),
-        ("torch", "pytorch"), ("mlflow", "mlflow"), ("dvc", "dvc"),
-        ("boto3", "boto3"), ("yaml", "pyyaml")
+        ("dotenv", "python-dotenv"),
+        ("pydantic_settings", "pydantic-settings"),
+        ("pandas", "pandas"),
+        ("numpy", "numpy"),
+        ("sklearn", "scikit-learn"),
+        ("torch", "pytorch"),
+        ("mlflow", "mlflow"),
+        ("dvc", "dvc"),
+        ("boto3", "boto3"),
+        ("yaml", "pyyaml"),
     ]
     imported_packages = {}
     has_errors = False
@@ -60,6 +72,7 @@ def _check_package_imports():
             print_failure(f"Failed to import {pkg_name} ({mod_name}): {e}")
             has_errors = True
     return imported_packages, has_errors
+
 
 def _validate_env_vars(fase2_dir, imported_packages):
     print_header("3. Environment Variables (.env) via Pydantic Settings")
@@ -76,6 +89,7 @@ def _validate_env_vars(fase2_dir, imported_packages):
     env_vars, has_errors = {}, False
     try:
         from recommender.config import Settings
+
         settings = Settings(_env_file=env_path if os.path.exists(env_path) else None)
         print_success("Pydantic Settings loaded and validated successfully!")
         print(f"    MLFLOW_TRACKING_URI = {settings.mlflow_tracking_uri}")
@@ -90,10 +104,16 @@ def _validate_env_vars(fase2_dir, imported_packages):
         has_errors = True
         if "dotenv" in imported_packages and os.path.exists(env_path):
             imported_packages["dotenv"].load_dotenv(env_path)
-        for var in ["MLFLOW_TRACKING_URI", "AWS_DEFAULT_REGION", "AWS_REGION", "AWS_PROFILE"]:
+        for var in [
+            "MLFLOW_TRACKING_URI",
+            "AWS_DEFAULT_REGION",
+            "AWS_REGION",
+            "AWS_PROFILE",
+        ]:
             if val := os.getenv(var):
                 env_vars[var] = val
     return env_vars, has_errors
+
 
 def _check_pytorch_device(imported_packages):
     if "torch" not in imported_packages:
@@ -109,6 +129,7 @@ def _check_pytorch_device(imported_packages):
     else:
         print_warning("No GPU acceleration found. PyTorch will run on CPU.")
 
+
 def _check_mlflow_server(env_vars):
     if "MLFLOW_TRACKING_URI" not in env_vars:
         return
@@ -119,7 +140,7 @@ def _check_mlflow_server(env_vars):
         return
     print(f"  Pinging MLflow tracking server: {uri} ...")
     try:
-        req = urllib.request.Request(uri, headers={'User-Agent': 'Mozilla/5.0'})
+        req = urllib.request.Request(uri, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=5) as response:
             status_code = response.getcode()
             if status_code in (200, 301, 302):
@@ -128,6 +149,7 @@ def _check_mlflow_server(env_vars):
                 print_warning(f"MLflow server returned status code: {status_code}")
     except Exception as e:
         print_warning(f"Could not reach MLflow tracking server at {uri}. Details: {e}")
+
 
 def _check_aws_connectivity(imported_packages, env_vars):
     if "boto3" not in imported_packages:
@@ -138,12 +160,13 @@ def _check_aws_connectivity(imported_packages, env_vars):
     try:
         boto3_mod = imported_packages["boto3"]
         session = boto3_mod.Session(profile_name=profile, region_name=region) if profile else boto3_mod.Session(region_name=region)
-        caller = session.client('sts').get_caller_identity()
+        caller = session.client("sts").get_caller_identity()
         print_success(f"AWS Credentials verified! Account: {caller.get('Account')}")
-        buckets = session.client('s3').list_buckets()
+        buckets = session.client("s3").list_buckets()
         print_success(f"Successfully connected to S3. Account has {len(buckets.get('Buckets', []))} buckets.")
     except Exception as e:
         print_warning(f"Could not verify AWS/S3 connection. Details: {e}")
+
 
 def main():
     print(f"{BOLD}{BLUE}==============================================={RESET}")
@@ -152,11 +175,11 @@ def main():
 
     err1 = _check_python_version()
     imported_packages, err2 = _check_package_imports()
-    
+
     script_dir = os.path.dirname(os.path.abspath(__file__))
     fase2_dir = os.path.dirname(script_dir)
     env_vars, err3 = _validate_env_vars(fase2_dir, imported_packages)
-    
+
     _check_pytorch_device(imported_packages)
     _check_mlflow_server(env_vars)
     _check_aws_connectivity(imported_packages, env_vars)
@@ -166,10 +189,11 @@ def main():
         print(f"{BOLD}{RED}  ENV VALIDATION FAILED! Please resolve the errors.{RESET}")
         print(f"{BOLD}{BLUE}==============================================={RESET}")
         sys.exit(1)
-    
+
     print(f"{BOLD}{GREEN}  ENV VALIDATION SUCCESSFUL! Everything is ready.{RESET}")
     print(f"{BOLD}{BLUE}==============================================={RESET}")
     sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

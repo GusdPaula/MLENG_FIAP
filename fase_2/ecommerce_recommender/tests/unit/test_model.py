@@ -3,9 +3,7 @@ from src.recommender.models.ncf import NCFModel
 
 
 def test_ncf_forward_shape() -> None:
-    model = NCFModel(
-        num_users=100, num_items=50, embedding_dim=16, hidden_layers=[32, 16]
-    )
+    model = NCFModel(num_users=100, num_items=50, embedding_dim=16, hidden_layers=[32, 16])
     users = torch.randint(0, 100, (8,))
     items = torch.randint(0, 50, (8,))
 
@@ -15,9 +13,7 @@ def test_ncf_forward_shape() -> None:
 
 
 def test_ncf_output_range() -> None:
-    model = NCFModel(
-        num_users=100, num_items=50, embedding_dim=16, hidden_layers=[32, 16]
-    )
+    model = NCFModel(num_users=100, num_items=50, embedding_dim=16, hidden_layers=[32, 16])
     users = torch.randint(0, 100, (32,))
     items = torch.randint(0, 50, (32,))
 

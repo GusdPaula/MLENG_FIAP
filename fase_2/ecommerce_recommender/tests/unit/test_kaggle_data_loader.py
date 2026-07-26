@@ -21,14 +21,10 @@ def test_kaggle_data_loader_download_and_combine(tmp_path: Path) -> None:
     (fake_root / "category_tree.csv").write_text("category_id,parent_id\n")
     (fake_root / "events.csv").write_text("event_id,user_id\n")
 
-    fake_kagglehub = types.SimpleNamespace(
-        dataset_download=lambda dataset_name: str(fake_root)
-    )
+    fake_kagglehub = types.SimpleNamespace(dataset_download=lambda dataset_name: str(fake_root))
     sys.modules["kagglehub"] = fake_kagglehub
 
-    module_path = (
-        Path(__file__).resolve().parents[2] / "data_pipeline" / "kaggle_data_loader.py"
-    )
+    module_path = Path(__file__).resolve().parents[2] / "data_pipeline" / "kaggle_data_loader.py"
     loader_module = load_module_from_path("kaggle_data_loader", module_path)
 
     loader = loader_module.KaggleDataLoader()
@@ -50,9 +46,7 @@ def test_kaggle_data_loader_collect_files(tmp_path: Path) -> None:
     (fake_root / "events.csv").write_text("event_id,user_id\n")
     (fake_root / "item_properties.csv").write_text("item_id,item_property\n1,A\n")
 
-    module_path = (
-        Path(__file__).resolve().parents[2] / "data_pipeline" / "kaggle_data_loader.py"
-    )
+    module_path = Path(__file__).resolve().parents[2] / "data_pipeline" / "kaggle_data_loader.py"
     loader_module = load_module_from_path("kaggle_data_loader_for_collect", module_path)
     loader = loader_module.KaggleDataLoader()
 

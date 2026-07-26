@@ -36,9 +36,7 @@ class DataProcessor(ABC):
     name: str = "abstract"
 
     @abstractmethod
-    def process(
-        self, events: pd.DataFrame, **kwargs: Any
-    ) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
+    def process(self, events: pd.DataFrame, **kwargs: Any) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
         """Process events into interactions with user/item mappings.
 
         Args:
@@ -68,9 +66,7 @@ class DataProcessor(ABC):
         return user2idx, item2idx
 
     @staticmethod
-    def _filter_by_min_interactions(
-        df: pd.DataFrame, min_interactions: int
-    ) -> pd.DataFrame:
+    def _filter_by_min_interactions(df: pd.DataFrame, min_interactions: int) -> pd.DataFrame:
         """Filter DataFrame to keep only users/items with minimum interactions.
 
         Args:
@@ -83,10 +79,7 @@ class DataProcessor(ABC):
         if min_interactions > 1:
             user_counts = df["visitorid"].value_counts()
             item_counts = df["itemid"].value_counts()
-            df = df[
-                df["visitorid"].isin(user_counts[user_counts >= min_interactions].index)
-                & df["itemid"].isin(item_counts[item_counts >= min_interactions].index)
-            ]
+            df = df[df["visitorid"].isin(user_counts[user_counts >= min_interactions].index) & df["itemid"].isin(item_counts[item_counts >= min_interactions].index)]
         return df
 
     @staticmethod
@@ -133,9 +126,7 @@ class WeightedEventProcessor(DataProcessor):
         """
         self.weights = weights or self.DEFAULT_WEIGHTS
 
-    def process(
-        self, events: pd.DataFrame, min_interactions: int = 1, **_: Any
-    ) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
+    def process(self, events: pd.DataFrame, min_interactions: int = 1, **_: Any) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
         """Process events with weighted event types.
 
         Args:
@@ -173,9 +164,7 @@ class BinaryInteractionProcessor(DataProcessor):
         """
         self.positive_events = positive_events or self.POSITIVE_EVENTS
 
-    def process(
-        self, events: pd.DataFrame, min_interactions: int = 1, **_: Any
-    ) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
+    def process(self, events: pd.DataFrame, min_interactions: int = 1, **_: Any) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
         """Process events keeping only positive events.
 
         Args:
@@ -199,9 +188,7 @@ class ImplicitFeedbackProcessor(DataProcessor):
 
     name = "implicit"
 
-    def process(
-        self, events: pd.DataFrame, min_interactions: int = 1, **_: Any
-    ) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
+    def process(self, events: pd.DataFrame, min_interactions: int = 1, **_: Any) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
         """Process events treating all events as positive (implicit feedback).
 
         Args:
@@ -236,9 +223,7 @@ class DataProcessorContext:
         )
     }
 
-    def __init__(
-        self, strategy: str | DataProcessor = "weighted", **strategy_kwargs: Any
-    ) -> None:
+    def __init__(self, strategy: str | DataProcessor = "weighted", **strategy_kwargs: Any) -> None:
         """Initialize the data processor context with a strategy.
 
         Args:
@@ -254,19 +239,14 @@ class DataProcessorContext:
             self._strategy = self._STRATEGIES[strategy](**strategy_kwargs)
         else:
             available = ", ".join(sorted(self._STRATEGIES)) or "<empty>"
-            raise ValueError(
-                f"Unknown data processor strategy '{strategy}'. "
-                f"Available strategies: {available}."
-            )
+            raise ValueError(f"Unknown data processor strategy '{strategy}'. Available strategies: {available}.")
 
     @property
     def strategy_name(self) -> str:
         """Return the name of the current strategy."""
         return self._strategy.name
 
-    def process(
-        self, events: pd.DataFrame, **kwargs: Any
-    ) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
+    def process(self, events: pd.DataFrame, **kwargs: Any) -> tuple[pd.DataFrame, dict[int, int], dict[int, int]]:
         """Process events using the configured strategy.
 
         Args:

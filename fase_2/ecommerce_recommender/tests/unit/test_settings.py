@@ -35,12 +35,7 @@ def test_settings_from_env(monkeypatch, tmp_path):
 def test_settings_from_env_file(tmp_path):
     """Settings should load from a .env file."""
     env_file = tmp_path / ".env"
-    env_file.write_text(
-        "MLFLOW_TRACKING_URI=http://localhost:5000\n"
-        "AWS_DEFAULT_REGION=ap-southeast-1\n"
-        "AWS_REGION=ap-southeast-1\n"
-        "AWS_PROFILE=dev\n"
-    )
+    env_file.write_text("MLFLOW_TRACKING_URI=http://localhost:5000\nAWS_DEFAULT_REGION=ap-southeast-1\nAWS_REGION=ap-southeast-1\nAWS_PROFILE=dev\n")
 
     settings = Settings(_env_file=str(env_file))
     assert settings.mlflow_tracking_uri == "http://localhost:5000"
@@ -51,13 +46,7 @@ def test_settings_from_env_file(tmp_path):
 def test_settings_extra_fields_ignored(tmp_path):
     """Settings should ignore extra env vars not defined in the model."""
     env_file = tmp_path / ".env"
-    env_file.write_text(
-        "MLFLOW_TRACKING_URI=http://localhost:5000\n"
-        "AWS_DEFAULT_REGION=us-east-1\n"
-        "AWS_REGION=us-east-1\n"
-        "AWS_PROFILE=aws\n"
-        "SOME_RANDOM_VAR=should_be_ignored\n"
-    )
+    env_file.write_text("MLFLOW_TRACKING_URI=http://localhost:5000\nAWS_DEFAULT_REGION=us-east-1\nAWS_REGION=us-east-1\nAWS_PROFILE=aws\nSOME_RANDOM_VAR=should_be_ignored\n")
 
     settings = Settings(_env_file=str(env_file))
     assert not hasattr(settings, "some_random_var")

@@ -90,6 +90,7 @@ def test_collect_batch() -> None:
     events = pd.DataFrame({"user_idx": [0, 1], "item_idx": [0, 1]})
     dataset = RecommenderDataset(events, num_items=3, num_negatives=1)
     from src.recommender.data.dataset import _collect_batch
+
     users, items, labels = _collect_batch(dataset, 0, 2)
     assert users.shape == (2,)
     assert items.shape == (2,)
@@ -108,9 +109,7 @@ def test_append_negatives() -> None:
 
 
 def test_build_batch_tensors() -> None:
-    users, items, labels = RecommenderDataset._build_batch_tensors(
-        [0, 1], [1, 2], [1.0, 0.0]
-    )
+    users, items, labels = RecommenderDataset._build_batch_tensors([0, 1], [1, 2], [1.0, 0.0])
     assert isinstance(users, torch.Tensor)
     assert isinstance(items, torch.Tensor)
     assert isinstance(labels, torch.Tensor)
@@ -140,4 +139,3 @@ def test_getitem_streaming() -> None:
     u_neg, i_neg, l_neg = dataset._getitem_streaming(1)
     assert u_neg == 0
     assert l_neg == 0.0
-

@@ -84,8 +84,11 @@ def compute_baseline_ranking_metrics(
 
 
 def _compute_user_baseline_ranking(
-    predict_fn: Callable, user_idx: int, true_items: list[int],
-    num_items: int, k: int,
+    predict_fn: Callable,
+    user_idx: int,
+    true_items: list[int],
+    num_items: int,
+    k: int,
 ) -> dict[str, float]:
     """Compute ranking metrics for a single user using a baseline predict function."""
     user_arr = np.full(num_items, user_idx, dtype=np.int64)
@@ -108,9 +111,12 @@ def _compute_user_baseline_ranking(
     ndcg = dcg / ideal_dcg if ideal_dcg > 0 else 0.0
 
     return {
-        "hits": user_hits, "total": len(true_items),
-        "precision": user_hits / k, "recall": user_hits / len(true_items),
-        "rr": rr, "ndcg": ndcg,
+        "hits": user_hits,
+        "total": len(true_items),
+        "precision": user_hits / k,
+        "recall": user_hits / len(true_items),
+        "rr": rr,
+        "ndcg": ndcg,
     }
 
 
@@ -138,12 +144,8 @@ class EvaluationPipeline:
         user2idx_path = processed_dir / "user2idx.json"
         item2idx_path = processed_dir / "item2idx.json"
 
-        if not all(
-            p.exists() for p in [interactions_path, user2idx_path, item2idx_path]
-        ):
-            raise FileNotFoundError(
-                f"Processed data not found in {processed_dir}. Run preprocessing first."
-            )
+        if not all(p.exists() for p in [interactions_path, user2idx_path, item2idx_path]):
+            raise FileNotFoundError(f"Processed data not found in {processed_dir}. Run preprocessing first.")
 
         interactions = pd.read_csv(interactions_path)
         with open(user2idx_path) as f:
@@ -155,9 +157,7 @@ class EvaluationPipeline:
 
     def _create_dataset(self, interactions, num_items):
         """Create dataset with negative sampling."""
-        dataset = RecommenderDataset(
-            interactions, num_items, num_negatives=self.cfg["num_negatives"]
-        )
+        dataset = RecommenderDataset(interactions, num_items, num_negatives=self.cfg["num_negatives"])
         train_size = int(0.8 * len(dataset))
         val_size = len(dataset) - train_size
         train_dataset, val_dataset = random_split(
@@ -181,12 +181,8 @@ class EvaluationPipeline:
 
         # Use hyperparameters from checkpoint if available, otherwise from config
         hyperparams = checkpoint.get("config", {}).get("hyperparams", {})
-        embedding_dim = hyperparams.get(
-            "embedding_dim", self.cfg.get("embedding_dim", 64)
-        )
-        hidden_dims = hyperparams.get(
-            "hidden_dims", self.cfg.get("hidden_dims", [128, 64])
-        )
+        embedding_dim = hyperparams.get("embedding_dim", self.cfg.get("embedding_dim", 64))
+        hidden_dims = hyperparams.get("hidden_dims", self.cfg.get("hidden_dims", [128, 64]))
         dropout = hyperparams.get("dropout", self.cfg.get("dropout", 0.2))
 
         model = ModelFactory.create(
@@ -215,9 +211,7 @@ class EvaluationPipeline:
         )
 
         trainer = Trainer(model, self.cfg, device=self.device)
-        pytorch_eval = trainer.evaluate(
-            val_loader, metrics=("auc_roc", "avg_precision")
-        )
+        pytorch_eval = trainer.evaluate(val_loader, metrics=("auc_roc", "avg_precision"))
 
         pytorch_ranking = compute_ranking_metrics(
             model=model,
@@ -253,15 +247,20 @@ class EvaluationPipeline:
             self._log_baseline_datasets(mlflow_toolkit, train_samples, val_samples)
 
             pop_recommender, training_latency = self._train_and_measure_popularity(train_samples)
-            pop_preds = pop_recommender.predict(
-                val_samples[:, 0].astype(np.int64), val_samples[:, 1].astype(np.int64)
-            )
+            pop_preds = pop_recommender.predict(val_samples[:, 0].astype(np.int64), val_samples[:, 1].astype(np.int64))
 
             from sklearn.metrics import average_precision_score, roc_auc_score
+
             pop_auc = float(roc_auc_score(val_samples[:, 2], pop_preds))
             pop_ap = float(average_precision_score(val_samples[:, 2], pop_preds))
 
-            mlflow_toolkit.log_metrics({"final_auc_roc": pop_auc, "final_avg_precision": pop_ap, "training_latency": training_latency})
+            mlflow_toolkit.log_metrics(
+                {
+                    "final_auc_roc": pop_auc,
+                    "final_avg_precision": pop_ap,
+                    "training_latency": training_latency,
+                }
+            )
             mlflow_toolkit.log_sklearn_model(model=pop_recommender, name="popularity_baseline")
 
         return pop_recommender, pop_auc, pop_ap, training_latency
@@ -270,6 +269,7 @@ class EvaluationPipeline:
     def _create_mlflow_toolkit() -> MLflowToolkit:
         """Create MLflowToolkit from config file."""
         import os
+
         mlflow_config_path = Path("configs/mlflow.yaml")
         mlflow_cfg = {}
         if mlflow_config_path.exists():
@@ -290,10 +290,13 @@ class EvaluationPipeline:
     def _train_and_measure_popularity(train_samples):
         """Train PopularityRecommender and return model + training latency."""
         import time
-        train_pos_df = pd.DataFrame({
-            "user_idx": train_samples[:, 0][train_samples[:, 2] == 1.0].astype(np.int64),
-            "item_idx": train_samples[:, 1][train_samples[:, 2] == 1.0].astype(np.int64),
-        })
+
+        train_pos_df = pd.DataFrame(
+            {
+                "user_idx": train_samples[:, 0][train_samples[:, 2] == 1.0].astype(np.int64),
+                "item_idx": train_samples[:, 1][train_samples[:, 2] == 1.0].astype(np.int64),
+            }
+        )
         start = time.time()
         pop_recommender = PopularityRecommender()
         pop_recommender.fit(train_pos_df)
@@ -308,18 +311,21 @@ class EvaluationPipeline:
             mlflow_toolkit.log_params({"model_type": "logistic_regression_baseline", "processor": "weighted"})
             self._log_baseline_datasets(mlflow_toolkit, train_samples, val_samples)
 
-            lr_recommender, training_latency = self._train_and_measure_logistic(
-                train_samples, num_users, num_items
-            )
-            lr_preds = lr_recommender.predict(
-                val_samples[:, 0].astype(np.int64), val_samples[:, 1].astype(np.int64)
-            )
+            lr_recommender, training_latency = self._train_and_measure_logistic(train_samples, num_users, num_items)
+            lr_preds = lr_recommender.predict(val_samples[:, 0].astype(np.int64), val_samples[:, 1].astype(np.int64))
 
             from sklearn.metrics import average_precision_score, roc_auc_score
+
             lr_auc = float(roc_auc_score(val_samples[:, 2], lr_preds))
             lr_ap = float(average_precision_score(val_samples[:, 2], lr_preds))
 
-            mlflow_toolkit.log_metrics({"final_auc_roc": lr_auc, "final_avg_precision": lr_ap, "training_latency": training_latency})
+            mlflow_toolkit.log_metrics(
+                {
+                    "final_auc_roc": lr_auc,
+                    "final_avg_precision": lr_ap,
+                    "training_latency": training_latency,
+                }
+            )
             mlflow_toolkit.log_sklearn_model(model=lr_recommender, name="logistic_regression_baseline")
 
         return lr_recommender, lr_auc, lr_ap, training_latency
@@ -328,6 +334,7 @@ class EvaluationPipeline:
     def _train_and_measure_logistic(train_samples, num_users, num_items):
         """Train LogisticRegressionRecommender and return model + latency."""
         import time
+
         start = time.time()
         lr_recommender = LogisticRegressionRecommender(num_users, num_items)
         lr_recommender.fit(
@@ -337,16 +344,10 @@ class EvaluationPipeline:
         )
         return lr_recommender, time.time() - start
 
-    def _compute_baseline_rankings(
-        self, pop_recommender, lr_recommender, positive_only_val, num_items
-    ):
+    def _compute_baseline_rankings(self, pop_recommender, lr_recommender, positive_only_val, num_items):
         """Compute ranking metrics for baselines."""
-        pop_ranking = compute_baseline_ranking_metrics(
-            pop_recommender.predict, positive_only_val, num_items, k=10
-        )
-        lr_ranking = compute_baseline_ranking_metrics(
-            lr_recommender.predict, positive_only_val, num_items, k=10
-        )
+        pop_ranking = compute_baseline_ranking_metrics(pop_recommender.predict, positive_only_val, num_items, k=10)
+        lr_ranking = compute_baseline_ranking_metrics(lr_recommender.predict, positive_only_val, num_items, k=10)
         return pop_ranking, lr_ranking
 
     def _print_comparison_table(
@@ -362,10 +363,7 @@ class EvaluationPipeline:
         lr_latency,
     ):
         """Print comparison table with all models."""
-        header = (
-            f"{'Modelo':<30} | {'Loss':<8} | {'AUC-ROC':<8} | {'Avg Prec':<8} | "
-            f"{'HR@10':<8} | {'NDCG@10':<8} | {'Prec@10':<8} | {'Rec@10':<8} | {'MRR@10':<8} | {'TrainLat(s)':<10}"
-        )
+        header = f"{'Modelo':<30} | {'Loss':<8} | {'AUC-ROC':<8} | {'Avg Prec':<8} | {'HR@10':<8} | {'NDCG@10':<8} | {'Prec@10':<8} | {'Rec@10':<8} | {'MRR@10':<8} | {'TrainLat(s)':<10}"
         logger.info("\n" + "=" * 120)
         logger.info("TABELA COMPARATIVA (Conjunto de Validação)")
         logger.info("=" * 120)
@@ -375,23 +373,11 @@ class EvaluationPipeline:
         # Print all PyTorch models from MLflow
         for metrics in mlflow_model_metrics:
             model_label = f"{metrics['name']} ({metrics['type'].upper()})"
-            logger.info(
-                f"{model_label:<30} | {metrics['final_train_loss']:<8.4f} | {metrics['auc_roc']:<8.4f} | {metrics['avg_precision']:<8.4f} | "
-                f"{metrics['hit_rate_10']:<8.4f} | {metrics['ndcg_10']:<8.4f} | "
-                f"{metrics['precision_10']:<8.4f} | {metrics['recall_10']:<8.4f} | {metrics['mrr_10']:<8.4f} | {metrics['training_latency']:<10.2f}"
-            )
+            logger.info(f"{model_label:<30} | {metrics['final_train_loss']:<8.4f} | {metrics['auc_roc']:<8.4f} | {metrics['avg_precision']:<8.4f} | {metrics['hit_rate_10']:<8.4f} | {metrics['ndcg_10']:<8.4f} | {metrics['precision_10']:<8.4f} | {metrics['recall_10']:<8.4f} | {metrics['mrr_10']:<8.4f} | {metrics['training_latency']:<10.2f}")
 
         # Print baselines
-        logger.info(
-            f"{'Popularidade':<30} | {'N/A':<8} | {pop_auc:<8.4f} | {pop_ap:<8.4f} | "
-            f"{pop_ranking.hit_rate:<8.4f} | {pop_ranking.ndcg:<8.4f} | "
-            f"{pop_ranking.precision:<8.4f} | {pop_ranking.recall:<8.4f} | {pop_ranking.mrr:<8.4f} | {pop_latency:<10.4f}"
-        )
-        logger.info(
-            f"{'Regressão Logística':<30} | {'N/A':<8} | {lr_auc:<8.4f} | {lr_ap:<8.4f} | "
-            f"{lr_ranking.hit_rate:<8.4f} | {lr_ranking.ndcg:<8.4f} | "
-            f"{lr_ranking.precision:<8.4f} | {lr_ranking.recall:<8.4f} | {lr_ranking.mrr:<8.4f} | {lr_latency:<10.4f}"
-        )
+        logger.info(f"{'Popularidade':<30} | {'N/A':<8} | {pop_auc:<8.4f} | {pop_ap:<8.4f} | {pop_ranking.hit_rate:<8.4f} | {pop_ranking.ndcg:<8.4f} | {pop_ranking.precision:<8.4f} | {pop_ranking.recall:<8.4f} | {pop_ranking.mrr:<8.4f} | {pop_latency:<10.4f}")
+        logger.info(f"{'Regressão Logística':<30} | {'N/A':<8} | {lr_auc:<8.4f} | {lr_ap:<8.4f} | {lr_ranking.hit_rate:<8.4f} | {lr_ranking.ndcg:<8.4f} | {lr_ranking.precision:<8.4f} | {lr_ranking.recall:<8.4f} | {lr_ranking.mrr:<8.4f} | {lr_latency:<10.4f}")
         logger.info("=" * 120)
 
     def _save_metrics(
@@ -415,9 +401,7 @@ class EvaluationPipeline:
             "logistic_regression_auc_roc": lr_auc,
             "logistic_regression_avg_precision": lr_ap,
             "logistic_regression_training_latency": lr_latency,
-            **{
-                f"logistic_regression_{k}": v for k, v in lr_ranking.to_dict(10).items()
-            },
+            **{f"logistic_regression_{k}": v for k, v in lr_ranking.to_dict(10).items()},
         }
 
         # Add metrics for all PyTorch models from MLflow
@@ -441,9 +425,7 @@ class EvaluationPipeline:
             json.dump(metrics_dict, f, indent=4)
         logger.info("Metrics saved successfully to %s", metrics_path)
 
-    def _log_baselines_to_mlflow(
-        self, pop_auc, pop_ap, pop_ranking, lr_auc, lr_ap, lr_ranking
-    ):
+    def _log_baselines_to_mlflow(self, pop_auc, pop_ap, pop_ranking, lr_auc, lr_ap, lr_ranking):
         """Log baseline metrics to MLflow."""
         mlflow_config_path = Path("configs/mlflow.yaml")
         mlflow_cfg = {}
@@ -454,9 +436,7 @@ class EvaluationPipeline:
         try:
             mlflow_toolkit = MLflowToolkit(
                 tracking_uri=mlflow_cfg.get("tracking_uri"),
-                experiment_name=mlflow_cfg.get(
-                    "experiment_name", "ecommerce_recommender"
-                ),
+                experiment_name=mlflow_cfg.get("experiment_name", "ecommerce_recommender"),
                 registry_uri=mlflow_cfg.get("registry_uri"),
             )
             mlflow_toolkit.setup()
@@ -472,9 +452,7 @@ class EvaluationPipeline:
                 )
 
             with mlflow_toolkit.start_run(run_name="baseline-logistic-regression"):
-                mlflow_toolkit.log_params(
-                    {"model_type": "logistic_regression_baseline"}
-                )
+                mlflow_toolkit.log_params({"model_type": "logistic_regression_baseline"})
                 mlflow_toolkit.log_metrics(
                     {
                         "final_auc_roc": lr_auc,
@@ -513,6 +491,7 @@ class EvaluationPipeline:
                 mlflow_cfg = yaml.safe_load(f).get("mlflow", {})
 
         import mlflow
+
         mlflow.set_tracking_uri(mlflow_cfg.get("tracking_uri", "https://mlflow.asgardprint.com.br"))
         experiment_name = mlflow_cfg.get("experiment_name", "ecommerce_recommender_fiap_5")
         experiment = mlflow.get_experiment_by_name(experiment_name)
@@ -527,7 +506,8 @@ class EvaluationPipeline:
         run_duration_ms = run.get("duration", 0)
         run_duration_s = run_duration_ms / 1000.0 if run_duration_ms else 0.0
         metrics = {
-            "name": run_name, "type": model_type,
+            "name": run_name,
+            "type": model_type,
             "auc_roc": run.get("metrics.final_auc_roc", 0.0),
             "avg_precision": run.get("metrics.final_avg_precision", 0.0),
             "hit_rate_10": run.get("metrics.hit_rate_10", 0.0),
@@ -549,32 +529,18 @@ class EvaluationPipeline:
         num_users = len(user2idx)
         num_items = len(item2idx)
 
-        dataset, train_dataset, val_dataset = self._create_dataset(
-            interactions, num_items
-        )
+        dataset, train_dataset, val_dataset = self._create_dataset(interactions, num_items)
 
         # Extract metrics for all 9 trained models from MLflow
         mlflow_model_metrics = self._extract_mlflow_metrics()
 
-        train_samples, val_samples = self._extract_samples(
-            dataset, train_dataset, val_dataset
-        )
-        positive_only_val = val_samples[val_samples[:, 2] == 1.0][:, :2].astype(
-            np.int64
-        )[:1000]
+        train_samples, val_samples = self._extract_samples(dataset, train_dataset, val_dataset)
+        positive_only_val = val_samples[val_samples[:, 2] == 1.0][:, :2].astype(np.int64)[:1000]
 
-        pop_recommender, pop_auc, pop_ap, pop_latency = self._train_popularity_baseline(
-            train_samples, val_samples
-        )
-        lr_recommender, lr_auc, lr_ap, lr_latency = (
-            self._train_logistic_regression_baseline(
-                train_samples, val_samples, num_users, num_items
-            )
-        )
+        pop_recommender, pop_auc, pop_ap, pop_latency = self._train_popularity_baseline(train_samples, val_samples)
+        lr_recommender, lr_auc, lr_ap, lr_latency = self._train_logistic_regression_baseline(train_samples, val_samples, num_users, num_items)
 
-        pop_ranking, lr_ranking = self._compute_baseline_rankings(
-            pop_recommender, lr_recommender, positive_only_val, num_items
-        )
+        pop_ranking, lr_ranking = self._compute_baseline_rankings(pop_recommender, lr_recommender, positive_only_val, num_items)
 
         self._print_comparison_table(
             mlflow_model_metrics,

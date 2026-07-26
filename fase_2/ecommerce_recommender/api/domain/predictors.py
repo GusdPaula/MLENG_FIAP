@@ -51,9 +51,7 @@ class SingleUserPredictor(BasePredictor):
 
         if not request.item_ids:
             logger.error("No item_ids provided for single user prediction")
-            raise InvalidInputError(
-                "item_ids must be provided for single user prediction."
-            )
+            raise InvalidInputError("item_ids must be provided for single user prediction.")
 
         user_idx = self._get_user_idx(request.user_id)
 
@@ -80,16 +78,9 @@ class SingleUserPredictor(BasePredictor):
             item_tensor = torch.tensor(item_indices, dtype=torch.long)
             scores = self.model(user_tensor, item_tensor)
 
-        item_scores = {
-            item_id: float(score)
-            for item_id, score in zip(
-                request.item_ids, scores.squeeze().tolist(), strict=True
-            )
-        }
+        item_scores = {item_id: float(score) for item_id, score in zip(request.item_ids, scores.squeeze().tolist(), strict=True)}
 
-        logger.debug(
-            "Generated %d item scores for user %d", len(item_scores), request.user_id
-        )
+        logger.debug("Generated %d item scores for user %d", len(item_scores), request.user_id)
 
         return PredictionResponse(
             user_id=request.user_id,
@@ -97,9 +88,7 @@ class SingleUserPredictor(BasePredictor):
             metadata={"predictor": self.name, "model_type": self.model.model_name},
         )
 
-    def predict_batch(
-        self, requests: list[PredictionRequest]
-    ) -> list[PredictionResponse]:
+    def predict_batch(self, requests: list[PredictionRequest]) -> list[PredictionResponse]:
         """Generate predictions for multiple users sequentially.
 
         Args:
@@ -138,7 +127,8 @@ class TopKRecommendationPredictor(BasePredictor):
         """
         logger.info(
             "Generating predictions for user %d (k=%s, items=%d)",
-            request.user_id, request.k,
+            request.user_id,
+            request.k,
             len(request.item_ids) if request.item_ids else 0,
         )
 
@@ -149,9 +139,7 @@ class TopKRecommendationPredictor(BasePredictor):
         logger.error("Neither item_ids nor k provided for prediction")
         raise InvalidInputError("Either item_ids or k must be provided.")
 
-    def _predict_specific_items(
-        self, request: PredictionRequest
-    ) -> PredictionResponse:
+    def _predict_specific_items(self, request: PredictionRequest) -> PredictionResponse:
         """Score specific items for a user."""
         user_idx = self._get_user_idx(request.user_id)
 
@@ -170,23 +158,16 @@ class TopKRecommendationPredictor(BasePredictor):
             metadata={"predictor": self.name, "model_type": self.model.model_name},
         )
 
-    def _score_items_for_user(
-        self, user_idx: int, item_ids: list[int]
-    ) -> dict[int, float]:
+    def _score_items_for_user(self, user_idx: int, item_ids: list[int]) -> dict[int, float]:
         """Score a list of items for a single user."""
         item_indices = self._get_item_indices(item_ids)
         with torch.no_grad():
             user_tensor = torch.tensor([user_idx] * len(item_indices), dtype=torch.long)
             item_tensor = torch.tensor(item_indices, dtype=torch.long)
             scores = self.model(user_tensor, item_tensor)
-        return {
-            item_id: float(score)
-            for item_id, score in zip(item_ids, scores.squeeze().tolist(), strict=True)
-        }
+        return {item_id: float(score) for item_id, score in zip(item_ids, scores.squeeze().tolist(), strict=True)}
 
-    def predict_batch(
-        self, requests: list[PredictionRequest]
-    ) -> list[PredictionResponse]:
+    def predict_batch(self, requests: list[PredictionRequest]) -> list[PredictionResponse]:
         """Generate predictions for multiple users sequentially.
 
         Args:
@@ -213,9 +194,7 @@ class TopKRecommendationPredictor(BasePredictor):
             logger.error("Invalid k value: %s", request.k)
             raise InvalidInputError("k must be a positive integer.")
 
-        logger.info(
-            "Generating top-%d recommendations for user %d", request.k, request.user_id
-        )
+        logger.info("Generating top-%d recommendations for user %d", request.k, request.user_id)
 
         user_idx = self._get_user_idx(request.user_id)
         num_items = len(self.item2idx)
@@ -225,18 +204,12 @@ class TopKRecommendationPredictor(BasePredictor):
             item_tensor = torch.tensor(range(num_items), dtype=torch.long)
             scores = self.model(user_tensor, item_tensor)
 
-        item_scores = list(
-            zip(range(num_items), scores.squeeze().tolist(), strict=True)
-        )
+        item_scores = list(zip(range(num_items), scores.squeeze().tolist(), strict=True))
         item_scores.sort(key=lambda x: x[1], reverse=True)
 
-        top_k_scores = {
-            self.idx2item[idx]: score for idx, score in item_scores[: request.k]
-        }
+        top_k_scores = {self.idx2item[idx]: score for idx, score in item_scores[: request.k]}
 
-        logger.debug(
-            "Generated top-%d recommendations for user %d", request.k, request.user_id
-        )
+        logger.debug("Generated top-%d recommendations for user %d", request.k, request.user_id)
 
         return PredictionResponse(
             user_id=request.user_id,
@@ -278,9 +251,7 @@ class TopKRecommendationPredictor(BasePredictor):
             metadata={"predictor": self.name, "model_type": self.model.model_name, "k": k},
         )
 
-    def _cold_start_recommendations(
-        self, user_id: int, k: int
-    ) -> RecommendationResponse:
+    def _cold_start_recommendations(self, user_id: int, k: int) -> RecommendationResponse:
         """Return popular-item recommendations for unknown users."""
         logger.info("Using cold start fallback for user %d", user_id)
         popular_items = self._get_popular_items(k)
@@ -302,15 +273,10 @@ class TopKRecommendationPredictor(BasePredictor):
         item_scores.sort(key=lambda x: x[1], reverse=True)
         return item_scores
 
-    def _build_top_k_recommendations(
-        self, user_idx: int, k: int
-    ) -> list[tuple[int, float]]:
+    def _build_top_k_recommendations(self, user_idx: int, k: int) -> list[tuple[int, float]]:
         """Build top-k recommendation list with original item IDs."""
         item_scores = self._score_all_items(user_idx)
-        return [
-            (self.idx2item[idx], float(score))
-            for idx, score in item_scores[:k]
-        ]
+        return [(self.idx2item[idx], float(score)) for idx, score in item_scores[:k]]
 
 
 class BatchPredictor(BasePredictor):
@@ -355,23 +321,16 @@ class BatchPredictor(BasePredictor):
             metadata={"predictor": self.name, "model_type": self.model.model_name},
         )
 
-    def _score_items_for_user(
-        self, user_idx: int, item_ids: list[int]
-    ) -> dict[int, float]:
+    def _score_items_for_user(self, user_idx: int, item_ids: list[int]) -> dict[int, float]:
         """Score a list of items for a single user."""
         item_indices = self._get_item_indices(item_ids)
         with torch.no_grad():
             user_tensor = torch.tensor([user_idx] * len(item_indices), dtype=torch.long)
             item_tensor = torch.tensor(item_indices, dtype=torch.long)
             scores = self.model(user_tensor, item_tensor)
-        return {
-            item_id: float(score)
-            for item_id, score in zip(item_ids, scores.squeeze().tolist(), strict=True)
-        }
+        return {item_id: float(score) for item_id, score in zip(item_ids, scores.squeeze().tolist(), strict=True)}
 
-    def predict_batch(
-        self, requests: list[PredictionRequest]
-    ) -> list[PredictionResponse]:
+    def predict_batch(self, requests: list[PredictionRequest]) -> list[PredictionResponse]:
         """Generate predictions for multiple users in a single batch.
 
         This method optimizes performance by batching all user-item pairs together.
@@ -397,15 +356,11 @@ class BatchPredictor(BasePredictor):
             item_tensor = torch.tensor(item_indices, dtype=torch.long)
             scores = self.model(user_tensor, item_tensor)
 
-        responses = self._distribute_scores_to_responses(
-            requests, scores.squeeze().tolist(), request_indices
-        )
+        responses = self._distribute_scores_to_responses(requests, scores.squeeze().tolist(), request_indices)
         logger.info("Completed batch predictions for %d users", len(responses))
         return responses
 
-    def _collect_batch_pairs(
-        self, requests: list[PredictionRequest]
-    ) -> tuple[list[int], list[int], list[int]]:
+    def _collect_batch_pairs(self, requests: list[PredictionRequest]) -> tuple[list[int], list[int], list[int]]:
         """Collect all user-item pairs from batch requests."""
         user_indices = []
         item_indices = []
@@ -434,10 +389,7 @@ class BatchPredictor(BasePredictor):
             start_idx = request_indices.index(req_idx)
             end_idx = len(request_indices) - request_indices[::-1].index(req_idx)
             req_scores = scores_list[start_idx:end_idx]
-            item_scores = {
-                item_id: float(score)
-                for item_id, score in zip(request.item_ids, req_scores, strict=True)
-            }
+            item_scores = {item_id: float(score) for item_id, score in zip(request.item_ids, req_scores, strict=True)}
             responses[req_idx] = PredictionResponse(
                 user_id=request.user_id,
                 item_scores=item_scores,

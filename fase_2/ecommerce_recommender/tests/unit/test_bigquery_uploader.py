@@ -57,12 +57,10 @@ def test_bigquery_uploader_upload_csv(tmp_path: Path) -> None:
 
     bigquery_module.Client = DummyClient
     bigquery_module.Dataset = fake_dataset
-    bigquery_module.LoadJobConfig = (
-        lambda autodetect, skip_leading_rows, source_format: types.SimpleNamespace(
-            autodetect=autodetect,
-            skip_leading_rows=skip_leading_rows,
-            source_format=source_format,
-        )
+    bigquery_module.LoadJobConfig = lambda autodetect, skip_leading_rows, source_format: types.SimpleNamespace(
+        autodetect=autodetect,
+        skip_leading_rows=skip_leading_rows,
+        source_format=source_format,
     )
     bigquery_module.SourceFormat = types.SimpleNamespace(CSV="CSV")
 
@@ -74,17 +72,13 @@ def test_bigquery_uploader_upload_csv(tmp_path: Path) -> None:
     sys.modules["google.cloud"] = cloud_module
     sys.modules["google.cloud.bigquery"] = bigquery_module
 
-    module_path = (
-        Path(__file__).resolve().parents[2] / "data_pipeline" / "bigquery_uploader.py"
-    )
+    module_path = Path(__file__).resolve().parents[2] / "data_pipeline" / "bigquery_uploader.py"
     uploader_module = load_module_from_path("bigquery_uploader", module_path)
 
     source_file = tmp_path / "events.csv"
     source_file.write_text("event_id,user_id\n1,100\n")
 
-    uploader = uploader_module.BigQueryUploader(
-        project_id="test-project", dataset_id="test_dataset"
-    )
+    uploader = uploader_module.BigQueryUploader(project_id="test-project", dataset_id="test_dataset")
     tables = uploader.upload_files({"events": source_file})
 
     assert "events" in tables
@@ -100,12 +94,10 @@ def test_bigquery_uploader_missing_file(tmp_path: Path) -> None:
 
     bigquery_module.Client = DummyClient
     bigquery_module.Dataset = lambda reference: types.SimpleNamespace(location=None)
-    bigquery_module.LoadJobConfig = (
-        lambda autodetect, skip_leading_rows, source_format: types.SimpleNamespace(
-            autodetect=autodetect,
-            skip_leading_rows=skip_leading_rows,
-            source_format=source_format,
-        )
+    bigquery_module.LoadJobConfig = lambda autodetect, skip_leading_rows, source_format: types.SimpleNamespace(
+        autodetect=autodetect,
+        skip_leading_rows=skip_leading_rows,
+        source_format=source_format,
     )
     bigquery_module.SourceFormat = types.SimpleNamespace(CSV="CSV")
 
@@ -117,14 +109,10 @@ def test_bigquery_uploader_missing_file(tmp_path: Path) -> None:
     sys.modules["google.cloud"] = cloud_module
     sys.modules["google.cloud.bigquery"] = bigquery_module
 
-    module_path = (
-        Path(__file__).resolve().parents[2] / "data_pipeline" / "bigquery_uploader.py"
-    )
+    module_path = Path(__file__).resolve().parents[2] / "data_pipeline" / "bigquery_uploader.py"
     uploader_module = load_module_from_path("bigquery_uploader_missing", module_path)
 
-    uploader = uploader_module.BigQueryUploader(
-        project_id="test-project", dataset_id="test_dataset"
-    )
+    uploader = uploader_module.BigQueryUploader(project_id="test-project", dataset_id="test_dataset")
 
     missing_path = tmp_path / "missing.csv"
     try:
