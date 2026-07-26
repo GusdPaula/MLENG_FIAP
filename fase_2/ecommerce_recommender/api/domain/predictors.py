@@ -78,7 +78,7 @@ class SingleUserPredictor(BasePredictor):
             item_tensor = torch.tensor(item_indices, dtype=torch.long)
             scores = self.model(user_tensor, item_tensor)
 
-        item_scores = {item_id: float(score) for item_id, score in zip(request.item_ids, scores.squeeze().tolist(), strict=True)}
+        item_scores = {item_id: float(score) for item_id, score in zip(request.item_ids, scores.view(-1).tolist(), strict=True)}
 
         logger.debug("Generated %d item scores for user %d", len(item_scores), request.user_id)
 
@@ -165,7 +165,7 @@ class TopKRecommendationPredictor(BasePredictor):
             user_tensor = torch.tensor([user_idx] * len(item_indices), dtype=torch.long)
             item_tensor = torch.tensor(item_indices, dtype=torch.long)
             scores = self.model(user_tensor, item_tensor)
-        return {item_id: float(score) for item_id, score in zip(item_ids, scores.squeeze().tolist(), strict=True)}
+        return {item_id: float(score) for item_id, score in zip(item_ids, scores.view(-1).tolist(), strict=True)}
 
     def predict_batch(self, requests: list[PredictionRequest]) -> list[PredictionResponse]:
         """Generate predictions for multiple users sequentially.
@@ -204,7 +204,7 @@ class TopKRecommendationPredictor(BasePredictor):
             item_tensor = torch.tensor(range(num_items), dtype=torch.long)
             scores = self.model(user_tensor, item_tensor)
 
-        item_scores = list(zip(range(num_items), scores.squeeze().tolist(), strict=True))
+        item_scores = list(zip(range(num_items), scores.view(-1).tolist(), strict=True))
         item_scores.sort(key=lambda x: x[1], reverse=True)
 
         top_k_scores = {self.idx2item[idx]: score for idx, score in item_scores[: request.k]}
@@ -269,7 +269,7 @@ class TopKRecommendationPredictor(BasePredictor):
             user_tensor = torch.tensor([user_idx] * num_items, dtype=torch.long)
             item_tensor = torch.tensor(range(num_items), dtype=torch.long)
             scores = self.model(user_tensor, item_tensor)
-        item_scores = list(zip(range(num_items), scores.squeeze().tolist(), strict=True))
+        item_scores = list(zip(range(num_items), scores.view(-1).tolist(), strict=True))
         item_scores.sort(key=lambda x: x[1], reverse=True)
         return item_scores
 
@@ -328,7 +328,7 @@ class BatchPredictor(BasePredictor):
             user_tensor = torch.tensor([user_idx] * len(item_indices), dtype=torch.long)
             item_tensor = torch.tensor(item_indices, dtype=torch.long)
             scores = self.model(user_tensor, item_tensor)
-        return {item_id: float(score) for item_id, score in zip(item_ids, scores.squeeze().tolist(), strict=True)}
+        return {item_id: float(score) for item_id, score in zip(item_ids, scores.view(-1).tolist(), strict=True)}
 
     def predict_batch(self, requests: list[PredictionRequest]) -> list[PredictionResponse]:
         """Generate predictions for multiple users in a single batch.
@@ -356,7 +356,7 @@ class BatchPredictor(BasePredictor):
             item_tensor = torch.tensor(item_indices, dtype=torch.long)
             scores = self.model(user_tensor, item_tensor)
 
-        responses = self._distribute_scores_to_responses(requests, scores.squeeze().tolist(), request_indices)
+        responses = self._distribute_scores_to_responses(requests, scores.view(-1).tolist(), request_indices)
         logger.info("Completed batch predictions for %d users", len(responses))
         return responses
 

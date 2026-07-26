@@ -151,6 +151,17 @@ class TestModelInfoEndpoint:
         response = client.get("/model/info")
         assert response.status_code == 401
 
+    def test_model_info_service_not_initialized(self, client):
+        with patch("api.controllers.routes.prediction_service", None):
+            response = client.get("/model/info", headers={"X-API-Key": "default-api-key-change-in-production"})
+            assert response.status_code == 503
+
+    def test_model_info_exception(self, client, mock_prediction_service):
+        mock_prediction_service.get_model_info.side_effect = Exception("Crash")
+        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+            response = client.get("/model/info", headers={"X-API-Key": "default-api-key-change-in-production"})
+            assert response.status_code == 500
+
 
 class TestModelInfoEndpointRealAPI:
     """Real integration tests for /model/info endpoint against running API."""
@@ -198,16 +209,34 @@ class TestPredictEndpoint:
             assert "item_scores" in data
 
     def test_predict_invalid_request(self, client, mock_prediction_service):
-        """Test prediction with invalid request (negative k)."""
-        # Note: TestClient validation behavior differs from real HTTP client
-        # This test is skipped due to TestClient limitations
-        pass
+        """Test prediction with invalid request raising InvalidInputError."""
+        from api.exceptions import InvalidInputError
+
+        mock_prediction_service.predict.side_effect = InvalidInputError("Invalid item_ids")
+
+        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+            response = client.post(
+                "/predict",
+                headers={"X-API-Key": "default-api-key-change-in-production"},
+                json={"user_id": 123, "item_ids": []},
+            )
+            assert response.status_code == 400
+            data = response.json()
+            assert "detail" in data
+            assert "Invalid item_ids" in data["detail"]
 
     def test_predict_missing_api_key(self, client):
         """Test prediction without API key."""
-        # Note: TestClient may not enforce API key dependency properly
-        # This test is skipped due to TestClient limitations
-        pass
+        response = client.post(
+            "/predict",
+            json={"user_id": 123, "item_ids": [1]},
+        )
+        assert response.status_code == 401
+
+    def test_predict_service_not_initialized(self, client):
+        with patch("api.controllers.routes.prediction_service", None):
+            response = client.post("/predict", headers={"X-API-Key": "default-api-key-change-in-production"}, json={"user_id": 1, "item_ids": [2]})
+            assert response.status_code == 500
 
 
 class TestPredictEndpointRealAPI:
@@ -317,6 +346,25 @@ class TestBatchPredictEndpoint:
             assert "predictions" in data
             assert len(data["predictions"]) == 2
 
+    def test_batch_predict_service_not_initialized(self, client):
+        with patch("api.controllers.routes.prediction_service", None):
+            response = client.post("/predict/batch", headers={"X-API-Key": "default-api-key-change-in-production"}, json={"user_item_pairs": [[1, [2]]]})
+            assert response.status_code == 503
+
+    def test_batch_predict_invalid_input(self, client, mock_prediction_service):
+        from api.exceptions import InvalidInputError
+
+        mock_prediction_service.predict_batch.side_effect = InvalidInputError("Bad")
+        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+            response = client.post("/predict/batch", headers={"X-API-Key": "default-api-key-change-in-production"}, json={"user_item_pairs": [[1, [2]]]})
+            assert response.status_code == 400
+
+    def test_batch_predict_exception(self, client, mock_prediction_service):
+        mock_prediction_service.predict_batch.side_effect = Exception("Fail")
+        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+            response = client.post("/predict/batch", headers={"X-API-Key": "default-api-key-change-in-production"}, json={"user_item_pairs": [[1, [2]]]})
+            assert response.status_code == 500
+
 
 class TestBatchPredictEndpointRealAPI:
     """Real integration tests for /predict/batch endpoint against running API."""
@@ -368,11 +416,24 @@ class TestRecommendEndpoint:
             assert data["user_id"] == 123
             assert "recommendations" in data
 
-    def test_recommend_missing_api_key(self, client):
-        """Test recommendation without API key."""
-        # Note: TestClient may not enforce API key dependency properly
-        # This test is skipped due to TestClient limitations
-        pass
+    def test_recommend_service_not_initialized(self, client):
+        with patch("api.controllers.routes.prediction_service", None):
+            response = client.get("/recommend/123?k=10", headers={"X-API-Key": "default-api-key-change-in-production"})
+            assert response.status_code == 503
+
+    def test_recommend_invalid_input(self, client, mock_prediction_service):
+        from api.exceptions import InvalidInputError
+
+        mock_prediction_service.recommend.side_effect = InvalidInputError("Bad")
+        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+            response = client.get("/recommend/123?k=10", headers={"X-API-Key": "default-api-key-change-in-production"})
+            assert response.status_code == 400
+
+    def test_recommend_exception(self, client, mock_prediction_service):
+        mock_prediction_service.recommend.side_effect = Exception("Fail")
+        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+            response = client.get("/recommend/123?k=10", headers={"X-API-Key": "default-api-key-change-in-production"})
+            assert response.status_code == 500
 
 
 class TestRecommendEndpointRealAPI:
@@ -428,6 +489,23 @@ class TestMonitoringEndpoints:
             data = response.json()
             assert "status" in data
 
+    def test_set_baselines_service_not_initialized(self, client):
+        with patch("api.controllers.routes.prediction_service", None):
+            response = client.post("/monitoring/baselines", headers={"X-API-Key": "default-api-key-change-in-production"})
+            assert response.status_code == 503
+
+    def test_set_baselines_runtime_error(self, client, mock_prediction_service):
+        mock_prediction_service.set_monitoring_baselines.side_effect = RuntimeError("Err")
+        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+            response = client.post("/monitoring/baselines", headers={"X-API-Key": "default-api-key-change-in-production"})
+            assert response.status_code == 400
+
+    def test_set_baselines_exception(self, client, mock_prediction_service):
+        mock_prediction_service.set_monitoring_baselines.side_effect = Exception("Fail")
+        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+            response = client.post("/monitoring/baselines", headers={"X-API-Key": "default-api-key-change-in-production"})
+            assert response.status_code == 500
+
     def test_check_shifts(self, client, mock_prediction_service):
         """Test checking for data/model shifts."""
         from api.services.monitoring_service import ShiftDetectionResult
@@ -461,6 +539,23 @@ class TestMonitoringEndpoints:
             assert "data_shift" in data
             assert "model_drift" in data
 
+    def test_check_shifts_service_not_initialized(self, client):
+        with patch("api.controllers.routes.prediction_service", None):
+            response = client.get("/monitoring/check", headers={"X-API-Key": "default-api-key-change-in-production"})
+            assert response.status_code == 503
+
+    def test_check_shifts_runtime_error(self, client, mock_prediction_service):
+        mock_prediction_service.check_shifts.side_effect = RuntimeError("Err")
+        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+            response = client.get("/monitoring/check", headers={"X-API-Key": "default-api-key-change-in-production"})
+            assert response.status_code == 400
+
+    def test_check_shifts_exception(self, client, mock_prediction_service):
+        mock_prediction_service.check_shifts.side_effect = Exception("Fail")
+        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+            response = client.get("/monitoring/check", headers={"X-API-Key": "default-api-key-change-in-production"})
+            assert response.status_code == 500
+
     def test_monitoring_summary(self, client, mock_prediction_service):
         """Test getting monitoring summary."""
         mock_prediction_service.get_monitoring_summary.return_value = {
@@ -476,6 +571,23 @@ class TestMonitoringEndpoints:
             assert response.status_code == 200
             data = response.json()
             assert "performance_stats" in data
+
+    def test_monitoring_summary_service_not_initialized(self, client):
+        with patch("api.controllers.routes.prediction_service", None):
+            response = client.get("/monitoring/summary", headers={"X-API-Key": "default-api-key-change-in-production"})
+            assert response.status_code == 503
+
+    def test_monitoring_summary_runtime_error(self, client, mock_prediction_service):
+        mock_prediction_service.get_monitoring_summary.side_effect = RuntimeError("Err")
+        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+            response = client.get("/monitoring/summary", headers={"X-API-Key": "default-api-key-change-in-production"})
+            assert response.status_code == 400
+
+    def test_monitoring_summary_exception(self, client, mock_prediction_service):
+        mock_prediction_service.get_monitoring_summary.side_effect = Exception("Fail")
+        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+            response = client.get("/monitoring/summary", headers={"X-API-Key": "default-api-key-change-in-production"})
+            assert response.status_code == 500
 
 
 class TestMonitoringEndpointsRealAPI:
@@ -628,6 +740,46 @@ class TestErrorHandling:
                 json={"user_id": 123, "item_ids": [1, 2, 3]},
             )
             assert response.status_code == 500
+
+    def test_predictor_not_found_error_handling(self, client, mock_prediction_service):
+        from api.exceptions import PredictorNotFoundError
+
+        mock_prediction_service.predict.side_effect = PredictorNotFoundError("Predictor missing")
+
+        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+            response = client.post(
+                "/predict",
+                headers={"X-API-Key": "default-api-key-change-in-production"},
+                json={"user_id": 123, "item_ids": [1, 2, 3]},
+            )
+            assert response.status_code == 500
+            assert "Predictor missing" in response.json()["detail"]
+
+    def test_generic_prediction_error_handling(self, client, mock_prediction_service):
+        from api.exceptions import PredictionError
+
+        mock_prediction_service.predict.side_effect = PredictionError("Generic fail")
+
+        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+            response = client.post(
+                "/predict",
+                headers={"X-API-Key": "default-api-key-change-in-production"},
+                json={"user_id": 123, "item_ids": [1, 2, 3]},
+            )
+            assert response.status_code == 500
+            assert "Generic fail" in response.json()["detail"]
+
+    def test_unhandled_exception_handling(self, client, mock_prediction_service):
+        mock_prediction_service.predict.side_effect = Exception("System error")
+
+        with patch("api.controllers.routes.prediction_service", mock_prediction_service):
+            response = client.post(
+                "/predict",
+                headers={"X-API-Key": "default-api-key-change-in-production"},
+                json={"user_id": 123, "item_ids": [1, 2, 3]},
+            )
+            assert response.status_code == 500
+            assert "System error" in response.json()["detail"]
 
 
 class TestCompleteFlowRealAPI:

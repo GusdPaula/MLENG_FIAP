@@ -175,6 +175,20 @@ class TestSingleUserPredictor:
             request = PredictionRequest(user_id=5, item_ids=[])
             predictor.predict(request)
 
+    def test_single_user_predictor_cold_start(self):
+        """Test SingleUserPredictor with unknown user and cold start."""
+        model = MockModel(num_users=100, num_items=50)
+        predictor = SingleUserPredictor(model, user2idx={1: 0}, item2idx={10: 0}, popular_items={10: 5.0})
+
+        from api.models.schemas import PredictionRequest
+
+        request = PredictionRequest(user_id=999, item_ids=[10])
+        result = predictor.predict(request)
+
+        assert result.user_id == 999
+        assert result.item_scores == {10: 5.0}
+        assert result.metadata.get("cold_start") is True
+
 
 class TestTopKRecommendationPredictor:
     """Tests for TopKRecommendationPredictor."""
@@ -247,6 +261,45 @@ class TestTopKRecommendationPredictor:
         assert result.user_id == 5
         assert len(result.recommendations) == 50  # Limited by available items
 
+    def test_top_k_predictor_predict_method(self):
+        """Test TopKRecommendationPredictor predict() routing."""
+        model = MockModel(num_users=100, num_items=50)
+        predictor = TopKRecommendationPredictor(model, user2idx={i: i for i in range(100)}, item2idx={i: i for i in range(50)}, popular_items={0: 5.0})
+
+        from api.models.schemas import PredictionRequest
+
+        # Test routing to _predict_top_k
+        req_top_k = PredictionRequest(user_id=5, k=10)
+        res_top_k = predictor.predict(req_top_k)
+        assert len(res_top_k.item_scores) == 10
+
+        # Test routing to _predict_specific_items
+        req_specific = PredictionRequest(user_id=5, item_ids=[1, 2, 3])
+        res_specific = predictor.predict(req_specific)
+        assert len(res_specific.item_scores) == 3
+
+        # Test missing both
+        req_invalid = PredictionRequest(user_id=5)
+        with pytest.raises(InvalidInputError):
+            predictor.predict(req_invalid)
+
+    def test_top_k_predictor_cold_start(self):
+        """Test TopKRecommendationPredictor with unknown user and cold start."""
+        model = MockModel(num_users=100, num_items=50)
+        predictor = TopKRecommendationPredictor(model, user2idx={1: 0}, item2idx={10: 0}, popular_items={10: 5.0})
+
+        # _predict_specific_items cold start
+        from api.models.schemas import PredictionRequest
+
+        req_specific = PredictionRequest(user_id=999, item_ids=[10])
+        res_specific = predictor.predict(req_specific)
+        assert res_specific.metadata.get("cold_start") is True
+
+        # recommend() cold start
+        res_rec = predictor.recommend(user_id=999, k=1)
+        assert res_rec.metadata.get("cold_start") is True
+        assert res_rec.recommendations == [(10, 5.0)]
+
 
 class TestBatchPredictor:
     """Tests for BatchPredictor."""
@@ -313,3 +366,30 @@ class TestBatchPredictor:
         result = predictor.predict_batch([])
 
         assert len(result) == 0
+
+    def test_batch_predictor_predict_method(self):
+        """Test BatchPredictor predict() for single item."""
+        model = MockModel(num_users=100, num_items=50)
+        predictor = BatchPredictor(model, user2idx={1: 0}, item2idx={10: 0}, popular_items={10: 5.0})
+
+        from api.models.schemas import PredictionRequest
+
+        # Empty item_ids
+        with pytest.raises(InvalidInputError):
+            predictor.predict(PredictionRequest(user_id=1, item_ids=[]))
+
+        # Valid prediction
+        res = predictor.predict(PredictionRequest(user_id=1, item_ids=[10]))
+        assert 10 in res.item_scores
+
+        # Cold start
+        res_cold = predictor.predict(PredictionRequest(user_id=999, item_ids=[10]))
+        assert res_cold.metadata.get("cold_start") is True
+
+    def test_batch_predictor_invalid_items(self):
+        model = MockModel(num_users=100, num_items=50)
+        predictor = BatchPredictor(model, {1: 0}, {10: 0})
+        from api.models.schemas import PredictionRequest
+
+        with pytest.raises(InvalidInputError):
+            predictor.predict_batch([PredictionRequest(user_id=1, item_ids=[])])

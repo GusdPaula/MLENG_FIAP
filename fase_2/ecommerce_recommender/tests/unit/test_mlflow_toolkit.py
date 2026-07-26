@@ -222,7 +222,9 @@ def test_get_model_version_by_run_id(monkeypatch: pytest.MonkeyPatch) -> None:
         def search_model_versions(self, filter_string):
             return [DummyVersion("run-123", "1"), DummyVersion("run-456", "2")]
 
-    import sys, types
+    import sys
+    import types
+
     monkeypatch.setitem(sys.modules, "mlflow.tracking", types.SimpleNamespace(MlflowClient=DummyClient))
 
     toolkit = MLflowToolkit()
@@ -242,7 +244,9 @@ def test_set_model_version_alias(monkeypatch: pytest.MonkeyPatch) -> None:
         def set_registered_model_alias(self, name, alias, version):
             calls.append((name, alias, version))
 
-    import sys, types
+    import sys
+    import types
+
     monkeypatch.setitem(sys.modules, "mlflow.tracking", types.SimpleNamespace(MlflowClient=DummyClient))
 
     toolkit = MLflowToolkit()
@@ -259,7 +263,9 @@ def test_get_version_by_alias(monkeypatch: pytest.MonkeyPatch) -> None:
                 return types.SimpleNamespace(version="1", run_id="run-123")
             raise Exception("not found")
 
-    import sys, types
+    import sys
+    import types
+
     monkeypatch.setitem(sys.modules, "mlflow.tracking", types.SimpleNamespace(MlflowClient=DummyClient))
 
     toolkit = MLflowToolkit()
@@ -300,7 +306,9 @@ def test_promote_best_to_staging(monkeypatch: pytest.MonkeyPatch) -> None:
         def set_registered_model_alias(self, name, alias, version):
             self.promoted = version
 
-    import sys, types
+    import sys
+    import types
+
     monkeypatch.setitem(sys.modules, "mlflow.tracking", types.SimpleNamespace(MlflowClient=DummyClient))
 
     toolkit = MLflowToolkit(experiment_name="test_exp")
@@ -328,7 +336,9 @@ def test_promote_best_to_staging_no_staging(monkeypatch: pytest.MonkeyPatch) -> 
         def set_registered_model_alias(self, name, alias, version):
             self.promoted = version
 
-    import sys, types
+    import sys
+    import types
+
     monkeypatch.setitem(sys.modules, "mlflow.tracking", types.SimpleNamespace(MlflowClient=DummyClient))
 
     toolkit = MLflowToolkit(experiment_name="test_exp")
@@ -341,3 +351,148 @@ def test_promote_best_to_staging_offline(monkeypatch: pytest.MonkeyPatch) -> Non
     toolkit._is_offline = True
     promoted = toolkit.promote_best_to_staging("model", "new-run", "auc_roc")
     assert promoted is False
+
+
+def test_get_experiment_id_no_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_dummy_mlflow(monkeypatch)
+    toolkit = MLflowToolkit(experiment_name=None)
+    assert toolkit.get_experiment_id() is None
+
+
+def test_log_dataset_fallback(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = _install_dummy_mlflow(monkeypatch)
+
+    # Remove data and log_input to trigger fallback
+    import sys
+
+    mlflow_mock = sys.modules["mlflow"]
+    delattr(mlflow_mock, "data")
+    delattr(mlflow_mock, "log_input")
+
+    toolkit = MLflowToolkit(experiment_name="test_exp")
+    df = pd.DataFrame({"a": [1, 2]})
+    toolkit.log_dataset(df, name="test_data", source="test_src")
+
+    assert len(calls["log_artifact"]) > 0
+    assert ("dataset.test_data.context", "training") in calls["set_tag"]
+    assert ("dataset.test_data.source", "test_src") in calls["set_tag"]
+
+
+def test_log_pytorch_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_dummy_mlflow(monkeypatch)
+    toolkit = MLflowToolkit()
+    import torch.nn as nn
+
+    model = nn.Linear(10, 2)
+    name = toolkit.log_pytorch_model(model, "my_model")
+    assert name == "my_model"
+
+    with pytest.raises(TypeError):
+        toolkit.log_pytorch_model("not_a_model", "my_model")
+
+
+def test_log_sklearn_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_dummy_mlflow(monkeypatch)
+    # mock mlflow.sklearn
+    import sys
+    import types
+
+    sys.modules["mlflow"].sklearn = types.SimpleNamespace(log_model=lambda **kwargs: None)
+    toolkit = MLflowToolkit()
+    name = toolkit.log_sklearn_model("sk_model", "my_model")
+    assert name == "my_model"
+
+
+def test_promote_best_to_staging_edge_cases(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_dummy_mlflow(monkeypatch)
+
+    class DummyVersion:
+        def __init__(self, run_id, version):
+            self.run_id = run_id
+            self.version = version
+
+    class DummyRun:
+        def __init__(self, run_id, metrics):
+            self.data = types.SimpleNamespace(metrics=metrics)
+
+    class DummyClient:
+        def search_model_versions(self, filter_string):
+            return [DummyVersion("new-run", "2")]
+
+        def get_model_version_by_alias(self, name, alias):
+            return DummyVersion("old-run", "1")
+
+        def get_run(self, run_id):
+            if run_id == "new-run":
+                return DummyRun("new-run", {"acc": 0.8, "loss": 0.5})
+            if run_id == "old-run":
+                return DummyRun("old-run", {"acc": 0.9, "loss": 0.8})
+
+        def set_registered_model_alias(self, name, alias, version):
+            pass
+
+    import sys
+    import types
+
+    monkeypatch.setitem(sys.modules, "mlflow.tracking", types.SimpleNamespace(MlflowClient=DummyClient))
+
+    toolkit = MLflowToolkit(experiment_name="test_exp")
+
+    # Not found new run (run-missing is not in search_model_versions)
+    assert toolkit.promote_best_to_staging("model", "run-missing", "acc") is False
+
+    # Missing metric in new run
+    assert toolkit.promote_best_to_staging("model", "new-run", "missing_metric") is False
+
+    # New metric is worse (0.8 < 0.9)
+    assert toolkit.promote_best_to_staging("model", "new-run", "acc", higher_is_better=True) is False
+
+    # New metric is better because lower is better (0.5 < 0.8)
+    assert toolkit.promote_best_to_staging("model", "new-run", "loss", higher_is_better=False) is True
+
+    # Test Exception in metrics fetch
+    class BrokenClient(DummyClient):
+        def get_run(self, run_id):
+            raise Exception("broken")
+
+    monkeypatch.setitem(sys.modules, "mlflow.tracking", types.SimpleNamespace(MlflowClient=BrokenClient))
+    assert toolkit.promote_best_to_staging("model", "new-run", "acc") is False
+
+
+def test_promote_best_staging_no_metric(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_dummy_mlflow(monkeypatch)
+
+    class DummyVersion:
+        def __init__(self, run_id, version):
+            self.run_id = run_id
+            self.version = version
+
+    class DummyRun:
+        def __init__(self, run_id, metrics):
+            self.data = types.SimpleNamespace(metrics=metrics)
+
+    class DummyClient:
+        def search_model_versions(self, filter_string):
+            return [DummyVersion("new-run", "2")]
+
+        def get_model_version_by_alias(self, name, alias):
+            return DummyVersion("old-run", "1")
+
+        def get_run(self, run_id):
+            if run_id == "new-run":
+                return DummyRun("new-run", {"acc": 0.9})
+            if run_id == "old-run":
+                return DummyRun("old-run", {})  # No metric
+
+        def set_registered_model_alias(self, name, alias, version):
+            pass
+
+    import sys
+    import types
+
+    monkeypatch.setitem(sys.modules, "mlflow.tracking", types.SimpleNamespace(MlflowClient=DummyClient))
+
+    toolkit = MLflowToolkit(experiment_name="test_exp")
+
+    # Staging has no metric -> should promote unconditionally
+    assert toolkit.promote_best_to_staging("model", "new-run", "acc") is True

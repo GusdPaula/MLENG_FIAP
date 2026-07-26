@@ -1,5 +1,6 @@
 """Tests for the training components (Trainer, EarlyStopping)."""
 
+import pytest
 import torch
 from src.recommender.models.ncf import NCFModel
 from src.recommender.training import EarlyStopping, Trainer
@@ -132,10 +133,26 @@ def test_trainer_train_epoch() -> None:
     dataset = SimpleDataset(interactions)
     dataloader = DataLoader(dataset, batch_size=2, shuffle=False)
 
-    # Should return a loss value
     loss = trainer.train_epoch(dataloader)
     assert isinstance(loss, float)
     assert loss >= 0
+
+
+def test_trainer_train_epoch_empty() -> None:
+    """Test train_epoch with an empty DataLoader."""
+    model = NCFModel(num_users=10, num_items=5, embedding_dim=8, hidden_layers=[16])
+    trainer = Trainer(model, {"learning_rate": 0.01})
+
+    class EmptyDataset:
+        def __len__(self):
+            return 0
+
+        def __getitem__(self, idx):
+            raise IndexError
+
+    loader = DataLoader(EmptyDataset())
+    loss = trainer.train_epoch(loader)
+    assert loss == 0.0
 
 
 def test_trainer_evaluate() -> None:
@@ -171,12 +188,44 @@ def test_trainer_evaluate() -> None:
     dataloader = DataLoader(dataset, batch_size=2, shuffle=False)
 
     # Should return metrics dict
-    metrics = trainer.evaluate(dataloader)
+    metrics = trainer.evaluate(dataloader, metrics=("auc_roc", "avg_precision", "loss", "ndcg_at_k"), num_items=5, k=3)
     assert isinstance(metrics, dict)
     assert "auc_roc" in metrics
     assert "avg_precision" in metrics
+    assert "loss" in metrics
+    assert "ndcg_at_k" in metrics
     assert 0.0 <= metrics["auc_roc"] <= 1.0
     assert 0.0 <= metrics["avg_precision"] <= 1.0
+
+
+def test_trainer_evaluate_invalid_metric() -> None:
+    model = NCFModel(num_users=10, num_items=5, embedding_dim=8, hidden_layers=[16])
+    trainer = Trainer(model, {"learning_rate": 0.01})
+
+    class EmptyDataset:
+        def __len__(self):
+            return 0
+
+        def __getitem__(self, idx):
+            raise IndexError
+
+    with pytest.raises(ValueError):
+        trainer.evaluate(DataLoader(EmptyDataset()), metrics=("unknown",))
+
+
+def test_trainer_evaluate_ndcg_missing_num_items() -> None:
+    model = NCFModel(num_users=10, num_items=5, embedding_dim=8, hidden_layers=[16])
+    trainer = Trainer(model, {"learning_rate": 0.01})
+
+    class EmptyDataset:
+        def __len__(self):
+            return 0
+
+        def __getitem__(self, idx):
+            raise IndexError
+
+    with pytest.raises(ValueError):
+        trainer.evaluate(DataLoader(EmptyDataset()), metrics=("ndcg_at_k",))
 
 
 def test_trainer_fit() -> None:
@@ -210,13 +259,21 @@ def test_trainer_fit() -> None:
     val_loader = DataLoader(val_dataset, batch_size=2, shuffle=False)
 
     # Should return a list of EpochResult
-    history = trainer.fit(train_loader=train_loader, val_loader=val_loader, epochs=2, show_progress=False)
+    history = trainer.fit(train_loader=train_loader, val_loader=val_loader, epochs=2, show_progress=False, metric_for_best="auc_roc", mode="max", log_callback=lambda res: None)
 
     assert isinstance(history, list)
     assert len(history) == 2
     assert all(hasattr(result, "epoch") for result in history)
     assert all(hasattr(result, "train_loss") for result in history)
     assert all(hasattr(result, "eval_metrics") for result in history)
+
+
+def test_trainer_fit_invalid_mode() -> None:
+    model = NCFModel(num_users=10, num_items=5, embedding_dim=8, hidden_layers=[16])
+    trainer = Trainer(model, {"learning_rate": 0.01})
+
+    with pytest.raises(ValueError):
+        trainer.fit(None, None, epochs=1, metric_for_best="loss", mode="invalid")
 
 
 def test_trainer_fit_with_early_stopping() -> None:
@@ -311,3 +368,39 @@ def test_trainer_fit_with_early_stopping_enabled() -> None:
     # Should have stopped before running all 5 epochs due to early stopping
     assert len(history) <= 5
     assert best["value"] is None or best["value"] >= 0
+
+
+def test_trainer_fit_with_early_stopping_monitor_ndcg() -> None:
+    model = NCFModel(num_users=10, num_items=5, embedding_dim=8, hidden_layers=[16])
+    trainer = Trainer(model, {"learning_rate": 0.01})
+
+    class SimpleDataset:
+        def __len__(self):
+            return 1
+
+        def __getitem__(self, idx):
+            return torch.tensor(0), torch.tensor(0), torch.tensor(1.0)
+
+    loader = DataLoader(SimpleDataset(), batch_size=1)
+    stopper = EarlyStopping(patience=1, mode="max")
+
+    history, best = trainer.fit_with_early_stopping(train_loader=loader, val_loader=loader, epochs=1, early_stopping=stopper, monitor="ndcg_at_k", num_items=5, ranking_k=3)
+    assert len(history) == 1
+
+
+def test_trainer_resolve_monitor_error() -> None:
+    model = NCFModel(num_users=10, num_items=5, embedding_dim=8, hidden_layers=[16])
+    trainer = Trainer(model, {"learning_rate": 0.01})
+
+    class SimpleDataset:
+        def __len__(self):
+            return 1
+
+        def __getitem__(self, idx):
+            return torch.tensor(0), torch.tensor(0), torch.tensor(1.0)
+
+    loader = DataLoader(SimpleDataset(), batch_size=1)
+    stopper = EarlyStopping(patience=1)
+
+    with pytest.raises(ValueError):
+        trainer.fit_with_early_stopping(train_loader=loader, val_loader=loader, epochs=1, early_stopping=stopper, monitor="invalid_monitor")

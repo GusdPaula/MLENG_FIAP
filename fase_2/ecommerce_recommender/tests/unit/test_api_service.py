@@ -3,10 +3,11 @@
 Tests the PredictionService for model loading and prediction orchestration.
 """
 
+from pathlib import Path
+
 import pytest
 import torch
 import torch.nn as nn
-from pathlib import Path
 from api.exceptions import InvalidInputError, ModelLoadError
 from api.models.schemas import PredictionRequest
 from api.services.prediction_service import PredictionService
@@ -393,10 +394,12 @@ class TestPredictionService:
             def search_registered_models(self):
                 model = type("obj", (object,), {"name": "test_model"})
                 return [model]
-                
+
             def download_artifacts(self, run_id, path, dst_path):
-                import torch
                 from pathlib import Path
+
+                import torch
+
                 model = MockModel()
                 checkpoint = {
                     "model_type": "mock",
