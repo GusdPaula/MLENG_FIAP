@@ -138,60 +138,51 @@ class TopKRecommendationPredictor(BasePredictor):
         """
         logger.info(
             "Generating predictions for user %d (k=%s, items=%d)",
-            request.user_id,
-            request.k,
+            request.user_id, request.k,
             len(request.item_ids) if request.item_ids else 0,
         )
 
         if request.k is not None:
             return self._predict_top_k(request)
-        elif request.item_ids:
-            user_idx = self._get_user_idx(request.user_id)
+        if request.item_ids:
+            return self._predict_specific_items(request)
+        logger.error("Neither item_ids nor k provided for prediction")
+        raise InvalidInputError("Either item_ids or k must be provided.")
 
-            # Cold start fallback: use popularity scores for unknown users
-            if user_idx is None:
-                logger.info("Using cold start fallback for user %d", request.user_id)
-                item_scores = self._get_popular_item_scores(request.item_ids)
-                return PredictionResponse(
-                    user_id=request.user_id,
-                    item_scores=item_scores,
-                    metadata={
-                        "predictor": self.name,
-                        "model_type": self.model.model_name,
-                        "cold_start": True,
-                    },
-                )
+    def _predict_specific_items(
+        self, request: PredictionRequest
+    ) -> PredictionResponse:
+        """Score specific items for a user."""
+        user_idx = self._get_user_idx(request.user_id)
 
-            item_indices = self._get_item_indices(request.item_ids)
-
-            with torch.no_grad():
-                user_tensor = torch.tensor(
-                    [user_idx] * len(item_indices), dtype=torch.long
-                )
-                item_tensor = torch.tensor(item_indices, dtype=torch.long)
-                scores = self.model(user_tensor, item_tensor)
-
-            item_scores = {
-                item_id: float(score)
-                for item_id, score in zip(
-                    request.item_ids, scores.squeeze().tolist(), strict=True
-                )
-            }
-
-            logger.debug(
-                "Generated %d item scores for user %d",
-                len(item_scores),
-                request.user_id,
-            )
-
+        if user_idx is None:
+            logger.info("Using cold start fallback for user %d", request.user_id)
             return PredictionResponse(
                 user_id=request.user_id,
-                item_scores=item_scores,
-                metadata={"predictor": self.name, "model_type": self.model.model_name},
+                item_scores=self._get_popular_item_scores(request.item_ids),
+                metadata={"predictor": self.name, "model_type": self.model.model_name, "cold_start": True},
             )
-        else:
-            logger.error("Neither item_ids nor k provided for prediction")
-            raise InvalidInputError("Either item_ids or k must be provided.")
+
+        item_scores = self._score_items_for_user(user_idx, request.item_ids)
+        return PredictionResponse(
+            user_id=request.user_id,
+            item_scores=item_scores,
+            metadata={"predictor": self.name, "model_type": self.model.model_name},
+        )
+
+    def _score_items_for_user(
+        self, user_idx: int, item_ids: list[int]
+    ) -> dict[int, float]:
+        """Score a list of items for a single user."""
+        item_indices = self._get_item_indices(item_ids)
+        with torch.no_grad():
+            user_tensor = torch.tensor([user_idx] * len(item_indices), dtype=torch.long)
+            item_tensor = torch.tensor(item_indices, dtype=torch.long)
+            scores = self.model(user_tensor, item_tensor)
+        return {
+            item_id: float(score)
+            for item_id, score in zip(item_ids, scores.squeeze().tolist(), strict=True)
+        }
 
     def predict_batch(
         self, requests: list[PredictionRequest]
@@ -275,56 +266,51 @@ class TopKRecommendationPredictor(BasePredictor):
             raise InvalidInputError("k must be a positive integer.")
 
         logger.info("Generating top-%d recommendations for user %d", k, user_id)
-
         user_idx = self._get_user_idx(user_id)
 
-        # Cold start fallback: return popular items for unknown users
         if user_idx is None:
-            logger.info("Using cold start fallback for user %d", user_id)
-            popular_items = self._get_popular_items(k)
-            recommendations = [
-                (item_id, float(score)) for item_id, score in popular_items
-            ]
-            return RecommendationResponse(
-                user_id=user_id,
-                recommendations=recommendations,
-                metadata={
-                    "predictor": self.name,
-                    "model_type": self.model.model_name,
-                    "k": k,
-                    "cold_start": True,
-                },
-            )
+            return self._cold_start_recommendations(user_id, k)
 
+        recommendations = self._build_top_k_recommendations(user_idx, k)
+        return RecommendationResponse(
+            user_id=user_id,
+            recommendations=recommendations,
+            metadata={"predictor": self.name, "model_type": self.model.model_name, "k": k},
+        )
+
+    def _cold_start_recommendations(
+        self, user_id: int, k: int
+    ) -> RecommendationResponse:
+        """Return popular-item recommendations for unknown users."""
+        logger.info("Using cold start fallback for user %d", user_id)
+        popular_items = self._get_popular_items(k)
+        recommendations = [(item_id, float(score)) for item_id, score in popular_items]
+        return RecommendationResponse(
+            user_id=user_id,
+            recommendations=recommendations,
+            metadata={"predictor": self.name, "model_type": self.model.model_name, "k": k, "cold_start": True},
+        )
+
+    def _score_all_items(self, user_idx: int) -> list[tuple[int, float]]:
+        """Score all items for a user and return sorted (idx, score) pairs."""
         num_items = len(self.item2idx)
-
         with torch.no_grad():
             user_tensor = torch.tensor([user_idx] * num_items, dtype=torch.long)
             item_tensor = torch.tensor(range(num_items), dtype=torch.long)
             scores = self.model(user_tensor, item_tensor)
-
-        item_scores = list(
-            zip(range(num_items), scores.squeeze().tolist(), strict=True)
-        )
+        item_scores = list(zip(range(num_items), scores.squeeze().tolist(), strict=True))
         item_scores.sort(key=lambda x: x[1], reverse=True)
+        return item_scores
 
-        recommendations = [
-            (self.idx2item[idx], float(score)) for idx, score in item_scores[:k]
+    def _build_top_k_recommendations(
+        self, user_idx: int, k: int
+    ) -> list[tuple[int, float]]:
+        """Build top-k recommendation list with original item IDs."""
+        item_scores = self._score_all_items(user_idx)
+        return [
+            (self.idx2item[idx], float(score))
+            for idx, score in item_scores[:k]
         ]
-
-        logger.debug(
-            "Generated %d recommendations for user %d", len(recommendations), user_id
-        )
-
-        return RecommendationResponse(
-            user_id=user_id,
-            recommendations=recommendations,
-            metadata={
-                "predictor": self.name,
-                "model_type": self.model.model_name,
-                "k": k,
-            },
-        )
 
 
 class BatchPredictor(BasePredictor):
@@ -348,55 +334,40 @@ class BatchPredictor(BasePredictor):
         Raises:
             InvalidInputError: If the request contains invalid data.
         """
-        logger.info(
-            "Generating predictions for user %d with %d items",
-            request.user_id,
-            len(request.item_ids) if request.item_ids else 0,
-        )
-
         if not request.item_ids:
             logger.error("No item_ids provided for prediction")
             raise InvalidInputError("item_ids must be provided for prediction.")
 
         user_idx = self._get_user_idx(request.user_id)
 
-        # Cold start fallback: use popularity scores for unknown users
         if user_idx is None:
             logger.info("Using cold start fallback for user %d", request.user_id)
-            item_scores = self._get_popular_item_scores(request.item_ids)
             return PredictionResponse(
                 user_id=request.user_id,
-                item_scores=item_scores,
-                metadata={
-                    "predictor": self.name,
-                    "model_type": self.model.model_name,
-                    "cold_start": True,
-                },
+                item_scores=self._get_popular_item_scores(request.item_ids),
+                metadata={"predictor": self.name, "model_type": self.model.model_name, "cold_start": True},
             )
 
-        item_indices = self._get_item_indices(request.item_ids)
-
-        with torch.no_grad():
-            user_tensor = torch.tensor([user_idx] * len(item_indices), dtype=torch.long)
-            item_tensor = torch.tensor(item_indices, dtype=torch.long)
-            scores = self.model(user_tensor, item_tensor)
-
-        item_scores = {
-            item_id: float(score)
-            for item_id, score in zip(
-                request.item_ids, scores.squeeze().tolist(), strict=True
-            )
-        }
-
-        logger.debug(
-            "Generated %d item scores for user %d", len(item_scores), request.user_id
-        )
-
+        item_scores = self._score_items_for_user(user_idx, request.item_ids)
         return PredictionResponse(
             user_id=request.user_id,
             item_scores=item_scores,
             metadata={"predictor": self.name, "model_type": self.model.model_name},
         )
+
+    def _score_items_for_user(
+        self, user_idx: int, item_ids: list[int]
+    ) -> dict[int, float]:
+        """Score a list of items for a single user."""
+        item_indices = self._get_item_indices(item_ids)
+        with torch.no_grad():
+            user_tensor = torch.tensor([user_idx] * len(item_indices), dtype=torch.long)
+            item_tensor = torch.tensor(item_indices, dtype=torch.long)
+            scores = self.model(user_tensor, item_tensor)
+        return {
+            item_id: float(score)
+            for item_id, score in zip(item_ids, scores.squeeze().tolist(), strict=True)
+        }
 
     def predict_batch(
         self, requests: list[PredictionRequest]
@@ -419,52 +390,57 @@ class BatchPredictor(BasePredictor):
             return []
 
         logger.info("Generating batch predictions for %d users", len(requests))
+        user_indices, item_indices, request_indices = self._collect_batch_pairs(requests)
 
-        # Collect all user-item pairs
+        with torch.no_grad():
+            user_tensor = torch.tensor(user_indices, dtype=torch.long)
+            item_tensor = torch.tensor(item_indices, dtype=torch.long)
+            scores = self.model(user_tensor, item_tensor)
+
+        responses = self._distribute_scores_to_responses(
+            requests, scores.squeeze().tolist(), request_indices
+        )
+        logger.info("Completed batch predictions for %d users", len(responses))
+        return responses
+
+    def _collect_batch_pairs(
+        self, requests: list[PredictionRequest]
+    ) -> tuple[list[int], list[int], list[int]]:
+        """Collect all user-item pairs from batch requests."""
         user_indices = []
         item_indices = []
         request_indices = []
 
         for req_idx, request in enumerate(requests):
             if not request.item_ids:
-                logger.error("No item_ids provided for request %d", req_idx)
-                raise InvalidInputError(
-                    f"item_ids must be provided for request {req_idx}."
-                )
-
+                raise InvalidInputError(f"item_ids must be provided for request {req_idx}.")
             user_idx = self._get_user_idx(request.user_id)
             item_idxs = self._get_item_indices(request.item_ids)
-
             user_indices.extend([user_idx] * len(item_idxs))
             item_indices.extend(item_idxs)
             request_indices.extend([req_idx] * len(item_idxs))
 
-        # Batch prediction
-        logger.debug("Batching %d user-item pairs", len(user_indices))
-        with torch.no_grad():
-            user_tensor = torch.tensor(user_indices, dtype=torch.long)
-            item_tensor = torch.tensor(item_indices, dtype=torch.long)
-            scores = self.model(user_tensor, item_tensor)
+        return user_indices, item_indices, request_indices
 
-        # Distribute scores back to requests
-        scores_list = scores.squeeze().tolist()
+    def _distribute_scores_to_responses(
+        self,
+        requests: list[PredictionRequest],
+        scores_list: list[float],
+        request_indices: list[int],
+    ) -> list[PredictionResponse]:
+        """Map batch scores back to individual PredictionResponse objects."""
         responses: list[PredictionResponse] = [None] * len(requests)
-
         for req_idx, request in enumerate(requests):
             start_idx = request_indices.index(req_idx)
             end_idx = len(request_indices) - request_indices[::-1].index(req_idx)
             req_scores = scores_list[start_idx:end_idx]
-
             item_scores = {
                 item_id: float(score)
                 for item_id, score in zip(request.item_ids, req_scores, strict=True)
             }
-
             responses[req_idx] = PredictionResponse(
                 user_id=request.user_id,
                 item_scores=item_scores,
                 metadata={"predictor": self.name, "model_type": self.model.model_name},
             )
-
-        logger.info("Completed batch predictions for %d users", len(responses))
         return responses

@@ -54,6 +54,10 @@ def compute_baseline_ranking_metrics(
     k: int = 10,
 ) -> BaselineRankingMetrics:
     """Calcula métricas de ranking para a função de predição de um modelo baseline."""
+    users_items: dict[int, list[int]] = {}
+    for user, item in test_interactions:
+        users_items.setdefault(int(user), []).append(int(item))
+
     hits = 0
     total = 0
     ndcg_scores: list[float] = []
@@ -61,37 +65,14 @@ def compute_baseline_ranking_metrics(
     recall_scores: list[float] = []
     rr_scores: list[float] = []
 
-    users_items: dict[int, list[int]] = {}
-    for user, item in test_interactions:
-        users_items.setdefault(int(user), []).append(int(item))
-
     for user_idx, true_items in users_items.items():
-        user_arr = np.full(num_items, user_idx, dtype=np.int64)
-        item_arr = np.arange(num_items, dtype=np.int64)
-
-        scores = predict_fn(user_arr, item_arr)
-        top_k_indices = np.argsort(scores)[::-1][:k]
-        top_k_set = set(top_k_indices)
-
-        user_hits = sum(1 for item in true_items if item in top_k_set)
-        hits += user_hits
-        total += len(true_items)
-
-        precision_scores.append(user_hits / k)
-        recall_scores.append(user_hits / len(true_items))
-
-        rr = 0.0
-        dcg = 0.0
-        for rank, item_id in enumerate(top_k_indices):
-            if item_id in true_items:
-                dcg += 1.0 / np.log2(rank + 2)
-                if rr == 0.0:
-                    rr = 1.0 / (rank + 1)
-        rr_scores.append(rr)
-
-        ideal_dcg = sum(1.0 / np.log2(i + 2) for i in range(min(len(true_items), k)))
-        ndcg = dcg / ideal_dcg if ideal_dcg > 0 else 0.0
-        ndcg_scores.append(ndcg)
+        result = _compute_user_baseline_ranking(predict_fn, user_idx, true_items, num_items, k)
+        hits += result["hits"]
+        total += result["total"]
+        precision_scores.append(result["precision"])
+        recall_scores.append(result["recall"])
+        rr_scores.append(result["rr"])
+        ndcg_scores.append(result["ndcg"])
 
     return BaselineRankingMetrics(
         hit_rate=hits / total if total > 0 else 0.0,
@@ -100,6 +81,37 @@ def compute_baseline_ranking_metrics(
         recall=float(np.mean(recall_scores)) if recall_scores else 0.0,
         mrr=float(np.mean(rr_scores)) if rr_scores else 0.0,
     )
+
+
+def _compute_user_baseline_ranking(
+    predict_fn: Callable, user_idx: int, true_items: list[int],
+    num_items: int, k: int,
+) -> dict[str, float]:
+    """Compute ranking metrics for a single user using a baseline predict function."""
+    user_arr = np.full(num_items, user_idx, dtype=np.int64)
+    item_arr = np.arange(num_items, dtype=np.int64)
+    scores = predict_fn(user_arr, item_arr)
+    top_k_indices = np.argsort(scores)[::-1][:k]
+    top_k_set = set(top_k_indices)
+
+    user_hits = sum(1 for item in true_items if item in top_k_set)
+
+    rr = 0.0
+    dcg = 0.0
+    for rank, item_id in enumerate(top_k_indices):
+        if item_id in true_items:
+            dcg += 1.0 / np.log2(rank + 2)
+            if rr == 0.0:
+                rr = 1.0 / (rank + 1)
+
+    ideal_dcg = sum(1.0 / np.log2(i + 2) for i in range(min(len(true_items), k)))
+    ndcg = dcg / ideal_dcg if ideal_dcg > 0 else 0.0
+
+    return {
+        "hits": user_hits, "total": len(true_items),
+        "precision": user_hits / k, "recall": user_hits / len(true_items),
+        "rr": rr, "ndcg": ndcg,
+    }
 
 
 class EvaluationPipeline:
@@ -234,157 +246,96 @@ class EvaluationPipeline:
     def _train_popularity_baseline(self, train_samples, val_samples):
         """Train and evaluate popularity baseline with MLflow logging."""
         logger.info("Training and evaluating Popularity Baseline...")
-
-        # Setup MLflow for baseline logging
-        mlflow_config_path = Path("configs/mlflow.yaml")
-        mlflow_cfg = {}
-        if mlflow_config_path.exists():
-            with open(mlflow_config_path) as f:
-                mlflow_cfg = yaml.safe_load(f).get("mlflow", {})
-
-        import os
-
-        os.environ["AWS_PROFILE"] = "aws"
-        mlflow_toolkit = MLflowToolkit(**mlflow_cfg)
+        mlflow_toolkit = self._create_mlflow_toolkit()
 
         with mlflow_toolkit.start_run(run_name="baseline_popularity"):
-            mlflow_toolkit.log_params(
-                {"model_type": "popularity_baseline", "processor": "weighted"}
-            )
+            mlflow_toolkit.log_params({"model_type": "popularity_baseline", "processor": "weighted"})
+            self._log_baseline_datasets(mlflow_toolkit, train_samples, val_samples)
 
-            train_pos_df = pd.DataFrame(
-                {
-                    "user_idx": train_samples[:, 0][train_samples[:, 2] == 1.0].astype(
-                        np.int64
-                    ),
-                    "item_idx": train_samples[:, 1][train_samples[:, 2] == 1.0].astype(
-                        np.int64
-                    ),
-                }
-            )
-
-            # Log train and validation samples
-            train_df = pd.DataFrame(
-                train_samples, columns=["user_id", "item_id", "label"]
-            )
-            val_df = pd.DataFrame(val_samples, columns=["user_id", "item_id", "label"])
-            mlflow_toolkit.log_dataset(
-                train_df, name="baseline_train_samples", context="training"
-            )
-            mlflow_toolkit.log_dataset(
-                val_df, name="baseline_val_samples", context="validation"
-            )
-
-            # Measure training time
-            import time
-
-            training_start = time.time()
-
-            pop_recommender = PopularityRecommender()
-            pop_recommender.fit(train_pos_df)
-
-            training_latency = time.time() - training_start
-
+            pop_recommender, training_latency = self._train_and_measure_popularity(train_samples)
             pop_preds = pop_recommender.predict(
                 val_samples[:, 0].astype(np.int64), val_samples[:, 1].astype(np.int64)
             )
 
             from sklearn.metrics import average_precision_score, roc_auc_score
-
             pop_auc = float(roc_auc_score(val_samples[:, 2], pop_preds))
             pop_ap = float(average_precision_score(val_samples[:, 2], pop_preds))
 
-            mlflow_toolkit.log_metrics(
-                {
-                    "final_auc_roc": pop_auc,
-                    "final_avg_precision": pop_ap,
-                    "training_latency": training_latency,
-                }
-            )
-
-            # Log baseline model using MLflowToolkit
-            logger.info("Logging baseline model to MLflow...")
-            mlflow_toolkit.log_sklearn_model(
-                model=pop_recommender, name="popularity_baseline"
-            )
-            logger.info("Baseline model logged successfully")
+            mlflow_toolkit.log_metrics({"final_auc_roc": pop_auc, "final_avg_precision": pop_ap, "training_latency": training_latency})
+            mlflow_toolkit.log_sklearn_model(model=pop_recommender, name="popularity_baseline")
 
         return pop_recommender, pop_auc, pop_ap, training_latency
 
-    def _train_logistic_regression_baseline(
-        self, train_samples, val_samples, num_users, num_items
-    ):
-        """Train and evaluate logistic regression baseline with MLflow logging."""
-        logger.info("Training and evaluating Logistic Regression Baseline...")
-
-        # Setup MLflow for baseline logging
+    @staticmethod
+    def _create_mlflow_toolkit() -> MLflowToolkit:
+        """Create MLflowToolkit from config file."""
+        import os
         mlflow_config_path = Path("configs/mlflow.yaml")
         mlflow_cfg = {}
         if mlflow_config_path.exists():
             with open(mlflow_config_path) as f:
                 mlflow_cfg = yaml.safe_load(f).get("mlflow", {})
-
-        import os
-
         os.environ["AWS_PROFILE"] = "aws"
-        mlflow_toolkit = MLflowToolkit(**mlflow_cfg)
+        return MLflowToolkit(**mlflow_cfg)
+
+    @staticmethod
+    def _log_baseline_datasets(mlflow_toolkit, train_samples, val_samples) -> None:
+        """Log train and validation datasets to MLflow."""
+        train_df = pd.DataFrame(train_samples, columns=["user_id", "item_id", "label"])
+        val_df = pd.DataFrame(val_samples, columns=["user_id", "item_id", "label"])
+        mlflow_toolkit.log_dataset(train_df, name="baseline_train_samples", context="training")
+        mlflow_toolkit.log_dataset(val_df, name="baseline_val_samples", context="validation")
+
+    @staticmethod
+    def _train_and_measure_popularity(train_samples):
+        """Train PopularityRecommender and return model + training latency."""
+        import time
+        train_pos_df = pd.DataFrame({
+            "user_idx": train_samples[:, 0][train_samples[:, 2] == 1.0].astype(np.int64),
+            "item_idx": train_samples[:, 1][train_samples[:, 2] == 1.0].astype(np.int64),
+        })
+        start = time.time()
+        pop_recommender = PopularityRecommender()
+        pop_recommender.fit(train_pos_df)
+        return pop_recommender, time.time() - start
+
+    def _train_logistic_regression_baseline(self, train_samples, val_samples, num_users, num_items):
+        """Train and evaluate logistic regression baseline with MLflow logging."""
+        logger.info("Training and evaluating Logistic Regression Baseline...")
+        mlflow_toolkit = self._create_mlflow_toolkit()
 
         with mlflow_toolkit.start_run(run_name="baseline_logistic_regression"):
-            mlflow_toolkit.log_params(
-                {"model_type": "logistic_regression_baseline", "processor": "weighted"}
+            mlflow_toolkit.log_params({"model_type": "logistic_regression_baseline", "processor": "weighted"})
+            self._log_baseline_datasets(mlflow_toolkit, train_samples, val_samples)
+
+            lr_recommender, training_latency = self._train_and_measure_logistic(
+                train_samples, num_users, num_items
             )
-
-            # Log train and validation samples
-            train_df = pd.DataFrame(
-                train_samples, columns=["user_id", "item_id", "label"]
-            )
-            val_df = pd.DataFrame(val_samples, columns=["user_id", "item_id", "label"])
-            mlflow_toolkit.log_dataset(
-                train_df, name="baseline_train_samples", context="training"
-            )
-            mlflow_toolkit.log_dataset(
-                val_df, name="baseline_val_samples", context="validation"
-            )
-
-            # Measure training time
-            import time
-
-            training_start = time.time()
-
-            lr_recommender = LogisticRegressionRecommender(num_users, num_items)
-            lr_recommender.fit(
-                train_samples[:, 0].astype(np.int64),
-                train_samples[:, 1].astype(np.int64),
-                train_samples[:, 2],
-            )
-
-            training_latency = time.time() - training_start
-
             lr_preds = lr_recommender.predict(
                 val_samples[:, 0].astype(np.int64), val_samples[:, 1].astype(np.int64)
             )
 
             from sklearn.metrics import average_precision_score, roc_auc_score
-
             lr_auc = float(roc_auc_score(val_samples[:, 2], lr_preds))
             lr_ap = float(average_precision_score(val_samples[:, 2], lr_preds))
 
-            mlflow_toolkit.log_metrics(
-                {
-                    "final_auc_roc": lr_auc,
-                    "final_avg_precision": lr_ap,
-                    "training_latency": training_latency,
-                }
-            )
-
-            # Log baseline model using MLflowToolkit
-            logger.info("Logging baseline model to MLflow...")
-            mlflow_toolkit.log_sklearn_model(
-                model=lr_recommender, name="logistic_regression_baseline"
-            )
-            logger.info("Baseline model logged successfully")
+            mlflow_toolkit.log_metrics({"final_auc_roc": lr_auc, "final_avg_precision": lr_ap, "training_latency": training_latency})
+            mlflow_toolkit.log_sklearn_model(model=lr_recommender, name="logistic_regression_baseline")
 
         return lr_recommender, lr_auc, lr_ap, training_latency
+
+    @staticmethod
+    def _train_and_measure_logistic(train_samples, num_users, num_items):
+        """Train LogisticRegressionRecommender and return model + latency."""
+        import time
+        start = time.time()
+        lr_recommender = LogisticRegressionRecommender(num_users, num_items)
+        lr_recommender.fit(
+            train_samples[:, 0].astype(np.int64),
+            train_samples[:, 1].astype(np.int64),
+            train_samples[:, 2],
+        )
+        return lr_recommender, time.time() - start
 
     def _compute_baseline_rankings(
         self, pop_recommender, lr_recommender, positive_only_val, num_items
@@ -538,6 +489,23 @@ class EvaluationPipeline:
 
     def _extract_mlflow_metrics(self):
         """Extract metrics for all trained models from MLflow."""
+        experiment, runs_df = self._get_mlflow_experiment()
+        if experiment is None:
+            return []
+
+        model_metrics = []
+        for model_type in ["ncf", "gmf", "matrix_factorization"]:
+            for processor in ["weighted", "binary", "implicit"]:
+                run_name = f"{model_type}_{processor}"
+                matching_runs = runs_df[runs_df["tags.mlflow.runName"] == run_name]
+                if not matching_runs.empty:
+                    metrics = self._extract_run_metrics(matching_runs.iloc[0], run_name, model_type)
+                    model_metrics.append(metrics)
+        return model_metrics
+
+    @staticmethod
+    def _get_mlflow_experiment():
+        """Set up MLflow connection and return experiment + runs DataFrame."""
         mlflow_config_path = Path("configs/mlflow.yaml")
         mlflow_cfg = {}
         if mlflow_config_path.exists():
@@ -545,57 +513,33 @@ class EvaluationPipeline:
                 mlflow_cfg = yaml.safe_load(f).get("mlflow", {})
 
         import mlflow
-
-        mlflow.set_tracking_uri(
-            mlflow_cfg.get("tracking_uri", "https://mlflow.asgardprint.com.br")
-        )
-        experiment_name = mlflow_cfg.get(
-            "experiment_name", "ecommerce_recommender_fiap_5"
-        )
-
+        mlflow.set_tracking_uri(mlflow_cfg.get("tracking_uri", "https://mlflow.asgardprint.com.br"))
+        experiment_name = mlflow_cfg.get("experiment_name", "ecommerce_recommender_fiap_5")
         experiment = mlflow.get_experiment_by_name(experiment_name)
         if not experiment:
             logger.error(f"Experiment {experiment_name} not found")
-            return []
+            return None, None
+        return experiment, mlflow.search_runs(experiment_ids=[experiment.experiment_id])
 
-        runs_df = mlflow.search_runs(experiment_ids=[experiment.experiment_id])
-
-        model_metrics = []
-        model_types = ["ncf", "gmf", "matrix_factorization"]
-        processors = ["weighted", "binary", "implicit"]
-
-        for model_type in model_types:
-            for processor in processors:
-                run_name = f"{model_type}_{processor}"
-                matching_runs = runs_df[runs_df["tags.mlflow.runName"] == run_name]
-
-                if not matching_runs.empty:
-                    run = matching_runs.iloc[0]
-                    # MLflow automatically tracks run duration in milliseconds
-                    run_duration_ms = run.get("duration", 0)
-                    run_duration_s = (
-                        run_duration_ms / 1000.0 if run_duration_ms else 0.0
-                    )
-
-                    metrics = {
-                        "name": run_name,
-                        "auc_roc": run.get("metrics.final_auc_roc", 0.0),
-                        "avg_precision": run.get("metrics.final_avg_precision", 0.0),
-                        "hit_rate_10": run.get("metrics.hit_rate_10", 0.0),
-                        "ndcg_10": run.get("metrics.ndcg_10", 0.0),
-                        "precision_10": run.get("metrics.precision_10", 0.0),
-                        "recall_10": run.get("metrics.recall_10", 0.0),
-                        "mrr_10": run.get("metrics.mrr_10", 0.0),
-                        "final_train_loss": run.get("metrics.final_train_loss", 0.0),
-                        "training_latency": run_duration_s,
-                        "type": model_type,
-                    }
-                    model_metrics.append(metrics)
-                    logger.info(
-                        f"Extracted metrics for {run_name}: AUC={metrics['auc_roc']:.4f}, Latency={metrics['training_latency']:.2f}s"
-                    )
-
-        return model_metrics
+    @staticmethod
+    def _extract_run_metrics(run, run_name: str, model_type: str) -> dict:
+        """Extract metrics dictionary from a single MLflow run."""
+        run_duration_ms = run.get("duration", 0)
+        run_duration_s = run_duration_ms / 1000.0 if run_duration_ms else 0.0
+        metrics = {
+            "name": run_name, "type": model_type,
+            "auc_roc": run.get("metrics.final_auc_roc", 0.0),
+            "avg_precision": run.get("metrics.final_avg_precision", 0.0),
+            "hit_rate_10": run.get("metrics.hit_rate_10", 0.0),
+            "ndcg_10": run.get("metrics.ndcg_10", 0.0),
+            "precision_10": run.get("metrics.precision_10", 0.0),
+            "recall_10": run.get("metrics.recall_10", 0.0),
+            "mrr_10": run.get("metrics.mrr_10", 0.0),
+            "final_train_loss": run.get("metrics.final_train_loss", 0.0),
+            "training_latency": run_duration_s,
+        }
+        logger.info(f"Extracted metrics for {run_name}: AUC={metrics['auc_roc']:.4f}, Latency={metrics['training_latency']:.2f}s")
+        return metrics
 
     def run(self):
         """Run evaluation pipeline."""

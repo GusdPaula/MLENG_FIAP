@@ -118,10 +118,10 @@ def train_one_experiment(
     user2idx = processor_data["user2idx"]
     item2idx = processor_data["item2idx"]
     processed_path = processor_data["path"]
+    num_items = len(item2idx)
 
     logger.info(f"Training model={model_type}, processor={processor_name}")
 
-    # Log dataset to MLflow
     mlflow_toolkit.log_dataset(
         interactions,
         name=f"{processor_name}_interactions",
@@ -129,17 +129,42 @@ def train_one_experiment(
         context="training",
     )
 
-    num_users = len(user2idx)
-    num_items = len(item2idx)
-
-    # Create dataset
-    dataset = RecommenderDataset(
-        interactions,
-        num_items,
-        num_negatives=config["num_negatives"],
+    train_loader, val_loader, dataset, val_dataset = _prepare_data_loaders(
+        interactions, num_items, config, seed
     )
 
-    # Split dataset
+    model, history, best = _train_model_with_early_stopping(
+        model_type, len(user2idx), num_items, config, train_loader, val_loader, mlflow_toolkit
+    )
+
+    best_loss, best_metrics, ranking = _compute_final_metrics(
+        model, history, best, val_dataset, dataset, num_items, config, mlflow_toolkit
+    )
+
+    ranking_k = config.get("ranking_k", 10)
+    checkpoint_path = _save_and_log_artifacts(
+        model, model_type, processor_name, user2idx, item2idx, config,
+        best_loss, best_metrics, ranking, best, history,
+        artifact_dir, mlflow_toolkit, ranking_k,
+    )
+
+    return _build_experiment_result(
+        model_type, processor_name, checkpoint_path, processed_path,
+        best_loss, best_metrics, ranking, best, history,
+    )
+
+
+def _prepare_data_loaders(
+    interactions: Any,
+    num_items: int,
+    config: ExperimentConfig,
+    seed: int,
+) -> tuple:
+    """Create dataset, split it, and return train/val DataLoaders."""
+    dataset = RecommenderDataset(
+        interactions, num_items, num_negatives=config["num_negatives"],
+    )
+
     train_size = int(config["train_split_ratio"] * len(dataset))
     val_size = len(dataset) - train_size
 
@@ -149,50 +174,40 @@ def train_one_experiment(
         generator=torch.Generator().manual_seed(seed),
     )
 
-    # Create data loaders
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=config["batch_size"],
-        shuffle=True,
-    )
-
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size=config["batch_size"],
-    )
-
-    # Resolve device
     device = resolve_device()
-
     logger.info(
-        f"Device: {device} | "
-        f"samples={len(dataset):,} | "
-        f"train={train_size:,} | "
-        f"val={val_size:,}"
+        f"Device: {device} | samples={len(dataset):,} | "
+        f"train={train_size:,} | val={val_size:,}"
     )
 
-    # Create model
+    train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=config["batch_size"])
+
+    return train_loader, val_loader, dataset, val_dataset
+
+
+def _train_model_with_early_stopping(
+    model_type: str,
+    num_users: int,
+    num_items: int,
+    config: ExperimentConfig,
+    train_loader: DataLoader,
+    val_loader: DataLoader,
+    mlflow_toolkit: MLflowToolkit,
+) -> tuple:
+    """Create model, trainer, and run training with early stopping."""
     model = ModelFactory.create(
-        model_type,
-        num_users=num_users,
-        num_items=num_items,
+        model_type, num_users=num_users, num_items=num_items,
         **config.get("hyperparams", {}),
     )
+    trainer = Trainer(model, config, device=resolve_device())
 
-    # Create trainer
-    trainer = Trainer(model, config, device=device)
-
-    # Create early stopping
     early_stopping = EarlyStopping(
         patience=config["early_stopping_patience"],
         mode=config["early_stopping_mode"],
         min_delta=config["early_stopping_min_delta"],
     )
 
-    # Create MLflow callback
-    mlflow_logger = create_mlflow_logger(mlflow_toolkit)
-
-    # Train with early stopping
     history, best = trainer.fit_with_early_stopping(
         train_loader=train_loader,
         val_loader=val_loader,
@@ -200,39 +215,67 @@ def train_one_experiment(
         early_stopping=early_stopping,
         monitor=config.get("early_stopping_monitor", "auc_roc"),
         show_progress=config.get("show_progress", True),
-        log_callback=mlflow_logger,
+        log_callback=create_mlflow_logger(mlflow_toolkit),
         num_items=num_items,
         ranking_k=config.get("ranking_k", 10),
     )
 
-    # Extract best epoch metrics
+    return model, history, best
+
+
+def _compute_final_metrics(
+    model: Any,
+    history: list,
+    best: dict,
+    val_dataset: Any,
+    dataset: Any,
+    num_items: int,
+    config: ExperimentConfig,
+    mlflow_toolkit: MLflowToolkit,
+) -> tuple:
+    """Extract best-epoch metrics and compute ranking metrics."""
     best_result = next(r for r in history if r.epoch == best["epoch"])
     best_loss = float(best_result.train_loss)
     best_metrics = best_result.eval_metrics
 
-    # Log best epoch metrics to MLflow
-    mlflow_toolkit.log_metrics(
-        {
-            "best_epoch": int(best["epoch"]),
-            "best_auc_roc": float(best["value"]),
-            "epochs_run": len(history),
-        }
-    )
+    mlflow_toolkit.log_metrics({
+        "best_epoch": int(best["epoch"]),
+        "best_auc_roc": float(best["value"]),
+        "epochs_run": len(history),
+    })
 
-    # Compute ranking metrics
     ranking_k = config.get("ranking_k", 10)
     ranking = compute_ranking_metrics(
         model=model,
         val_dataset=val_dataset,
         dataset=dataset,
         num_items=num_items,
-        device=device,
+        device=resolve_device(),
         k=ranking_k,
         sample_limit=config.get("ranking_sample_limit", 10000),
         positive_limit=config.get("ranking_positive_limit", 1000),
     )
 
-    # Save checkpoint
+    return best_loss, best_metrics, ranking
+
+
+def _save_and_log_artifacts(
+    model: Any,
+    model_type: str,
+    processor_name: str,
+    user2idx: dict,
+    item2idx: dict,
+    config: ExperimentConfig,
+    best_loss: float,
+    best_metrics: dict,
+    ranking: Any,
+    best: dict,
+    history: list,
+    artifact_dir: Path,
+    mlflow_toolkit: MLflowToolkit,
+    ranking_k: int,
+) -> Path:
+    """Save checkpoint and log final metrics/artifacts to MLflow."""
     metrics = {
         "loss": best_loss,
         "auc_roc": float(best_metrics["auc_roc"]),
@@ -240,38 +283,42 @@ def train_one_experiment(
         **ranking.to_dict(ranking_k),
     }
 
-    early_stopping_info = {
-        "best_epoch": best["epoch"],
-        "best_auc_roc": best["value"],
-        "epochs_run": len(history),
-    }
-
     checkpoint_path = save_checkpoint(
-        model=model,
-        model_type=model_type,
-        processor_name=processor_name,
-        user2idx=user2idx,
-        item2idx=item2idx,
-        config=config,
-        metrics=metrics,
-        early_stopping_info=early_stopping_info,
+        model=model, model_type=model_type, processor_name=processor_name,
+        user2idx=user2idx, item2idx=item2idx, config=config, metrics=metrics,
+        early_stopping_info={
+            "best_epoch": best["epoch"],
+            "best_auc_roc": best["value"],
+            "epochs_run": len(history),
+        },
         artifact_dir=artifact_dir,
     )
 
-    # Log artifact and final metrics to MLflow
     mlflow_toolkit.log_artifact(checkpoint_path)
+    mlflow_toolkit.log_metrics({
+        "final_train_loss": best_loss,
+        "final_auc_roc": float(best_metrics["auc_roc"]),
+        "final_avg_precision": float(best_metrics["avg_precision"]),
+        **ranking.to_dict(ranking_k),
+    })
 
-    mlflow_toolkit.log_metrics(
-        {
-            "final_train_loss": best_loss,
-            "final_auc_roc": float(best_metrics["auc_roc"]),
-            "final_avg_precision": float(best_metrics["avg_precision"]),
-            **ranking.to_dict(ranking_k),
-        }
-    )
+    logger.info(f"Experiment completed. Artifact saved to: {checkpoint_path}")
+    return checkpoint_path
 
-    # Build result dictionary
-    result: ExperimentResult = {
+
+def _build_experiment_result(
+    model_type: str,
+    processor_name: str,
+    checkpoint_path: Path,
+    processed_path: Any,
+    best_loss: float,
+    best_metrics: dict,
+    ranking: Any,
+    best: dict,
+    history: list,
+) -> ExperimentResult:
+    """Assemble the ExperimentResult dictionary."""
+    return {
         "model_type": model_type,
         "processor": processor_name,
         "artifact": str(checkpoint_path),
@@ -288,6 +335,3 @@ def train_one_experiment(
         "epochs_run": len(history),
     }
 
-    logger.info(f"Experiment completed. Artifact saved to: {checkpoint_path}")
-
-    return result

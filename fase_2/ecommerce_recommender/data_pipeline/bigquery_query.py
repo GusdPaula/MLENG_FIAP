@@ -77,64 +77,67 @@ class BigQueryQuery:
         return destination_path
 
     def _write_query_results_to_csv(self, query: str, destination_path: Path) -> None:
-        query_job = self.client.query(query)
-        result = query_job.result()
-
-        headers = [field.name for field in result.schema]
+        result, headers = self._execute_and_describe_query(query)
         row_count = int(result.total_rows) if result.total_rows is not None else None
-        column_count = len(headers)
-
-        logger.info(
-            f"Downloading BigQuery result: {row_count if row_count is not None else 'unknown'} rows x {column_count} columns"
-        )
 
         with destination_path.open("w", newline="", encoding="utf-8") as output_file:
             writer = csv.writer(output_file)
             writer.writerow(headers)
             progress_bar = tqdm(
-                result,
-                total=row_count,
-                unit="row",
-                desc=f"Exporting {destination_path.name}",
-                dynamic_ncols=True,
+                result, total=row_count, unit="row",
+                desc=f"Exporting {destination_path.name}", dynamic_ncols=True,
             )
             for row in progress_bar:
                 writer.writerow([row[field] for field in headers])
 
         logger.info(
-            f"Finished writing {destination_path.name}: {progress_bar.n} rows x {column_count} columns"
+            f"Finished writing {destination_path.name}: {progress_bar.n} rows x {len(headers)} columns"
         )
 
+    def _execute_and_describe_query(self, query: str) -> tuple:
+        """Execute a BigQuery query and return (result_iterator, header_list)."""
+        query_job = self.client.query(query)
+        result = query_job.result()
+        headers = [field.name for field in result.schema]
+        row_count = int(result.total_rows) if result.total_rows is not None else None
+        logger.info(
+            f"Downloading BigQuery result: {row_count if row_count is not None else 'unknown'} rows x {len(headers)} columns"
+        )
+        return result, headers
+
     def _version_with_dvc(self, destination_path: Path) -> None:
+        destination_path = destination_path.resolve()
+        relative_destination = self._validate_dvc_path(destination_path)
+        self._run_dvc_add(relative_destination, destination_path)
+
+    def _validate_dvc_path(self, destination_path: Path) -> Path:
+        """Validate the DVC repo root and file existence, return relative path."""
         if self.dvc_repo_root is None:
             raise RuntimeError(
                 "DVC repository was not found. "
                 f"Checked '{self.dvc_repo_path}' and its parents, but no .dvc directory was found. "
                 "Initialize DVC with `dvc init` in your repository root or pass a valid `dvc_repo_path`."
             )
-
-        destination_path = destination_path.resolve()
         if not destination_path.exists():
             raise RuntimeError(
                 f"DVC cannot add '{destination_path}' because it does not exist. "
                 "Ensure the query output was written successfully before versioning."
             )
-
         try:
-            relative_destination = destination_path.relative_to(self.dvc_repo_root)
+            return destination_path.relative_to(self.dvc_repo_root)
         except ValueError as exc:
             raise RuntimeError(
                 f"DVC output path '{destination_path}' is outside the DVC repository root '{self.dvc_repo_root}'. "
                 "Use an output directory inside the DVC repo or pass a correct dvc_repo_path."
             ) from exc
 
+    def _run_dvc_add(self, relative_destination: Path, destination_path: Path) -> None:
+        """Run `dvc add` on a file and handle errors."""
         try:
             completed = subprocess.run(
                 ["dvc", "add", str(relative_destination)],
                 cwd=str(self.dvc_repo_root),
-                capture_output=True,
-                text=True,
-                check=False,
+                capture_output=True, text=True, check=False,
             )
         except FileNotFoundError as exc:
             raise RuntimeError(
@@ -145,3 +148,4 @@ class BigQueryQuery:
             raise RuntimeError(
                 f"DVC add failed for {destination_path}: {completed.stderr.strip() or completed.stdout.strip()}"
             )
+

@@ -155,67 +155,59 @@ class PredictionService:
         """
         import mlflow
 
-        # Set MLflow tracking URI
         mlflow.set_tracking_uri(self.mlflow_tracking_uri)
-
-        # Build model URI based on alias, version, or name
-        if self.mlflow_model_alias:
-            # Search for model with the specified alias
-            model_uri = self._find_model_by_alias(self.mlflow_model_alias)
-        elif self.mlflow_model_version:
-            model_uri = f"models:/{self.mlflow_model_name}/{self.mlflow_model_version}"
-        else:
-            model_uri = f"models:/{self.mlflow_model_name}/latest"
-
+        model_uri = self._build_model_uri()
         logger.info("Loading model from MLflow URI: %s", model_uri)
 
-        # Download model to temporary location
         import tempfile
 
         with tempfile.TemporaryDirectory() as temp_dir:
             try:
-                # Try PyTorch model loading first
                 model_path = mlflow.pytorch.load_model(model_uri, dst_path=temp_dir)
-                checkpoint = torch.load(model_path, map_location=self.device)
+                return torch.load(model_path, map_location=self.device)
             except Exception:
-                # Fallback to artifact downloading
                 logger.info("PyTorch model loading failed, trying artifact download")
-                client = mlflow.tracking.MlflowClient()
+                return self._download_mlflow_artifact(temp_dir)
 
-                # Get the model version info
-                if self.mlflow_model_alias:
-                    # Get model name from alias
-                    model_name = self._find_model_name_by_alias(self.mlflow_model_alias)
-                    model_version = client.get_model_version_by_alias(
-                        model_name, self.mlflow_model_alias
-                    )
-                elif self.mlflow_model_version:
-                    model_version = client.get_model_version(
-                        self.mlflow_model_name, self.mlflow_model_version
-                    )
-                else:
-                    model_version = client.get_latest_versions(self.mlflow_model_name)[
-                        0
-                    ]
+    def _build_model_uri(self) -> str:
+        """Build MLflow model URI from configured alias, version, or name."""
+        if self.mlflow_model_alias:
+            return self._find_model_by_alias(self.mlflow_model_alias)
+        if self.mlflow_model_version:
+            return f"models:/{self.mlflow_model_name}/{self.mlflow_model_version}"
+        return f"models:/{self.mlflow_model_name}/latest"
 
-                # Download artifacts
-                artifacts_dir = client.download_artifacts(
-                    model_version.run_id,
-                    model_name if self.mlflow_model_alias else self.mlflow_model_name,
-                    temp_dir,
-                )
+    def _download_mlflow_artifact(self, temp_dir: str) -> dict[str, Any]:
+        """Download model artifact from MLflow when PyTorch loading fails."""
+        import mlflow
+        import os
 
-                # Find the .pt file
-                import os
+        client = mlflow.tracking.MlflowClient()
+        model_version = self._resolve_mlflow_model_version(client)
 
-                pt_files = [f for f in os.listdir(artifacts_dir) if f.endswith(".pt")]
-                if not pt_files:
-                    raise Exception("No .pt file found in artifacts") from None
+        model_name = (
+            self._find_model_name_by_alias(self.mlflow_model_alias)
+            if self.mlflow_model_alias
+            else self.mlflow_model_name
+        )
+        artifacts_dir = client.download_artifacts(
+            model_version.run_id, model_name, temp_dir
+        )
 
-                model_path = os.path.join(artifacts_dir, pt_files[0])
-                checkpoint = torch.load(model_path, map_location=self.device)
+        pt_files = [f for f in os.listdir(artifacts_dir) if f.endswith(".pt")]
+        if not pt_files:
+            raise Exception("No .pt file found in artifacts") from None
 
-        return checkpoint
+        return torch.load(os.path.join(artifacts_dir, pt_files[0]), map_location=self.device)
+
+    def _resolve_mlflow_model_version(self, client: Any) -> Any:
+        """Resolve the MLflow model version from alias, version, or latest."""
+        if self.mlflow_model_alias:
+            model_name = self._find_model_name_by_alias(self.mlflow_model_alias)
+            return client.get_model_version_by_alias(model_name, self.mlflow_model_alias)
+        if self.mlflow_model_version:
+            return client.get_model_version(self.mlflow_model_name, self.mlflow_model_version)
+        return client.get_latest_versions(self.mlflow_model_name)[0]
 
     def _find_model_name_by_alias(self, alias: str) -> str:
         """Find model name by searching for the specified alias.
@@ -293,10 +285,14 @@ class PredictionService:
             ModelLoadError: If initialization fails.
         """
         self._model_metadata = checkpoint.get("metadata", {})
-
         logger.debug("Model checkpoint loaded successfully")
 
-        # Reconstruct the model
+        model = self._reconstruct_model(checkpoint)
+        self._create_predictor(checkpoint, model)
+        logger.info("PredictionService initialized successfully")
+
+    def _reconstruct_model(self, checkpoint: dict[str, Any]) -> Any:
+        """Reconstruct the PyTorch model from checkpoint data."""
         model_type = checkpoint.get("model_type")
         if not model_type:
             logger.error("Model type not found in checkpoint")
@@ -304,79 +300,61 @@ class PredictionService:
 
         from src.recommender.models.factory import ModelFactory
 
-        # Handle different checkpoint structures
-        # MLflow experiments save user2idx/item2idx instead of num_users/num_items
-        user2idx = checkpoint.get("user2idx")
-        item2idx = checkpoint.get("item2idx")
-
-        if user2idx is not None and item2idx is not None:
-            num_users = len(user2idx)
-            num_items = len(item2idx)
-            hyperparams = checkpoint.get("config", {}).get("hyperparams", {})
-            logger.info(
-                "Derived num_users=%d, num_items=%d from user2idx/item2idx",
-                num_users,
-                num_items,
-            )
-        else:
-            num_users = checkpoint.get("num_users")
-            num_items = checkpoint.get("num_items")
-            hyperparams = checkpoint.get("hyperparams", {})
-
-        if num_users is None or num_items is None:
-            logger.error("num_users or num_items not found in checkpoint")
-            raise ModelLoadError("num_users or num_items not found in checkpoint.")
+        num_users, num_items, hyperparams = self._resolve_model_dimensions(checkpoint)
 
         logger.info(
             "Reconstructing model of type %s with %d users and %d items",
-            model_type,
-            num_users,
-            num_items,
+            model_type, num_users, num_items,
         )
 
         model = ModelFactory.create(
-            model_type=model_type,
-            num_users=num_users,
-            num_items=num_items,
-            **hyperparams,
+            model_type=model_type, num_users=num_users,
+            num_items=num_items, **hyperparams,
         )
         model.load_state_dict(checkpoint["model_state_dict"])
         model.to(self.device)
         model.eval()
-
         logger.debug("Model state loaded and set to eval mode")
+        return model
 
-        # Create the predictor
+    @staticmethod
+    def _resolve_model_dimensions(
+        checkpoint: dict[str, Any],
+    ) -> tuple[int, int, dict]:
+        """Extract num_users, num_items, and hyperparams from checkpoint."""
+        user2idx = checkpoint.get("user2idx")
+        item2idx = checkpoint.get("item2idx")
+
+        if user2idx is not None and item2idx is not None:
+            return len(user2idx), len(item2idx), checkpoint.get("config", {}).get("hyperparams", {})
+
+        num_users = checkpoint.get("num_users")
+        num_items = checkpoint.get("num_items")
+        if num_users is None or num_items is None:
+            raise ModelLoadError("num_users or num_items not found in checkpoint.")
+        return num_users, num_items, checkpoint.get("hyperparams", {})
+
+    def _create_predictor(self, checkpoint: dict[str, Any], model: Any) -> None:
+        """Create the predictor instance from checkpoint data."""
         user2idx = checkpoint.get("user2idx", {})
         item2idx = checkpoint.get("item2idx", {})
 
         logger.info(
             "Creating predictor of type '%s' with %d users and %d items",
-            self.predictor_type,
-            len(user2idx),
-            len(item2idx),
+            self.predictor_type, len(user2idx), len(item2idx),
         )
 
-        # Load popular items for cold start fallback
         popular_items = checkpoint.get("popular_items", {})
         if popular_items:
-            logger.info(
-                "Loaded %d popular items for cold start fallback", len(popular_items)
-            )
+            logger.info("Loaded %d popular items for cold start fallback", len(popular_items))
         else:
-            logger.warning(
-                "No popular items found in checkpoint, cold start fallback disabled"
-            )
+            logger.warning("No popular items found in checkpoint, cold start fallback disabled")
 
         self._predictor = PredictorFactory.create(
             predictor_type=self.predictor_type,
-            model=model,
-            user2idx=user2idx,
-            item2idx=item2idx,
-            popular_items=popular_items,
+            model=model, user2idx=user2idx,
+            item2idx=item2idx, popular_items=popular_items,
         )
-
-        logger.info("PredictionService initialized successfully")
 
     def predict(self, request: PredictionRequest) -> PredictionResponse:
         """Generate predictions for a single user.
@@ -427,22 +405,7 @@ class PredictionService:
 
         logger.info("Processing batch prediction for %d requests", len(requests))
         predictions = self._predictor.predict_batch(requests)
-
-        if self.enable_monitoring and self._monitoring_service:
-            all_scores = []
-            all_user_ids = []
-            all_item_ids = []
-
-            for pred in predictions:
-                all_scores.extend(pred.item_scores.values())
-                all_user_ids.extend([pred.user_id] * len(pred.item_scores))
-                all_item_ids.extend(pred.item_scores.keys())
-
-            self._monitoring_service.record_predictions(
-                scores=all_scores,
-                user_ids=all_user_ids,
-                item_ids=all_item_ids,
-            )
+        self._record_batch_monitoring(predictions)
 
         return BatchPredictionResponse(
             predictions=predictions,
@@ -451,6 +414,23 @@ class PredictionService:
                 "predictor_type": self.predictor_type,
                 "num_requests": len(requests),
             },
+        )
+
+    def _record_batch_monitoring(
+        self, predictions: list[PredictionResponse]
+    ) -> None:
+        """Record batch predictions to monitoring service."""
+        if not (self.enable_monitoring and self._monitoring_service):
+            return
+        all_scores = []
+        all_user_ids = []
+        all_item_ids = []
+        for pred in predictions:
+            all_scores.extend(pred.item_scores.values())
+            all_user_ids.extend([pred.user_id] * len(pred.item_scores))
+            all_item_ids.extend(pred.item_scores.keys())
+        self._monitoring_service.record_predictions(
+            scores=all_scores, user_ids=all_user_ids, item_ids=all_item_ids,
         )
 
     def recommend(self, user_id: int, k: int = 10) -> RecommendationResponse:
@@ -484,17 +464,20 @@ class PredictionService:
 
         logger.info("Generating top-%d recommendations for user %d", k, user_id)
         response = self._predictor.recommend(user_id, k)
-
-        if self.enable_monitoring and self._monitoring_service:
-            scores = [score for _, score in response.recommendations]
-            item_ids = [item_id for item_id, _ in response.recommendations]
-            self._monitoring_service.record_predictions(
-                scores=scores,
-                user_ids=[user_id],
-                item_ids=item_ids,
-            )
-
+        self._record_recommendation_monitoring(response, user_id)
         return response
+
+    def _record_recommendation_monitoring(
+        self, response: RecommendationResponse, user_id: int
+    ) -> None:
+        """Record recommendation predictions to monitoring service."""
+        if not (self.enable_monitoring and self._monitoring_service):
+            return
+        scores = [score for _, score in response.recommendations]
+        item_ids = [item_id for item_id, _ in response.recommendations]
+        self._monitoring_service.record_predictions(
+            scores=scores, user_ids=[user_id], item_ids=item_ids,
+        )
 
     def get_model_info(self) -> dict[str, Any]:
         """Get information about the loaded model.
