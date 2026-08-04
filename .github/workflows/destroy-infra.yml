@@ -57,6 +57,9 @@ jobs:
         if: ${{ github.event.inputs.target == 'all' || github.event.inputs.target == 's3' }}
         run: |
           echo "Initiating destruction of S3 / DVC Infrastructure..."
+          # Cleanup login profiles if present to prevent IAM DeleteConflict errors
+          aws iam delete-login-profile --user-name fiap-dvc-user 2>/dev/null || true
+          aws iam delete-login-profile --user-name fiap-dvc-user-readonly 2>/dev/null || true
           cd fase_2/infra/s3
           terraform init
           terraform destroy -auto-approve -input=false
