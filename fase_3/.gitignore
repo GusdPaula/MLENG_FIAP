@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.pyc
+pyvenv.cfg
+venv/
+ENV/
+.venv/
+env/
+.env
+pip-wheel-metadata/
+dist/
+build/
+eggs/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+*.cover
+*.py,cover
+
+# Jupyter
+.ipynb_checkpoints/
+
+# MLOps / MLflow
+mlruns/
+mlflow/
+artifacts/
+models/
+checkpoints/
+logs/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+crash.log
+override.tf
+override.tf.json
+terraform.tfvars
+*.tfvars
+*.tfvars.json
+.terraform.tfstate.lock.info
+terraform.rc
+.terraformrc
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
