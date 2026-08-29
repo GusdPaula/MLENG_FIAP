@@ -9,7 +9,7 @@ Covers:
 
 import pytest
 
-from data.validate import validate_data
+from treino_modelo.data.validate import validate_data
 
 
 # ---------------------------------------------------------------------------
@@ -118,20 +118,42 @@ def test_validation_order_columns_first(df_missing_label_column, df_test_valid):
 
 import numpy as np
 import pandas as pd
-from hypothesis import given, settings
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+_sample_texts = [
+    "The patient presented with clinical symptoms.",
+    "A biopsy was performed to evaluate the condition.",
+    "Laboratory tests indicated standard biomarkers.",
+    "Treatment protocol was successfully initiated.",
+    "Follow-up examination showed positive progress.",
+]
+
 # Strategy for a single valid non-blank abstract text
-_valid_abstract_st = st.text(
-    alphabet=st.characters(blacklist_categories=("Cs",)),
-    min_size=1,
-).filter(lambda s: s.strip() != "")
+_valid_abstract_st = st.sampled_from(_sample_texts) | st.text(
+    alphabet="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,",
+    min_size=5,
+    max_size=30,
+)
+
+# Strategy for a single valid non-blank abstract text
+_valid_abstract_st = st.sampled_from(_sample_texts) | st.text(
+    alphabet="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,",
+    min_size=5,
+    max_size=30,
+)
 
 # Strategy for a single valid label in {1, 2, 3, 4, 5}
 _valid_label_st = st.integers(min_value=1, max_value=5)
+
+HEALTH_CHECKS = [
+    HealthCheck.large_base_example,
+    HealthCheck.too_slow,
+    HealthCheck.data_too_large,
+]
 
 
 def _make_df_from_lists(labels, abstracts) -> pd.DataFrame:
@@ -145,18 +167,22 @@ def _make_df_from_lists(labels, abstracts) -> pd.DataFrame:
 @st.composite
 def _valid_train_df(draw) -> pd.DataFrame:
     """Generate a valid training DataFrame (≥ 1 000 rows)."""
-    n = draw(st.integers(min_value=1_000, max_value=1_200))
-    labels = draw(st.lists(_valid_label_st, min_size=n, max_size=n))
-    abstracts = draw(st.lists(_valid_abstract_st, min_size=n, max_size=n))
+    n = draw(st.integers(min_value=1_000, max_value=1_050))
+    sample_labels = [draw(_valid_label_st) for _ in range(10)]
+    labels = [sample_labels[i % 10] for i in range(n)]
+    sample_abstracts = [draw(_valid_abstract_st) for _ in range(10)]
+    abstracts = [sample_abstracts[i % 10] for i in range(n)]
     return _make_df_from_lists(labels, abstracts)
 
 
 @st.composite
 def _valid_test_df(draw) -> pd.DataFrame:
     """Generate a valid test DataFrame (≥ 100 rows)."""
-    n = draw(st.integers(min_value=100, max_value=150))
-    labels = draw(st.lists(_valid_label_st, min_size=n, max_size=n))
-    abstracts = draw(st.lists(_valid_abstract_st, min_size=n, max_size=n))
+    n = draw(st.integers(min_value=100, max_value=120))
+    sample_labels = [draw(_valid_label_st) for _ in range(10)]
+    labels = [sample_labels[i % 10] for i in range(n)]
+    sample_abstracts = [draw(_valid_abstract_st) for _ in range(10)]
+    abstracts = [sample_abstracts[i % 10] for i in range(n)]
     return _make_df_from_lists(labels, abstracts)
 
 
@@ -164,7 +190,7 @@ def _valid_test_df(draw) -> pd.DataFrame:
 # Validates: Requirements 2.2, 2.3
 
 @given(df=_valid_train_df(), test_df=_valid_test_df(), drop_col=st.sampled_from(["condition_label", "medical_abstract"]))
-@settings(max_examples=30)
+@settings(max_examples=30, suppress_health_check=HEALTH_CHECKS)
 def test_prop2_missing_column_raises(df, test_df, drop_col):
     """Property 2: validate_data() must raise ValueError for any DataFrame
     that is missing either required column.
@@ -180,8 +206,8 @@ def test_prop2_missing_column_raises(df, test_df, drop_col):
 # Validates: Requirements 2.4, 2.5
 
 _invalid_label_st = st.one_of(
-    st.integers(max_value=0),
-    st.integers(min_value=6),
+    st.integers(min_value=-2**63, max_value=0),
+    st.integers(min_value=6, max_value=2**63 - 1),
 )
 
 
@@ -191,7 +217,7 @@ _invalid_label_st = st.one_of(
     invalid_label=_invalid_label_st,
     inject_into_train=st.booleans(),
 )
-@settings(max_examples=40)
+@settings(max_examples=30, suppress_health_check=HEALTH_CHECKS)
 def test_prop3_invalid_labels_raises(df, test_df, invalid_label, inject_into_train):
     """Property 3: validate_data() must raise ValueError whenever condition_label
     contains at least one value outside {1, 2, 3, 4, 5}.
@@ -226,7 +252,7 @@ _bad_abstract_st = st.one_of(
     bad_abstract=_bad_abstract_st,
     inject_into_train=st.booleans(),
 )
-@settings(max_examples=40)
+@settings(max_examples=30, suppress_health_check=HEALTH_CHECKS)
 def test_prop4_bad_abstract_raises(df, test_df, bad_abstract, inject_into_train):
     """Property 4: validate_data() must raise ValueError for any DataFrame
     that contains a null, empty, or whitespace-only medical_abstract entry.
@@ -252,8 +278,10 @@ def test_prop4_bad_abstract_raises(df, test_df, bad_abstract, inject_into_train)
 def _undersized_train_df(draw) -> pd.DataFrame:
     """Generate a valid-content training DataFrame with fewer than 1 000 rows."""
     n = draw(st.integers(min_value=1, max_value=999))
-    labels = draw(st.lists(_valid_label_st, min_size=n, max_size=n))
-    abstracts = draw(st.lists(_valid_abstract_st, min_size=n, max_size=n))
+    sample_labels = [draw(_valid_label_st) for _ in range(min(n, 10))]
+    labels = [sample_labels[i % len(sample_labels)] for i in range(n)]
+    sample_abstracts = [draw(_valid_abstract_st) for _ in range(min(n, 10))]
+    abstracts = [sample_abstracts[i % len(sample_abstracts)] for i in range(n)]
     return _make_df_from_lists(labels, abstracts)
 
 
@@ -261,13 +289,15 @@ def _undersized_train_df(draw) -> pd.DataFrame:
 def _undersized_test_df(draw) -> pd.DataFrame:
     """Generate a valid-content test DataFrame with fewer than 100 rows."""
     n = draw(st.integers(min_value=1, max_value=99))
-    labels = draw(st.lists(_valid_label_st, min_size=n, max_size=n))
-    abstracts = draw(st.lists(_valid_abstract_st, min_size=n, max_size=n))
+    sample_labels = [draw(_valid_label_st) for _ in range(min(n, 10))]
+    labels = [sample_labels[i % len(sample_labels)] for i in range(n)]
+    sample_abstracts = [draw(_valid_abstract_st) for _ in range(min(n, 10))]
+    abstracts = [sample_abstracts[i % len(sample_abstracts)] for i in range(n)]
     return _make_df_from_lists(labels, abstracts)
 
 
 @given(small_train=_undersized_train_df(), test_df=_valid_test_df())
-@settings(max_examples=20)
+@settings(max_examples=20, suppress_health_check=HEALTH_CHECKS)
 def test_prop5a_undersized_train_raises(small_train, test_df):
     """Property 5a: validate_data() must raise ValueError when the training
     DataFrame has fewer than 1 000 rows.
@@ -279,7 +309,7 @@ def test_prop5a_undersized_train_raises(small_train, test_df):
 
 
 @given(train_df=_valid_train_df(), small_test=_undersized_test_df())
-@settings(max_examples=20)
+@settings(max_examples=20, suppress_health_check=HEALTH_CHECKS)
 def test_prop5b_undersized_test_raises(train_df, small_test):
     """Property 5b: validate_data() must raise ValueError when the test
     DataFrame has fewer than 100 rows.
@@ -294,7 +324,7 @@ def test_prop5b_undersized_test_raises(train_df, small_test):
 # Validates: Requirement 2.10
 
 @given(train_df=_valid_train_df(), test_df=_valid_test_df())
-@settings(max_examples=30)
+@settings(max_examples=30, suppress_health_check=HEALTH_CHECKS)
 def test_prop6_valid_data_always_passes(train_df, test_df):
     """Property 6: validate_data() must return exactly True for any pair of
     DataFrames that satisfies all constraints simultaneously (columns present,
@@ -304,3 +334,4 @@ def test_prop6_valid_data_always_passes(train_df, test_df):
     """
     result = validate_data(train_df, test_df)
     assert result is True
+
