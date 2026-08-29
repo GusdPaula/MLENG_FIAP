@@ -1,3 +1,4 @@
+import json
 import logging
 from pathlib import Path
 
@@ -19,7 +20,15 @@ CLASS_NAMES = [
 ]
 
 LABELS = [1, 2, 3, 4, 5]
+LABEL_TO_CLASS = {
+    1: "neoplasms",
+    2: "digestive system diseases",
+    3: "nervous system diseases",
+    4: "cardiovascular diseases",
+    5: "general pathological conditions",
+}
 ACCURACY_THRESHOLD = 0.50
+METADATA_PATH = ARTIFACTS_DIR / "model_metadata.json"
 
 
 def evaluate_model(
@@ -66,11 +75,19 @@ def evaluate_model(
             f"({ACCURACY_THRESHOLD})."
         )
 
-    # Persiste o relatório; falha de I/O não bloqueia o retorno
+    # Persiste o relatório e metadados; falha de I/O não bloqueia o retorno
     try:
         ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
         REPORT_PATH.write_text(report, encoding="utf-8")
-        logger.info(f"Relatório salvo em '{REPORT_PATH}'.")
+        metadata = {
+            "accuracy": accuracy,
+            "accuracy_threshold": ACCURACY_THRESHOLD,
+            "labels": LABELS,
+            "class_names": CLASS_NAMES,
+            "label_to_class": LABEL_TO_CLASS,
+        }
+        METADATA_PATH.write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
+        logger.info(f"Relatório salvo em '{REPORT_PATH}'. Metadados salvos em '{METADATA_PATH}'.")
     except Exception as exc:
         logger.error(f"Falha ao salvar o relatório: {exc}")
 

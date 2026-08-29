@@ -1,6 +1,7 @@
+from pathlib import Path
+
 import kagglehub
 import pandas as pd
-from pathlib import Path
 
 DATASET_SLUG = "saharalaa/medical-abstracts-tc-corpus"
 

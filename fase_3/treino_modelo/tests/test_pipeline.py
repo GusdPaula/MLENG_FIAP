@@ -7,9 +7,7 @@ Covers:
   - Directory creation: artifacts/ directory created before execution (Req 5.5)
 """
 
-import io
-import logging
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
