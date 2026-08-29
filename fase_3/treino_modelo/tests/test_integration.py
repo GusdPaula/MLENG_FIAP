@@ -5,7 +5,6 @@ Covers:
   - Verification of created artifacts: model.pkl and evaluation_report.txt
 """
 
-import sys
 from pathlib import Path
 from unittest.mock import patch
 

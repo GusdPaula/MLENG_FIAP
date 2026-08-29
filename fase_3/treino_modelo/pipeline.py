@@ -56,12 +56,23 @@ def run_pipeline() -> None:
         logger.error(f"Falha na etapa de Avaliação: {exc}")
         sys.exit(1)
 
+    # Etapa 5 — Otimização ONNX
+    logger.info("=== Etapa 5/5: Exportação e Otimização ONNX ===")
+    onnx_path = ARTIFACTS_DIR / "model.onnx"
+    try:
+        from treino_modelo.optimize.onnx_exporter import export_pipeline_to_onnx
+        export_pipeline_to_onnx(pipeline, output_path=onnx_path)
+    except Exception as exc:
+        logger.warning(f"Não foi possível exportar modelo para ONNX: {exc}")
+
     # Resumo final
     model_path = ARTIFACTS_DIR / "model.pkl"
     print("\n" + "=" * 50)
     print("PIPELINE CONCLUÍDA COM SUCESSO")
     print(f"Acurácia do modelo : {results['accuracy']:.4f}")
-    print(f"Artefato salvo em  : {model_path}")
+    print(f"Artefato Sklearn   : {model_path}")
+    if onnx_path.exists():
+        print(f"Artefato ONNX      : {onnx_path}")
     print("=" * 50)
 
 
