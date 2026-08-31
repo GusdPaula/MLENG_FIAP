@@ -31,7 +31,9 @@ jobs:
         run: pip install poetry
 
       - name: Install dependencies
-        run: poetry install --with dev --with api
+        run: |
+          poetry install --with dev
+          poetry install --all-extras
 
       - name: Run ruff check
         run: poetry run ruff check src/
@@ -60,7 +62,9 @@ jobs:
         run: pip install poetry
 
       - name: Install dependencies
-        run: poetry install --with dev --with api
+        run: |
+          poetry install --with dev
+          poetry install --all-extras
 
       - name: Run tests
         run: poetry run pytest src/app/tests/ -v

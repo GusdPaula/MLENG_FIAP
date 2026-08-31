@@ -30,7 +30,9 @@ jobs:
         run: pip install poetry
 
       - name: Install dependencies
-        run: poetry install --with dev --with api
+        run: |
+          poetry install --with dev
+          poetry install --all-extras
 
       - name: Run ruff check (strict)
         run: poetry run ruff check src/ --select ALL
