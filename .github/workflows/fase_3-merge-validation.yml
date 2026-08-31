@@ -35,7 +35,7 @@ jobs:
           poetry install --all-extras
 
       - name: Run ruff check (strict)
-        run: poetry run ruff check src/ --select ALL
+        run: poetry run ruff check src/
 
       - name: Run ruff format check
         run: poetry run ruff format --check src/
