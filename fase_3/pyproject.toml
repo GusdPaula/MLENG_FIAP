@@ -19,8 +19,10 @@ apache-airflow = {version = ">=2.8.0", optional = true}
 
 # Dependências para a API (Etapas 1 e 3)
 fastapi = {version = ">=0.110.0", optional = true}
-uvicorn = {version = ">=0.28.0", optional = true}
+uvicorn = {extras = ["standard"], version = "^0.52.4"}
 prometheus-client = {version = ">=0.20.0", optional = true}
+pydantic-settings = "^2.15.0"
+httpx2 = "^2.12.0"
 
 [tool.poetry.extras]
 airflow = ["apache-airflow"]
@@ -47,7 +49,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
-testpaths = ["treino_modelo/tests"]
+testpaths = ["treino_modelo/tests", "src/app/tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 
@@ -73,7 +75,11 @@ select = [
 ]
 ignore = [
     "E501", # line-too-long (delega para o formatador)
+    "B008", # Depends calls in FastAPI are standard pattern
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"src/app/api/**/*.py" = ["B008"]  # FastAPI Depends pattern is standard
 
 [tool.ruff.format]
 quote-style = "double"

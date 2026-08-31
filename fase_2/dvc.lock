@@ -1,14 +1,14 @@
 schema: '2.0'
 stages:
   preprocess:
-    cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from
-      recommender.pipelines.preprocess_pipeline import run_preprocess_pipeline;
+    cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from 
+      recommender.pipelines.preprocess_pipeline import run_preprocess_pipeline; 
       run_preprocess_pipeline()" --config configs/model.yaml
     deps:
     - path: configs/model.yaml
       hash: md5
-      md5: e373bf84be03adc649475b4d4accd672
-      size: 1327
+      md5: 4d864d04b6cff9b63c3017a34630683a
+      size: 1326
     - path: data/raw/events.csv
       hash: md5
       md5: b2c06f552519442bddbd7c3bcc770123
@@ -31,14 +31,14 @@ stages:
       md5: def5a7cbb53b57239ba87cae2c2b0ca0
       size: 1388405
   train:
-    cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from
-      recommender.pipelines.train_pipeline import run_training_pipeline;
+    cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from 
+      recommender.pipelines.train_pipeline import run_training_pipeline; 
       run_training_pipeline(comprehensive=True)" --config configs/model.yaml
     deps:
     - path: configs/model.yaml
       hash: md5
-      md5: e373bf84be03adc649475b4d4accd672
-      size: 1327
+      md5: 4d864d04b6cff9b63c3017a34630683a
+      size: 1326
     - path: data/processed/interactions.csv
       hash: md5
       md5: 8321e4e8e454055600cc4cd40aa9737b
@@ -54,7 +54,7 @@ stages:
     params:
       configs/model.yaml:
         model.batch_size: 1024
-        model.epochs: 10
+        model.epochs: 1
         model.hyperparams:
           embedding_dim: 64
           hidden_layers:
@@ -69,17 +69,17 @@ stages:
     outs:
     - path: models/model.pt
       hash: md5
-      md5: 3dc13978e8f22009cc864a9694531f8b
-      size: 39442837
+      md5: ca73f0d4f5cb0b261ff011096988c1ee
+      size: 40370837
   evaluate:
-    cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from
-      recommender.pipelines.evaluate_pipeline import run_evaluation_pipeline;
+    cmd: poetry run python -c "import sys; sys.path.insert(0, 'src'); from 
+      recommender.pipelines.evaluate_pipeline import run_evaluation_pipeline; 
       run_evaluation_pipeline()" --config configs/model.yaml
     deps:
     - path: configs/model.yaml
       hash: md5
-      md5: e373bf84be03adc649475b4d4accd672
-      size: 1327
+      md5: 4d864d04b6cff9b63c3017a34630683a
+      size: 1326
     - path: data/processed/interactions.csv
       hash: md5
       md5: 8321e4e8e454055600cc4cd40aa9737b
@@ -94,10 +94,10 @@ stages:
       size: 1388405
     - path: models/model.pt
       hash: md5
-      md5: 3dc13978e8f22009cc864a9694531f8b
-      size: 39442837
+      md5: ca73f0d4f5cb0b261ff011096988c1ee
+      size: 40370837
     outs:
     - path: reports/metrics.json
       hash: md5
-      md5: baf0feb4b8c9992e5402283e560e5edf
-      size: 5252
+      md5: ed17c107c195c2a5e51458b7fec5ccc3
+      size: 5260

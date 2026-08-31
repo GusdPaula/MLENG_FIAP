@@ -1,0 +1,44 @@
+name: Merge Validation
+
+on:
+  pull_request:
+    branches: ["main"]
+    types: [opened, synchronize, reopened]
+
+env:
+  PYTHON_VERSION: "3.11"
+  WORKING_DIR: "fase_3"
+
+jobs:
+  validate-merge:
+    name: Validate Merge
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: |
+          poetry install --with dev
+          poetry install --all-extras
+
+      - name: Run ruff check (strict)
+        run: poetry run ruff check src/
+
+      - name: Run ruff format check
+        run: poetry run ruff format --check src/
+
+      - name: Run tests
+        run: poetry run pytest src/app/tests/ -v
