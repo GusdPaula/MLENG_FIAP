@@ -49,6 +49,50 @@ Executa a comparação de latência (P50, P90, P95, P99), throughput e paridade 
 poetry run benchmark --iterations 500 --warmup 50
 ```
 
+#### 📊 Interpretação dos Resultados do Benchmark
+
+O relatório de benchmark é gerado em `treino_modelo/artifacts/benchmark_report.md` e contém:
+
+**Métricas de Latência:**
+- **Média**: Tempo médio de inferência em todas as iterações
+- **P50 (Mediana)**: Valor central - representa o desempenho típico
+- **P90/P95/P99**: Percentis que mostram o desempenho no pior caso (90º, 95º, 99º percentil)
+
+**Throughput**: Estimativa de requisições por segundo que o sistema consegue processar
+
+**Paridade de Predições**: Porcentagem de predições idênticas entre Scikit-Learn e ONNX Runtime (deve ser 100% para segurança clínica)
+
+**Ganhos de Performance:**
+- Porcentagem de redução de latência
+- Porcentagem de aumento de throughput
+
+#### 🎯 Resultados do Benchmark Atual
+
+Com base no benchmark mais recente (2026-08-29):
+
+| Métrica | Scikit-Learn | ONNX Runtime | Melhoria |
+|---------|--------------|--------------|----------|
+| Latência Mediana (P50) | 0.1732 ms | 0.0702 ms | **59.5% mais rápido** |
+| Throughput | 5.729 req/s | 14.023 req/s | **144.8% de aumento** |
+| Paridade de Predições | — | 100% | **Correspondência perfeita** |
+
+**Principais Conclusões:**
+- ONNX Runtime proporciona redução significativa de latência para respostas em tempo real na API
+- Paridade perfeita de predições garante que a acurácia clínica é mantida
+- Maior throughput permite escalabilidade para mais usuários simultâneos
+
+#### 📈 Como Interpretar Seus Resultados
+
+**Resultados Bons:**
+- **Paridade de Predições = 100%**: Crítico para segurança clínica - os modelos devem produzir predições idênticas
+- **Redução de Latência > 50%**: Melhoria significativa de performance com otimização ONNX
+- **Aumento de Throughput > 100%**: Melhor escalabilidade para API em produção
+
+**Se os Resultados Forem Ruins:**
+- Verifique se ambos os modelos usam os mesmos dados de treinamento
+- Confirme que a exportação ONNX foi concluída com sucesso
+- Certifique-se de que os dados de teste são representativos da carga de produção
+
 ### 3. Testes Automatizados (Pytest)
 ```bash
 poetry run pytest
