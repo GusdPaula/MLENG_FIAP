@@ -150,9 +150,9 @@ def run_benchmark(
     onnx_path = Path(onnx_path)
     report_path = Path(report_path)
 
-    print("\n" + "=" * 60)
-    print("INICIANDO BENCHMARK: Scikit-Learn vs ONNX Runtime")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("INICIANDO BENCHMARK: Scikit-Learn vs ONNX Runtime")
+    logger.info("=" * 60)
 
     # Carrega textos de teste
     if test_texts is None:
@@ -170,19 +170,19 @@ def run_benchmark(
                 "General fatigue, fever and pathological inflammation.",
             ]
 
-    print(f"Total de textos de teste carregados: {len(test_texts)}")
-    print(f"Executando {iterations} iterações (warmup={warmup})...\n")
+    logger.info(f"Total de textos de teste carregados: {len(test_texts)}")
+    logger.info(f"Executando {iterations} iterações (warmup={warmup})...")
 
     sk_engine = SklearnInferenceEngine(model_path=sklearn_path)
     onnx_engine = ONNXInferenceEngine(model_path=onnx_path)
 
-    print("1. Medindo latência do Scikit-Learn...")
+    logger.info("1. Medindo latência do Scikit-Learn...")
     sk_metrics = measure_latencies(sk_engine, test_texts, iterations=iterations, warmup=warmup)
 
-    print("2. Medindo latência do ONNX Runtime...")
+    logger.info("2. Medindo latência do ONNX Runtime...")
     onnx_metrics = measure_latencies(onnx_engine, test_texts, iterations=iterations, warmup=warmup)
 
-    print("3. Calculando paridade de predições...")
+    logger.info("3. Calculando paridade de predições...")
     parity_rate = compute_prediction_parity(sk_engine, onnx_engine, test_texts[:min(500, len(test_texts))])
 
     report_content = generate_markdown_report(
@@ -196,9 +196,9 @@ def run_benchmark(
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(report_content, encoding="utf-8")
 
-    print("\n" + report_content)
-    print(f"\nRelatório salvo com sucesso em: '{report_path}'")
-    print("=" * 60)
+    logger.info("\n" + report_content)
+    logger.info(f"Relatório salvo com sucesso em: '{report_path}'")
+    logger.info("=" * 60)
 
     return {
         "sklearn": sk_metrics,
