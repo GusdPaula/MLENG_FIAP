@@ -67,13 +67,13 @@ def run_pipeline() -> None:
 
     # Resumo final
     model_path = ARTIFACTS_DIR / "model.pkl"
-    print("\n" + "=" * 50)
-    print("PIPELINE CONCLUÍDA COM SUCESSO")
-    print(f"Acurácia do modelo : {results['accuracy']:.4f}")
-    print(f"Artefato Sklearn   : {model_path}")
+    logger.info("=" * 50)
+    logger.info("PIPELINE CONCLUÍDA COM SUCESSO")
+    logger.info(f"Acurácia do modelo : {results['accuracy']:.4f}")
+    logger.info(f"Artefato Sklearn   : {model_path}")
     if onnx_path.exists():
-        print(f"Artefato ONNX      : {onnx_path}")
-    print("=" * 50)
+        logger.info(f"Artefato ONNX      : {onnx_path}")
+    logger.info("=" * 50)
 
 
 if __name__ == "__main__":
