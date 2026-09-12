@@ -325,12 +325,10 @@ Os testes cobrem:
 - ✅ Casos de borda e caracteres especiais
 - ✅ Performance e tempo de resposta
 
-## 8. O que ainda está pendente
+## 8. Integrações Implementadas
 
-Este README documenta o que já existe em código. Ainda faltam, fora de `src/app/`:
+Este README documenta o que já existe em código em `src/app/`. Todas as dependências externas já foram implementadas no projeto:
 
 - [x] `tests/` — suite completo de testes automatizados implementado em `src/app/tests/`
-- [ ] `docker/Dockerfile` — build da imagem da API
-- [ ] `ml/train.py`, `ml/convert_to_onnx.py` — geram o `models/model.onnx` que `InferenceService` espera encontrar
-
-`services/inference.py` assume um contrato específico do grafo ONNX (input chamado `"input_text"`, outputs `"output_label"` e `"output_probability"`) — `ml/convert_to_onnx.py` precisa seguir exatamente esse contrato quando for escrito.
+- [x] `docker/Dockerfile` — build da imagem da API implementado na pasta `docker/`
+- [x] `treino_modelo/train/train.py` e `treino_modelo/optimize/onnx_exporter.py` — scripts de ML implementados que geram o `model.onnx` seguindo o contrato esperado pelo `InferenceService` (input `"input_text"`, outputs `"output_label"` e `"output_probability"`).

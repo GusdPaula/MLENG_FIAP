@@ -93,12 +93,18 @@ Com base no benchmark mais recente (2026-08-29):
 - Confirme que a exportação ONNX foi concluída com sucesso
 - Certifique-se de que os dados de teste são representativos da carga de produção
 
-### 3. Testes Automatizados (Pytest)
+### 3. Testes de API e Geração de Tráfego (`run.sh`)
+Para validar a API em execução e gerar tráfego para visualizar as métricas no dashboard do Grafana, utilize o script de simulação:
+```bash
+sh run.sh
+```
+
+### 4. Testes Automatizados (Pytest)
 ```bash
 poetry run pytest
 ```
 
-### 4. Verificação e Formatação de Código (Ruff)
+### 5. Verificação e Formatação de Código (Ruff)
 ```bash
 # Verificar problemas de lint e imports
 poetry run ruff check .
@@ -110,6 +116,15 @@ poetry run ruff check . --fix
 poetry run ruff format .
 ```
 
+---
+
+## 📚 Documentações Complementares
+
+Para um entendimento mais profundo sobre componentes específicos do projeto, consulte os arquivos abaixo:
+
+- [**Plano de Deploy e Decisão Arquitetural**](docker/PLANO_DEPLOY.md): Justificativas para as escolhas de infraestrutura, incluindo uso da AWS e opções de escalabilidade.
+- [**Documentação Docker e Monitoramento**](docker/README.md): Guia detalhado sobre a stack (API, Prometheus, Grafana), dashboards e troubleshooting dos containers.
+- [**Arquitetura da API (Backend)**](src/README.md): Documentação técnica sobre as camadas do backend (FastAPI), endpoints, schemas e a suíte de testes.
 ---
 
 ## 📂 Estrutura do Projeto
