@@ -131,10 +131,20 @@ Para um entendimento mais profundo sobre componentes específicos do projeto, co
 
 ```
 fase_3/
+├── apresentacao/                  # Arquivos da apresentação/pitch (HTML, imagens)
 ├── dags/
 │   └── medical_training_dag.py    # DAG semanal do Apache Airflow (@weekly)
+├── docker/                        # Arquivos para deploy e monitoramento
+│   ├── grafana/                   # Dashboards do Grafana
+│   ├── docker-compose.yml         # Orquestração local dos containers
+│   ├── Dockerfile                 # Definição da imagem da API
+│   ├── PLANO_DEPLOY.md            # Plano e arquitetura de deploy na nuvem
+│   └── prometheus.yml             # Configuração do Prometheus
 ├── notebooks/
 │   └── explorer.ipynb             # Notebook de análise exploratória
+├── src/                           # Código-fonte principal da aplicação
+│   ├── app/                       # API com FastAPI
+│   └── README.md                  # Documentação da arquitetura da API
 ├── treino_modelo/
 │   ├── data/
 │   │   ├── ingest.py              # Ingestão de dados (Kagglehub)
@@ -150,5 +160,6 @@ fase_3/
 │   ├── tests/                     # Suíte de testes com Pytest
 │   └── pipeline.py                # Orquestrador local da pipeline
 ├── pyproject.toml                 # Configuração do Poetry e dependências
-└── README.md                      # Documentação do projeto
+├── run.sh                         # Script de simulação de tráfego para a API
+└── README.md                      # Documentação do projeto principal
 ```
