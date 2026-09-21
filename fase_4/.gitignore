@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.coverage
+htmlcov/
+.pytest_cache/
+mlruns/
+credit_scoring/reports/
+credit_scoring/artifacts/
+credit_scoring/data/*.csv
