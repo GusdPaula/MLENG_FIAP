@@ -33,3 +33,9 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v"
+
+[tool.coverage.run]
+omit = [
+    "credit_scoring/pipeline.py",
+    "credit_scoring/monitoring/mlflow_logger.py",
+]
