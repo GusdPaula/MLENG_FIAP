@@ -1,7 +1,5 @@
 """Testes de integração do pipeline end-to-end."""
 
-
-
 from credit_scoring.models.train import FEATURE_COLS, _encode_categoricals, train_baseline
 from credit_scoring.monitoring.drift_detector import run_drift_report
 
@@ -49,9 +47,15 @@ class TestDriftReport:
 class TestDataGeneration:
     def test_referencia_tem_colunas_corretas(self, reference_df):
         expected_cols = {
-            "idade", "anos_emprego", "renda_mensal", "valor_emprestimo",
-            "score_credito", "historico_pagamentos", "finalidade",
-            "possui_conta_poupanca", "inadimplente",
+            "idade",
+            "anos_emprego",
+            "renda_mensal",
+            "valor_emprestimo",
+            "score_credito",
+            "historico_pagamentos",
+            "finalidade",
+            "possui_conta_poupanca",
+            "inadimplente",
         }
         assert expected_cols.issubset(set(reference_df.columns))
 

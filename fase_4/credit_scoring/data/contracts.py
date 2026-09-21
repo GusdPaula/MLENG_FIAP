@@ -57,7 +57,9 @@ credit_schema = DataFrameSchema(
         ),
         "finalidade": Column(
             str,
-            Check.isin(FINALIDADES_VALIDAS, error=f"Finalidade deve ser uma de: {FINALIDADES_VALIDAS}"),
+            Check.isin(
+                FINALIDADES_VALIDAS, error=f"Finalidade deve ser uma de: {FINALIDADES_VALIDAS}"
+            ),
             nullable=False,
         ),
         "possui_conta_poupanca": Column(

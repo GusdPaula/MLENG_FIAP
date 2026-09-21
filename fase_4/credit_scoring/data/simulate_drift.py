@@ -33,7 +33,9 @@ def simulate_production_drift(
     df["renda_mensal"] = (df["renda_mensal"] * inflation_factor).round(2)
 
     # Data Drift 2: score_credito sofre compressão para baixo (crise)
-    df["score_credito"] = (df["score_credito"] * rng.uniform(0.55, 0.80, size=n)).clip(300, 900).round(1)
+    df["score_credito"] = (
+        (df["score_credito"] * rng.uniform(0.55, 0.80, size=n)).clip(300, 900).round(1)
+    )
 
     # Data Drift 3: anos_emprego reduz (instabilidade no mercado de trabalho)
     df["anos_emprego"] = np.clip(

@@ -20,7 +20,9 @@ class TestDataDrift:
             reference_df["score_credito"].values,
             production_df["score_credito"].values,
         )
-        assert p_value < 0.05, f"KS test falhou: p={p_value:.4f} — drift não detectado em score_credito"
+        assert p_value < 0.05, (
+            f"KS test falhou: p={p_value:.4f} — drift não detectado em score_credito"
+        )
 
     def test_renda_media_aumentou(self, reference_df, production_df):
         """A renda média de produção deve ser maior que a de referência (inflação simulada)."""
@@ -70,7 +72,5 @@ class TestPSI:
         assert psi > 0.2, f"PSI renda={psi:.3f} — esperado > 0.2 para drift significativo"
 
     def test_psi_score_acima_limiar(self, reference_df, production_df):
-        psi = self._psi(
-            reference_df["score_credito"].values, production_df["score_credito"].values
-        )
+        psi = self._psi(reference_df["score_credito"].values, production_df["score_credito"].values)
         assert psi > 0.2, f"PSI score={psi:.3f} — esperado > 0.2 para drift significativo"

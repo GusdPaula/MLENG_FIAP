@@ -72,7 +72,10 @@ def train_baseline(df: pd.DataFrame, experiment_name: str = "credit_scoring_base
     # --- Logistic Regression baseline ---
     with mlflow.start_run(run_name="logistic_regression"):
         lr_pipeline = Pipeline(
-            [("scaler", StandardScaler()), ("clf", LogisticRegression(max_iter=1000, random_state=42))]
+            [
+                ("scaler", StandardScaler()),
+                ("clf", LogisticRegression(max_iter=1000, random_state=42)),
+            ]
         )
         lr_pipeline.fit(X_train, y_train)
         y_pred_lr = lr_pipeline.predict(X_test)
@@ -110,13 +113,17 @@ def train_baseline(df: pd.DataFrame, experiment_name: str = "credit_scoring_base
         mlflow.log_dict(fi, "feature_importances.json")
 
         results["xgboost"] = {"pipeline": xgb, "metrics": metrics_xgb}
-        logger.info("XGB — accuracy=%.3f, AUC=%.3f", metrics_xgb["accuracy"], metrics_xgb["auc_roc"])
+        logger.info(
+            "XGB — accuracy=%.3f, AUC=%.3f", metrics_xgb["accuracy"], metrics_xgb["auc_roc"]
+        )
 
     # Seleciona campeão pelo AUC
     champion_name = max(results, key=lambda k: results[k]["metrics"]["auc_roc"])
     champion = results[champion_name]["pipeline"]
     champion_path = ARTIFACTS_DIR / "model.pkl"
-    joblib.dump({"model": champion, "feature_cols": FEATURE_COLS, "name": champion_name}, champion_path)
+    joblib.dump(
+        {"model": champion, "feature_cols": FEATURE_COLS, "name": champion_name}, champion_path
+    )
     logger.info("Campeão: %s — salvo em %s", champion_name, champion_path)
 
     return {

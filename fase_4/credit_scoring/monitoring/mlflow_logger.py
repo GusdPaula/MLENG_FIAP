@@ -51,7 +51,8 @@ def log_drift_run(
 
         # Tags de alerta
         alert = drift_metrics.get("dataset_drift", False) or (
-            (model_metrics_prod or {}).get("accuracy", 1.0) < model_metrics_ref.get("accuracy", 1.0) - 0.05
+            (model_metrics_prod or {}).get("accuracy", 1.0)
+            < model_metrics_ref.get("accuracy", 1.0) - 0.05
         )
         mlflow.set_tag("drift_alert", str(alert))
         mlflow.set_tag("drifted_features", ", ".join(drift_metrics.get("drifted_features", [])))
