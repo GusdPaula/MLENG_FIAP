@@ -4,8 +4,8 @@ version = "0.1.0"
 description = "ML engineering project for default prediction"
 requires-python = ">=3.12"
 dependencies = [
-    "pandas",
-    "numpy",
+    "pandas>=2.2,<3",
+    "numpy>=1.26,<2",
     "ipykernel",
     "matplotlib",
     "scikit-learn",
@@ -14,6 +14,7 @@ dependencies = [
     "pandera",
     "pytest",
     "ruff",
+    "evidently>=0.7.23",
 ]
 
 [tool.uv]

@@ -34,6 +34,11 @@ def main() -> None:
         df, target=TARGET_COLUMN, test_size=TEST_SIZE, random_state=RANDOM_STATE
     )
 
+    X_train.to_pickle(os.path.join(PROCESSED_DATA_DIR, "X_train.pkl"))
+    X_test.to_pickle(os.path.join(PROCESSED_DATA_DIR, "X_test.pkl"))
+    y_train.to_pickle(os.path.join(PROCESSED_DATA_DIR, "y_train.pkl"))
+    y_test.to_pickle(os.path.join(PROCESSED_DATA_DIR, "y_test.pkl"))
+
     # Save the scaler for future use
     scaler_path = os.path.join(MODEL_DIR, "scaler.pkl")
     joblib.dump(scaler, scaler_path)

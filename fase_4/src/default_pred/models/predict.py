@@ -45,6 +45,17 @@ def predict(df: pd.DataFrame) -> np.ndarray:
         df = pd.concat([df[other_columns], scaled_df], axis=1)
         df = df.reindex(columns=model_columns)
 
+    try:
+        from default_pred.models.drift import detect_data_drift
+
+        logger.info("Checking for data drift before making predictions")
+        _result = detect_data_drift(X_test=df)
+    except Exception:
+        logger.warning(
+            "Data drift check failed; continuing with prediction without it.",
+            exc_info=True,
+        )
+
     logger.info("Making prediction for the input data")
     # Make prediction
     prediction = model.predict(df)
