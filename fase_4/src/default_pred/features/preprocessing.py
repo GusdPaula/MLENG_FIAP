@@ -43,6 +43,8 @@ def split_and_scale(
     X_train = X_train.dropna(subset=cols_with_nan_train)
     y_train = y_train.loc[X_train.index]
 
+    feature_columns = X_train.columns.tolist()
+
     logger.info("Split and scale completed.")
 
-    return X_train, X_test, y_train, y_test, scaler
+    return X_train, X_test, y_train, y_test, scaler, feature_columns

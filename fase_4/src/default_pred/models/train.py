@@ -1,5 +1,5 @@
 from sklearn.linear_model import LogisticRegression
-from models.evaluate import evaluate_model
+from default_pred.models.evaluate import evaluate_model
 import logging
 
 logging.basicConfig(level=logging.INFO)
