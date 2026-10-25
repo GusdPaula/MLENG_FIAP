@@ -4,7 +4,6 @@ from pathlib import Path
 from default_pred.data.load import load_one_entry
 from default_pred.models.predict import predict
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 

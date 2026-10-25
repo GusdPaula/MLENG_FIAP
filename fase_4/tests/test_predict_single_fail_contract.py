@@ -6,7 +6,6 @@ import pytest
 
 from default_pred.data.load import load_one_entry
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 

@@ -1,0 +1,35 @@
+[project]
+name = "fase-4"
+version = "0.1.0"
+description = "ML engineering project for default prediction"
+requires-python = ">=3.12"
+dependencies = [
+    "pandas",
+    "numpy",
+    "ipykernel",
+    "matplotlib",
+    "scikit-learn",
+    "openpyxl",
+    "seaborn",
+    "pandera",
+    "pytest",
+    "ruff",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+fixable = ["ALL"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

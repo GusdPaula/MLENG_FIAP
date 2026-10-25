@@ -1,7 +1,8 @@
-import joblib
 import os
 import sys
 from pathlib import Path
+
+import joblib
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SRC_ROOT = PROJECT_ROOT / "src"

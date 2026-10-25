@@ -1,6 +1,8 @@
-from sklearn.linear_model import LogisticRegression
-from default_pred.models.evaluate import evaluate_model
 import logging
+
+from sklearn.linear_model import LogisticRegression
+
+from default_pred.models.evaluate import evaluate_model
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

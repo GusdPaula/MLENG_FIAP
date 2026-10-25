@@ -1,8 +1,10 @@
-import pandas as pd
-from pathlib import Path
 import logging
-from default_pred.data.contract import Contract
+from pathlib import Path
+
+import pandas as pd
 import pandera.pandas as pa
+
+from default_pred.data.contract import Contract
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

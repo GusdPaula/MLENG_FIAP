@@ -1,12 +1,12 @@
+import logging
 import os
+
 import joblib
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from default_pred.config import MODEL_DIR
 from default_pred.features.engineering import feature_engineering
-
-import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
