@@ -16,20 +16,29 @@ entry_path_drifted = PROJECT_ROOT / "data/entries/loan_data_drifted.json"
 
 
 def main(path: str | Path = entry_path) -> None:
+    from default_pred.config import LOG_DIR
     from default_pred.data.load import load_entries, load_one_entry
     from default_pred.models.predict import predict
+    from default_pred.observability.factory import build_tracker
+    from default_pred.observability.instrumentation import track_inference
+    from default_pred.utils.logging import setup_logging
 
-    with open(path, "r") as f:
-        data = json.load(f)
+    setup_logging(LOG_DIR)
 
-    if isinstance(data, dict) and any(
-        isinstance(value, dict) for value in data.values()
-    ):
-        df = load_entries(data)
-    else:
-        df = load_one_entry(data)
+    def infer():
+        with open(path, "r") as f:
+            data = json.load(f)
 
-    prediction = predict(df)
+        if isinstance(data, dict) and any(
+            isinstance(value, dict) for value in data.values()
+        ):
+            df = load_entries(data)
+        else:
+            df = load_one_entry(data)
+
+        return predict(df)
+
+    prediction = track_inference(build_tracker(), infer)
     logger.info(f"Prediction: {prediction}")
 
 

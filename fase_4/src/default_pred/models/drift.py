@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -12,6 +13,8 @@ except ImportError:  # pragma: no cover - optional dependency fallback
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+DEFAULT_REPORT_PATH = "data_drift_report.html"
 
 
 def _prepare_drift_data(
@@ -99,6 +102,7 @@ def _load_reference_data() -> pd.DataFrame:
 def detect_data_drift(
     X_train: pd.DataFrame | None = None,
     X_test: pd.DataFrame | None = None,
+    output_path: str | Path = DEFAULT_REPORT_PATH,
 ) -> Report | None:
     """Detect data drift between the training reference data and current data."""
     if DataDriftPreset is None:
@@ -127,10 +131,10 @@ def detect_data_drift(
         reference_data=reference_data,
     )
 
-    snapshot.save_html("data_drift_report.html")
+    snapshot.save_html(str(output_path))
 
     logger.info(
-        "Data drift detection completed. Report saved as " "'data_drift_report.html'."
+        "Data drift detection completed. Report saved as '%s'.", output_path
     )
 
     return snapshot

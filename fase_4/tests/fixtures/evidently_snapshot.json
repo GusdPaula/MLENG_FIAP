@@ -1,0 +1,50 @@
+{
+  "metrics": [
+    {
+      "id": "15e89f895b482f9b84ba7274ed18a106",
+      "metric_name": "DriftedColumnsCount(drift_share=0.5)",
+      "config": {
+        "type": "evidently:metric_v2:DriftedColumnsCount",
+        "drift_share": 0.5
+      },
+      "value": {
+        "count": 1.0,
+        "share": 0.3333333333333333
+      }
+    },
+    {
+      "id": "1d6022329356e42e2e832402b66eeb4c",
+      "metric_name": "ValueDrift(column=a,method=K-S p_value,threshold=0.05)",
+      "config": {
+        "type": "evidently:metric_v2:ValueDrift",
+        "column": "a",
+        "method": "K-S p_value",
+        "threshold": 0.05
+      },
+      "value": 3.4094347317573873e-200
+    },
+    {
+      "id": "45e62e7e03916974f7a2a30fa115e44e",
+      "metric_name": "ValueDrift(column=b,method=K-S p_value,threshold=0.05)",
+      "config": {
+        "type": "evidently:metric_v2:ValueDrift",
+        "column": "b",
+        "method": "K-S p_value",
+        "threshold": 0.05
+      },
+      "value": 0.5089169658042532
+    },
+    {
+      "id": "b51a36999b7a099f4c903f7a2980cab1",
+      "metric_name": "ValueDrift(column=c,method=Z-test p_value,threshold=0.05)",
+      "config": {
+        "type": "evidently:metric_v2:ValueDrift",
+        "column": "c",
+        "method": "Z-test p_value",
+        "threshold": 0.05
+      },
+      "value": 0.5690397369095983
+    }
+  ],
+  "tests": []
+}

@@ -15,6 +15,8 @@ dependencies = [
     "pytest",
     "ruff",
     "evidently>=0.7.23",
+    "mlflow>=3.17.2",
+    "pytest-cov>=7.1.0",
 ]
 
 [tool.uv]
@@ -34,3 +36,26 @@ indent-style = "space"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+
+# Coverage gate (>= 90%) applies to the Stage 3 observability code only.
+# Run with: uv run pytest --cov --cov-report=term-missing
+[tool.coverage.run]
+source = ["src/default_pred"]
+# Stage 1/2 code and shared glue are out of the gate; only new Stage 3 code counts.
+omit = [
+    "src/default_pred/config.py",
+    "src/default_pred/data/*",
+    "src/default_pred/features/*",
+    "src/default_pred/models/*",
+    "src/default_pred/utils/*",
+    "src/default_pred/pipelines/pipeline_train.py",
+    "src/default_pred/pipelines/pipeline_predict.py",
+]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+]
