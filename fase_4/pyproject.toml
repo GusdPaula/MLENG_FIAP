@@ -17,6 +17,7 @@ dependencies = [
     "evidently>=0.7.23",
     "mlflow>=3.17.2",
     "pytest-cov>=7.1.0",
+    "kagglehub>=1.0.3",
 ]
 
 [tool.uv]

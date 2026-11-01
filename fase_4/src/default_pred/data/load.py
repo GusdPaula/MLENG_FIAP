@@ -38,14 +38,43 @@ def _normalize_single_entry(data: dict) -> dict:
     return normalized
 
 
+def download_dataset_if_missing(target_path: str | Path) -> Path:
+    """Download the Lending Club dataset from Kaggle via kagglehub if missing."""
+    target_path = Path(target_path)
+    if target_path.exists():
+        return target_path
+
+    logger.info(
+        "Dataset not found locally at %s. Downloading via kagglehub...", target_path
+    )
+    import kagglehub
+
+    download_dir = Path(
+        kagglehub.dataset_download("adarshsng/lending-club-loan-data-csv")
+    )
+    csv_candidates = list(download_dir.glob("*.csv"))
+    if not csv_candidates:
+        raise FileNotFoundError(
+            f"No CSV files found in downloaded Kaggle bundle: {download_dir}"
+        )
+
+    source_csv = csv_candidates[0]
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Stream a representative subset with sequential IDs to satisfy Stage 1 pipelines
+    logger.info("Sampling 5,000 rows from %s into %s", source_csv, target_path)
+    header = pd.read_csv(source_csv, nrows=1).columns
+    sample_df = pd.read_csv(source_csv, skiprows=range(1, 400000), nrows=5000)
+    sample_df.columns = header
+    sample_df["id"] = range(1, len(sample_df) + 1)
+    sample_df.to_csv(target_path, index=False)
+    logger.info("Dataset successfully downloaded and prepared at: %s", target_path)
+    return target_path
+
+
 def load_dataset(path: str | Path) -> pd.DataFrame:
-    """Load a dataset from a CSV file."""
-    path = Path(path)
-
-    if not path.exists():
-        logger.error(f"Dataset not found: {path}")
-        raise FileNotFoundError(f"Dataset not found: {path}")
-
+    """Load a dataset from a CSV file, downloading on demand if missing."""
+    path = download_dataset_if_missing(path)
     logger.info(f"Loading dataset from: {path}")
     df = pd.read_csv(path)
 
