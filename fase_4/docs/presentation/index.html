@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tech Challenge Fase 4 — Apresentação STAR | Credit Scoring MLOps & Governança</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-primary: #060913;
+      --bg-secondary: #0d1326;
+      --bg-card: rgba(17, 25, 48, 0.72);
+      --bg-card-strong: rgba(22, 32, 62, 0.88);
+      --border-subtle: rgba(148, 163, 184, 0.14);
+      --border-highlight: rgba(56, 189, 248, 0.42);
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --accent-cyan: #38bdf8;
+      --accent-indigo: #818cf8;
+      --accent-emerald: #34d399;
+      --accent-amber: #fbbf24;
+      --accent-rose: #fb7185;
+      --accent-purple: #c084fc;
+      --shadow-glow: 0 20px 50px rgba(0, 0, 0, 0.55), 0 0 35px rgba(56, 189, 248, 0.08);
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-sm: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Ambient Background */
+    .ambient-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(56, 189, 248, 0.13), transparent 38%),
+        radial-gradient(circle at 86% 22%, rgba(129, 140, 248, 0.14), transparent 40%),
+        radial-gradient(circle at 50% 88%, rgba(52, 211, 153, 0.09), transparent 45%),
+        linear-gradient(180deg, #060913 0%, #0b1122 100%);
+    }
+
+    .grid-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(to right, rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(circle at center, black 55%, transparent 100%);
+    }
+
+    /* App Layout */
+    .deck-wrapper {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* Top Header Navigation */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 2.2rem;
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(6, 9, 19, 0.78);
+      backdrop-filter: blur(14px);
+      gap: 1rem;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 0.92rem;
+      letter-spacing: 0.02em;
+      color: var(--text-primary);
+    }
+
+    .brand-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-indigo));
+      box-shadow: 0 0 12px var(--accent-cyan);
+    }
+
+    .star-pills {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+    }
+
+    .star-pill {
+      border: 1px solid var(--border-subtle);
+      background: rgba(15, 23, 42, 0.65);
+      color: var(--text-muted);
+      padding: 0.36rem 0.8rem;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: all 0.22s ease;
+    }
+
+    .star-pill:hover {
+      color: var(--text-primary);
+      border-color: rgba(56, 189, 248, 0.35);
+    }
+
+    .star-pill.active {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(129, 140, 248, 0.22));
+      color: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.2);
+    }
+
+    .slide-counter {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      min-width: 70px;
+      text-align: right;
+    }
+
+    /* Slide Viewport */
+    .slides-viewport {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      padding: clamp(1.2rem, 2.5vw, 2.6rem) clamp(1.5rem, 4vw, 4.2rem);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(18px) scale(0.99);
+      transition: opacity 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+                  visibility 0.38s;
+      overflow-y: auto;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0) scale(1);
+    }
+
+    .slide-inner {
+      width: 100%;
+      max-width: 1380px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: clamp(1rem, 1.8vw, 1.65rem);
+    }
+
+    /* Badges & Typography */
+    .tag-row {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+    }
+
+    .star-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.32rem 0.85rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .badge-intro { background: rgba(129, 140, 248, 0.16); color: var(--accent-indigo); border: 1px solid rgba(129, 140, 248, 0.38); }
+    .badge-s { background: rgba(251, 113, 133, 0.16); color: var(--accent-rose); border: 1px solid rgba(251, 113, 133, 0.38); }
+    .badge-t { background: rgba(251, 191, 36, 0.16); color: var(--accent-amber); border: 1px solid rgba(251, 191, 36, 0.38); }
+    .badge-a { background: rgba(56, 189, 248, 0.16); color: var(--accent-cyan); border: 1px solid rgba(56, 189, 248, 0.38); }
+    .badge-r { background: rgba(52, 211, 153, 0.16); color: var(--accent-emerald); border: 1px solid rgba(52, 211, 153, 0.38); }
+
+    .sub-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+      background: rgba(30, 41, 59, 0.75);
+      border: 1px solid var(--border-subtle);
+      padding: 0.28rem 0.7rem;
+      border-radius: 999px;
+    }
+
+    h1.hero-title {
+      font-size: clamp(2rem, 3.8vw, 3.45rem);
+      font-weight: 800;
+      line-height: 1.12;
+      letter-spacing: -0.025em;
+      background: linear-gradient(135deg, #ffffff 20%, #93c5fd 65%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    h2.slide-title {
+      font-size: clamp(1.55rem, 2.5vw, 2.35rem);
+      font-weight: 800;
+      line-height: 1.18;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+
+    .slide-lead {
+      font-size: clamp(0.95rem, 1.2vw, 1.12rem);
+      color: var(--text-secondary);
+      line-height: 1.58;
+      max-width: 980px;
+    }
+
+    /* Grid Layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.25rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1.15rem;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1rem;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: clamp(1rem, 1.6vw, 1.45rem);
+      box-shadow: var(--shadow-glow);
+      backdrop-filter: blur(16px);
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(56, 189, 248, 0.32);
+    }
+
+    .card-accent-cyan { border-top: 3px solid var(--accent-cyan); }
+    .card-accent-emerald { border-top: 3px solid var(--accent-emerald); }
+    .card-accent-amber { border-top: 3px solid var(--accent-amber); }
+    .card-accent-rose { border-top: 3px solid var(--accent-rose); }
+    .card-accent-indigo { border-top: 3px solid var(--accent-indigo); }
+
+    .card-title {
+      font-size: 1.02rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .card-text {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    /* Metric KPI Boxes */
+    .kpi-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(1.45rem, 2.2vw, 2.1rem);
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    .kpi-label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .text-cyan { color: var(--accent-cyan); }
+    .text-emerald { color: var(--accent-emerald); }
+    .text-amber { color: var(--accent-amber); }
+    .text-rose { color: var(--accent-rose); }
+    .text-indigo { color: var(--accent-indigo); }
+
+    /* Code & Formula Blocks */
+    .mono-box {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      background: rgba(6, 9, 19, 0.82);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: var(--radius-md);
+      padding: 0.85rem 1rem;
+      color: #e2e8f0;
+      line-height: 1.55;
+      overflow-x: auto;
+    }
+
+    .code-inline {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8em;
+      padding: 0.14rem 0.42rem;
+      border-radius: 6px;
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+    }
+
+    /* Tables */
+    .clean-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.84rem;
+    }
+
+    .clean-table th,
+    .clean-table td {
+      padding: 0.62rem 0.8rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .clean-table th {
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.73rem;
+      letter-spacing: 0.05em;
+      background: rgba(15, 23, 42, 0.55);
+    }
+
+    .clean-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Visual Bars for Drift */
+    .bar-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .bar-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .bar-track {
+      height: 10px;
+      width: 100%;
+      background: rgba(30, 41, 59, 0.85);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+    }
+
+    /* DAG Diagram */
+    .dag-flow {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(6, 9, 19, 0.72);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+    }
+
+    .dag-node {
+      background: var(--bg-card-strong);
+      border: 1px solid rgba(129, 140, 248, 0.35);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 0.9rem;
+      text-align: center;
+    }
+
+    .dag-arrow {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent-cyan);
+      font-weight: 700;
+      font-size: 1.15rem;
+    }
+
+    /* Links Footer on Final Slide */
+    .resource-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      padding: 1rem 1.35rem;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(52, 211, 153, 0.12));
+      border: 1px solid rgba(56, 189, 248, 0.38);
+      border-radius: var(--radius-lg);
+    }
+
+    .btn-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.58rem 1.1rem;
+      border-radius: 999px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      text-decoration: none;
+      background: var(--accent-cyan);
+      color: #060913;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .btn-link:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.45);
+    }
+
+    .btn-link.secondary {
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--text-primary);
+      border: 1px solid var(--border-highlight);
+    }
+
+    /* Bottom Controls */
+    .bottombar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.7rem 2.2rem;
+      border-top: 1px solid var(--border-subtle);
+      background: rgba(6, 9, 19, 0.84);
+      backdrop-filter: blur(14px);
+      flex-shrink: 0;
+    }
+
+    .progress-track {
+      flex: 1;
+      max-width: 420px;
+      height: 6px;
+      background: rgba(30, 41, 59, 0.9);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 0 1.5rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 12.5%;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-indigo), var(--accent-emerald));
+      transition: width 0.3s ease;
+    }
+
+    .nav-btns {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .nav-btn {
+      background: rgba(30, 41, 59, 0.75);
+      color: var(--text-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 0.42rem 0.9rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .kbd-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Responsive Breakpoints */
+    @media (max-width: 1080px) {
+      .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .dag-flow { grid-template-columns: 1fr; text-align: center; }
+      .dag-arrow { transform: rotate(90deg); }
+    }
+
+    @media (max-width: 768px) {
+      html, body { overflow: auto; }
+      .topbar { padding: 0.7rem 1rem; flex-wrap: wrap; }
+      .star-pills { display: none; }
+      .slide { padding: 1.1rem 1rem 2rem; justify-content: flex-start; }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .bottombar { padding: 0.65rem 1rem; }
+      .kbd-hint { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-bg"></div>
+  <div class="grid-overlay"></div>
+
+  <div class="deck-wrapper">
+    <!-- Header -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <span>FIAP POS TECH • MLET FASE 4</span>
+      </div>
+      <nav class="star-pills" id="starPills">
+        <button class="star-pill active" data-slide="0">1. Capa</button>
+        <button class="star-pill" data-slide="1">2. [S] Situation</button>
+        <button class="star-pill" data-slide="2">3. [T] Task</button>
+        <button class="star-pill" data-slide="3">4. [A] Etapa 1: Contratos</button>
+        <button class="star-pill" data-slide="4">5. [A] Etapa 2: Drift & PSI</button>
+        <button class="star-pill" data-slide="5">6. [A] Etapa 3: Observabilidade</button>
+        <button class="star-pill" data-slide="6">7. [A] Etapa 4: LGPD & Causal</button>
+        <button class="star-pill" data-slide="7">8. [R] Result</button>
+      </nav>
+      <div class="slide-counter" id="slideCounter">01 / 08</div>
+    </header>
+
+    <!-- Slides Viewport -->
+    <main class="slides-viewport" id="slidesViewport">
+
+      <!-- SLIDE 1: CAPA -->
+      <section class="slide active" data-index="0">
+        <div class="slide-inner">
+          <div class="tag-row">
+            <span class="star-badge badge-intro">Tech Challenge • Fase 4</span>
+            <span class="sub-badge">Método STAR (Situation • Task • Action • Result)</span>
+            <span class="sub-badge">Lending Club Credit Scoring</span>
+          </div>
+          <h1 class="hero-title">
+            Observabilidade Contínua, Detecção de Drift,<br />
+            Qualidade de Dados e Governança em Produção
+          </h1>
+          <p class="slide-lead">
+            Arquitetura de <strong>Sustentação e Confiabilidade MLOps</strong> para proteção de um modelo de
+            <em>Credit Scoring</em> contra degradação silenciosa induzida por choques macroeconômicos, combinando
+            <strong>Pandera Data Contracts</strong>, <strong>Simulação de Data &amp; Concept Drift (Evidently AI + PSI)</strong>,
+            <strong>Rastreamento Hexagonal no MLflow</strong> e <strong>Compliance LGPD (*Privacy by Design*)</strong>.
+          </p>
+
+          <div class="grid-4">
+            <div class="card card-accent-rose">
+              <span class="kpi-label">S — Situation</span>
+              <div class="card-title">Degradação Silenciosa</div>
+              <p class="card-text">Choque inflacionário e juros altos alteram o perfil de clientes e a taxa real de inadimplência sem gerar erros técnicos de infraestrutura.</p>
+            </div>
+            <div class="card card-accent-amber">
+              <span class="kpi-label">T — Task</span>
+              <div class="card-title">Sustentação 360°</div>
+              <p class="card-text">Bloquear dados inválidos na entrada, diagnosticar Data e Concept Drift estatisticamente, centralizar logs/métricas e auditar LGPD.</p>
+            </div>
+            <div class="card card-accent-cyan">
+              <span class="kpi-label">A — Action</span>
+              <div class="card-title">Engenharia Limpa</div>
+              <p class="card-text">Contratos Pandera, simulação pura de Drift + PSI, Ports &amp; Adapters com MLflow e Grafo Causal (DAG) documentado.</p>
+            </div>
+            <div class="card card-accent-emerald">
+              <span class="kpi-label">R — Result</span>
+              <div class="card-title">Detecção &amp; Governança</div>
+              <p class="card-text">50% das features com drift detectado, PSI &gt; 0.40, alertas automáticos no MLflow/logs e protocolo prescritivo de recalibração.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 2: SITUATION -->
+      <section class="slide" data-index="1">
+        <div class="slide-inner">
+          <div class="tag-row">
+            <span class="star-badge badge-s">S — Situation</span>
+            <span class="sub-badge">Contexto de Negócio &amp; Risco Financeiro</span>
+          </div>
+          <h2 class="slide-title">O Perigo da Degradação Silenciosa no Credit Scoring</h2>
+          <p class="slide-lead">
+            A fintech opera uma <strong>Regressão Logística</strong> em produção para concessão de crédito.
+            A API responde com baixa latência e <span class="code-inline">HTTP 200 OK</span>, mas mudanças severas na economia
+            descolaram a realidade produtiva da distribuição histórica de treinamento (<span class="code-inline">X_train.pkl</span>).
+          </p>
+
+          <div class="grid-3">
+            <div class="card card-accent-rose">
+              <span class="kpi-label">Vetor Macroeconômico 1</span>
+              <div class="kpi-value text-rose">-30% na Renda</div>
+              <div class="card-title">Compressão de Poder de Compra</div>
+              <p class="card-text">
+                A inflação corrói a renda disponível dos novos proponentes (<span class="code-inline">annual_inc × 0.70</span>),
+                deslocando a distribuição marginal de entrada $P(X)$.
+              </p>
+            </div>
+            <div class="card card-accent-amber">
+              <span class="kpi-label">Vetor Macroeconômico 2</span>
+              <div class="kpi-value text-amber">+30% no Crédito</div>
+              <div class="card-title">Pressão por Liquidez</div>
+              <p class="card-text">
+                O valor médio solicitado sobe (<span class="code-inline">loan_amnt × 1.30</span>), elevando a relação
+                empréstimo/renda em <strong>+85,7%</strong>.
+              </p>
+            </div>
+            <div class="card card-accent-indigo">
+              <span class="kpi-label">Consequência Crítica</span>
+              <div class="kpi-value text-indigo">Concept Drift</div>
+              <div class="card-title">Quebra da Fronteira $P(Y \mid X)$</div>
+              <p class="card-text">
+                Sob juros elevados, perfis que antes pagavam em dia (<span class="code-inline">Fully Paid</span>) passam a inadimplir
+                (<span class="code-inline">Charged Off</span>), gerando prejuízo silencioso.
+              </p>
+            </div>
+          </div>
+
+          <div class="mono-box">
+            <strong>Problema Central:</strong> Sem contratos de entrada, testes estatísticos de distribuição (KS-test / PSI) e rastreamento centralizado, o modelo aprova falsos negativos em massa sem emitir nenhum alerta operacional.
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 3: TASK -->
+      <section class="slide" data-index="2">
+        <div class="slide-inner">
+          <div class="tag-row">
+            <span class="star-badge badge-t">T — Task</span>
+            <span class="sub-badge">Requisitos Obrigatórios da Fase 4</span>
+          </div>
+          <h2 class="slide-title">Missão Técnica: 4 Etapas de Sustentação e Confiabilidade</h2>
+          <p class="slide-lead">
+            Estruturar uma arquitetura modular e testável em <span class="code-inline">src/default_pred/</span> que garanta
+            qualidade na ingestão, detecção estatística de desvios, observabilidade contínua e conformidade legal.
+          </p>
+
+          <div class="grid-2">
+            <div class="card card-accent-cyan">
+              <div class="card-title">
+                <span>Etapa 1 — Validação e Contratos (25%)</span>
+                <span class="sub-badge">Pandera</span>
+              </div>
+              <p class="card-text">
+                Treinar o classificador base em dataset limpo (5.000 amostras do <em>Lending Club</em>) e implementar um
+                <strong>Data Contract</strong> rígido capaz de interceptar e bloquear payloads anômalos antes da inferência.
+              </p>
+            </div>
+
+            <div class="card card-accent-amber">
+              <div class="card-title">
+                <span>Etapa 2 — Simulação e Detecção de Drift (25%)</span>
+                <span class="sub-badge">Evidently AI + PSI</span>
+              </div>
+              <p class="card-text">
+                Simular a degradação temporal (<em>Data Drift</em> e <em>Concept Drift</em>) usando Clean Code, comparar Referência vs.
+                Produção e identificar variáveis degradadas via <strong>KS-test, Z-test e PSI</strong>.
+              </p>
+            </div>
+
+            <div class="card card-accent-indigo">
+              <div class="card-title">
+                <span>Etapa 3 — Observabilidade e Logs (20%)</span>
+                <span class="sub-badge">MLflow + Rotating Logs</span>
+              </div>
+              <p class="card-text">
+                Centralizar logs operacionais e instrumentar os pipelines de treino, inferência e drift no <strong>MLflow</strong>,
+                documentando o catálogo de métricas de saúde e alertas.
+              </p>
+            </div>
+
+            <div class="card card-accent-emerald">
+              <div class="card-title">
+                <span>Etapa 4 — Governança, LGPD e Causalidade (15% + 15%)</span>
+                <span class="sub-badge">Privacy by Design</span>
+              </div>
+              <p class="card-text">
+                Mapear tratamento de PII, bases legais da LGPD (Art. 7º V e X), plano de retenção/descarte, mitigação de vieses
+                (<em>Fairness</em>) e <strong>Análise Causal (DAG)</strong> da degradação.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 4: ACTION - ETAPA 1 -->
+      <section class="slide" data-index="3">
+        <div class="slide-inner">
+          <div class="tag-row">
+            <span class="star-badge badge-a">A — Action • Etapa 1</span>
+            <span class="sub-badge">src/default_pred/data/contract.py &amp; load.py</span>
+          </div>
+          <h2 class="slide-title">Contratos de Dados com Pandera &amp; Bloqueio Fail-Fast</h2>
+          <p class="slide-lead">
+            A porta de entrada do modelo utiliza <span class="code-inline">Contract.validate(df, lazy=True)</span> para validar
+            simultaneamente todas as regras de domínio e impedir que lixo chegue ao classificador.
+          </p>
+
+          <div class="grid-2">
+            <div class="card card-accent-cyan">
+              <div class="card-title">Regras Estritas do Contrato (`Contract`)</div>
+              <table class="clean-table">
+                <thead>
+                  <tr>
+                    <th>Campo</th>
+                    <th>Regra Pandera</th>
+                    <th>Payload Inválido (`row_fail.json`)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="code-inline">annual_inc</span></td>
+                    <td><span class="code-inline">gt=20_000, nullable=False</span></td>
+                    <td class="text-rose"><strong>1000.0</strong> (Reprovado)</td>
+                  </tr>
+                  <tr>
+                    <td><span class="code-inline">purpose</span></td>
+                    <td><span class="code-inline">Series[str], nullable=False</span></td>
+                    <td class="text-rose"><strong>null</strong> (Reprovado)</td>
+                  </tr>
+                  <tr>
+                    <td><span class="code-inline">grade</span></td>
+                    <td><span class="code-inline">isin=["A".."G"], nullable=False</span></td>
+                    <td class="text-rose"><strong>"Z"</strong> (Reprovado)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="card card-accent-rose">
+              <div class="card-title">Evidência de Bloqueio na Ingestão (CLI &amp; Logs)</div>
+              <div class="mono-box">
+$ uv run python src/default_pred/pipelines/pipeline_predict.py \<br/>
+&nbsp;&nbsp;--input data/entries/loan_data_row_fail.json<br/><br/>
+<span class="text-rose">ERROR | default_pred.data.load | Data validation failed.</span><br/>
+<span class="text-amber">ERROR | default_pred.observability.run | Run failed:</span><br/>
+&nbsp;&nbsp;experiment=credit_inference run=batch_inference<br/>
+<span class="text-cyan">INFO  | Run finished: status=failed rows=0 run_success=0.0</span><br/>
+<span class="text-rose">pandera.errors.SchemaErrors: 3 schema failures</span>
+              </div>
+              <p class="card-text">
+                A falha é interceptada antes de <span class="code-inline">predict()</span>, gravando <span class="code-inline">run_success = 0.0</span> no MLflow.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 5: ACTION - ETAPA 2 -->
+      <section class="slide" data-index="4">
+        <div class="slide-inner">
+          <div class="tag-row">
+            <span class="star-badge badge-a">A — Action • Etapa 2</span>
+            <span class="sub-badge">src/default_pred/models/drift_simulation.py &amp; drift.py</span>
+          </div>
+          <h2 class="slide-title">Simulação Clean Code de Data &amp; Concept Drift + PSI</h2>
+          <p class="slide-lead">
+            Construímos um módulo dedicado e puro (<span class="code-inline">drift_simulation.py</span> + <span class="code-inline">pipeline_simulate_drift.py</span>)
+            com <span class="code-inline">@dataclass(frozen=True)</span> que simula ambos os tipos de drift e calcula o <strong>PSI</strong> em conjunto com o <strong>Evidently AI</strong>.
+          </p>
+
+          <div class="grid-2">
+            <div class="card card-accent-amber">
+              <div class="card-title">
+                <span>1. Data Drift $P(X)$ &amp; Testes Estatísticos</span>
+                <span class="sub-badge">KS-Test • Z-Test • PSI</span>
+              </div>
+              <p class="card-text">
+                Compara <span class="code-inline">X_train.pkl</span> (Referência) vs. Lote Degradado (1.000 amostras com <span class="code-inline">annual_inc × 0.7</span> e <span class="code-inline">loan_amnt × 1.3</span>):
+              </p>
+              <div class="bar-group">
+                <div class="bar-header">
+                  <span>PSI `annual_inc` (-30% renda)</span>
+                  <span class="text-rose">PSI = 0.4576 (&ge; 0.20 Crítico)</span>
+                </div>
+                <div class="bar-track"><div class="bar-fill" style="width: 90%; background: var(--accent-rose);"></div></div>
+              </div>
+              <div class="bar-group">
+                <div class="bar-header">
+                  <span>PSI `loan_amnt` (+30% empréstimo)</span>
+                  <span class="text-amber">PSI = 0.2861 (&ge; 0.20 Crítico)</span>
+                </div>
+                <div class="bar-track"><div class="bar-fill" style="width: 68%; background: var(--accent-amber);"></div></div>
+              </div>
+              <div class="bar-group">
+                <div class="bar-header">
+                  <span>Evidently KS-Test / Z-Test (`share_drifted`)</span>
+                  <span class="text-cyan">33 / 66 features (50.0% &ge; limiar 50%)</span>
+                </div>
+                <div class="bar-track"><div class="bar-fill" style="width: 50%; background: var(--accent-cyan);"></div></div>
+              </div>
+            </div>
+
+            <div class="card card-accent-indigo">
+              <div class="card-title">
+                <span>2. Concept Drift $P(Y \mid X)$ Simulado</span>
+                <span class="sub-badge">Posterior Shift</span>
+              </div>
+              <p class="card-text">
+                Em <span class="code-inline">simulate_concept_drift()</span>, tomadores antes adimplentes (<span class="code-inline">Fully Paid</span>)
+                com razão <span class="code-inline">loan_amnt / annual_inc &ge; 0.25</span> ou <span class="code-inline">grade D–G</span>
+                sofrem transição estocástica para inadimplência (<span class="code-inline">Charged Off</span>):
+              </p>
+              <div class="mono-box">
+• Inadimplência Real (Baseline):   <strong>4.09%</strong><br/>
+• Inadimplência Pós-Concept Drift: <strong class="text-rose">51.07% (+46.98 p.p.)</strong><br/>
+• Impacto na Acurácia do Modelo:   <strong class="text-amber">Queda de 95.91% para 48.93% (-46.98 p.p.)</strong><br/>
+• Diagnóstico: Fronteira linear antiga subestima severamente os novos inadimplentes.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 6: ACTION - ETAPA 3 -->
+      <section class="slide" data-index="5">
+        <div class="slide-inner">
+          <div class="tag-row">
+            <span class="star-badge badge-a">A — Action • Etapa 3</span>
+            <span class="sub-badge">src/default_pred/observability/</span>
+          </div>
+          <h2 class="slide-title">Observabilidade Hexagonal: MLflow + Logging Centralizado</h2>
+          <p class="slide-lead">
+            Implementamos o padrão <strong>Ports &amp; Adapters</strong> via protocolo <span class="code-inline">ExperimentTracker</span>
+            (<span class="code-inline">MlflowTracker</span> + fallback seguro <span class="code-inline">NullTracker</span>) e o gerenciador de contexto
+            <span class="code-inline">tracked_run()</span>, com cobertura de testes automatizados <strong>&gt; 94%</strong>.
+          </p>
+
+          <div class="grid-3">
+            <div class="card card-accent-cyan">
+              <span class="kpi-label">Experimento 1</span>
+              <div class="card-title">`credit_training`</div>
+              <p class="card-text">
+                Registra hiperparâmetros (<span class="code-inline">max_iter</span>, <span class="code-inline">n_train</span>, <span class="code-inline">n_features</span>),
+                métricas supervisionadas (<span class="code-inline">accuracy</span>, <span class="code-inline">precision</span>, <span class="code-inline">recall</span>, <span class="code-inline">f1_score</span>, <span class="code-inline">roc_auc</span>)
+                e versiona o artefato sklearn.
+              </p>
+            </div>
+
+            <div class="card card-accent-indigo">
+              <span class="kpi-label">Experimento 2</span>
+              <div class="card-title">`credit_inference`</div>
+              <p class="card-text">
+                Monitora cada lote ou chamada individual com <span class="code-inline">rows_in</span>, <span class="code-inline">latency_ms</span>,
+                <span class="code-inline">default_rate_predicted</span> e captura falhas de contrato Pandera (<span class="code-inline">run_success = 0.0</span>).
+              </p>
+            </div>
+
+            <div class="card card-accent-amber">
+              <span class="kpi-label">Experimento 3</span>
+              <div class="card-title">`credit_drift_monitoring`</div>
+              <p class="card-text">
+                Consolida runs de <span class="code-inline">drift_detection</span> (<span class="code-inline">share_drifted</span>, <span class="code-inline">alert_triggered</span>, <span class="code-inline">drift_score.*</span>)
+                e <span class="code-inline">drift_simulation</span> (<span class="code-inline">psi.*</span>, <span class="code-inline">concept_drift.*</span>).
+              </p>
+            </div>
+          </div>
+
+          <div class="mono-box">
+            <strong>Log Centralizado Rotativo (`logs/loan_prediction.log` — 1 MB × 3 backups):</strong><br/>
+            <span class="text-cyan">INFO</span>    | default_pred.observability.drift_summary | Drift summary: 33/66 features drifted (share=0.50, alert=True)<br/>
+            <span class="text-amber">WARNING</span> | default_pred.pipelines.pipeline_drift | DRIFT ALERT: 33/66 features drifted (share=0.50 &gt;= 0.50)<br/>
+            <span class="text-amber">WARNING</span> | default_pred.pipelines.pipeline_simulate_drift | PSI DRIFT ALERT: annual_inc=0.4480, loan_amnt=0.4152
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 7: ACTION - ETAPA 4 -->
+      <section class="slide" data-index="6">
+        <div class="slide-inner">
+          <div class="tag-row">
+            <span class="star-badge badge-a">A — Action • Etapa 4</span>
+            <span class="sub-badge">docs/GOVERNANCA_LGPD.md</span>
+          </div>
+          <h2 class="slide-title">Governança LGPD (*Privacy by Design*), Fairness &amp; Grafo Causal</h2>
+
+          <div class="grid-2">
+            <div class="card card-accent-emerald">
+              <div class="card-title">Compliance LGPD (Lei nº 13.709/2018) &amp; Fairness</div>
+              <table class="clean-table">
+                <tbody>
+                  <tr>
+                    <td><strong>Minimização de PII</strong></td>
+                    <td>Remoção em <span class="code-inline">engineering.py</span> de <span class="code-inline">id</span>, <span class="code-inline">member_id</span>, <span class="code-inline">url</span>, <span class="code-inline">title</span>, <span class="code-inline">emp_title</span> e <span class="code-inline">desc</span>.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Bases Legais (Art. 7º)</strong></td>
+                    <td><strong>Inciso X</strong> (Proteção do Crédito) e <strong>Inciso V</strong> (Execução de Contrato).</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Explicabilidade (Art. 20)</strong></td>
+                    <td>Modelo <em>Glass-Box</em> (Regressão Logística): pesos $\beta_j \cdot x_j$ auditáveis para revisão de negativa.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Retenção (Art. 15/16)</strong></td>
+                    <td>Política definida para <span class="code-inline">raw</span>, <span class="code-inline">processed</span>, <span class="code-inline">models</span>, rotação de logs e GC no MLflow.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Mitigação de Viés</strong></td>
+                    <td>Controle de <em>Disparate Impact (&ge; 0.80)</em> sobre variáveis <em>proxy</em> (<span class="code-inline">zip_code</span> 3 dígitos e <span class="code-inline">addr_state</span>).</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="card card-accent-indigo">
+              <div class="card-title">Análise Causal (DAG) da Degradação</div>
+              <div class="dag-flow">
+                <div class="dag-node">
+                  <div class="kpi-label text-rose">Confundidor (Z)</div>
+                  <strong>Choque Macroeconômico</strong>
+                  <div class="card-text">Inflação + Juros Altos</div>
+                </div>
+                <div class="dag-arrow">&rarr;</div>
+                <div class="dag-node">
+                  <div class="kpi-label text-amber">Data Drift P(X)</div>
+                  <strong>Renda -30% | Crédito +30%</strong>
+                  <div class="card-text">Comprometimento +85.7%</div>
+                </div>
+                <div class="dag-arrow">&rarr;</div>
+                <div class="dag-node">
+                  <div class="kpi-label text-indigo">Concept Drift P(Y|X)</div>
+                  <strong>Salto de Inadimplência</strong>
+                  <div class="card-text">Limiar antigo obsoleto</div>
+                </div>
+              </div>
+              <p class="card-text">
+                <strong>Causa Raiz:</strong> O choque $Z$ altera simultaneamente as covariáveis $X$ e a resposta $Y$. O alerta precoce de <em>Data Drift</em> (KS/PSI) antecipa o <em>Concept Drift</em> antes que os calotes se acumulem no balanço.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 8: RESULT -->
+      <section class="slide" data-index="7">
+        <div class="slide-inner">
+          <div class="tag-row">
+            <span class="star-badge badge-r">R — Result</span>
+            <span class="sub-badge">Resultados Consolidados, Prescrição e Artefatos</span>
+          </div>
+          <h2 class="slide-title">Resultados Alcançados &amp; Protocolo Prescritivo</h2>
+
+          <div class="grid-4">
+            <div class="card card-accent-emerald">
+              <span class="kpi-label">Qualidade na Entrada</span>
+              <div class="kpi-value text-emerald">100%</div>
+              <div class="card-title">Anomalias Bloqueadas</div>
+              <p class="card-text">Contrato Pandera barra payloads corrompidos e registra a falha no MLflow e nos logs.</p>
+            </div>
+
+            <div class="card card-accent-amber">
+              <span class="kpi-label">Evidently AI Drift</span>
+              <div class="kpi-value text-amber">50.0%</div>
+              <div class="card-title">33 / 66 Features Drifted</div>
+              <p class="card-text">Aciona <span class="code-inline">alert_triggered = 1.0</span> no experimento <span class="code-inline">credit_drift_monitoring</span>.</p>
+            </div>
+
+            <div class="card card-accent-rose">
+              <span class="kpi-label">Estabilidade Populacional</span>
+              <div class="kpi-value text-rose">PSI &gt; 0.41</div>
+              <div class="card-title">Drift Severo (&ge; 0.20)</div>
+              <p class="card-text"><span class="code-inline">psi.annual_inc = 0.448</span> e <span class="code-inline">psi.loan_amnt = 0.415</span> medidos via Clean Code.</p>
+            </div>
+
+            <div class="card card-accent-cyan">
+              <span class="kpi-label">Qualidade de Software</span>
+              <div class="kpi-value text-cyan">&gt; 94% Cov</div>
+              <div class="card-title">Testes Automatizados</div>
+              <p class="card-text">Suíte <span class="code-inline">pytest</span> + <span class="code-inline">ruff</span> validando contratos, drift, observabilidade e simulação.</p>
+            </div>
+          </div>
+
+          <div class="card card-accent-indigo">
+            <div class="card-title">Lições Aprendidas &amp; Plano Prescritivo de Resposta ao Alerta</div>
+            <p class="card-text">
+              <strong>1. Triagem Automatizada:</strong> Diferenciar falha de schema (Pandera) de mudança genuína de distribuição (KS/PSI). &nbsp;|&nbsp;
+              <strong>2. Contenção Imediata:</strong> Reduzir preventivamente o <em>decision threshold</em> (ex.: $0.50 \to 0.35$) ao detectar compressão de renda. &nbsp;|&nbsp;
+              <strong>3. Feature Causal:</strong> Incluir a razão explícita <span class="code-inline">loan_amnt / annual_inc</span> e variáveis macroeconômicas. &nbsp;|&nbsp;
+              <strong>4. Retreinamento Governado:</strong> Atualizar <span class="code-inline">X_train.pkl</span> auditando <em>Disparate Impact (&ge; 0.80)</em>.
+            </p>
+          </div>
+
+          <div class="resource-bar">
+            <div>
+              <strong>Artefatos Auditáveis do Projeto:</strong>
+              <span class="card-text">Acesse o relatório estatístico completo gerado pelo Evidently AI e o documento normativo de Governança/LGPD.</span>
+            </div>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <a class="btn-link" href="../../data_drift_report.html" target="_blank" rel="noopener">
+                Abrir Relatório Evidently (`data_drift_report.html`) &nearr;
+              </a>
+              <a class="btn-link secondary" href="../GOVERNANCA_LGPD.md" target="_blank" rel="noopener">
+                Documento Governança &amp; LGPD &nearr;
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Controls -->
+    <footer class="bottombar">
+      <div class="kbd-hint">Use as setas <strong>&larr; / &rarr;</strong>, <strong>Espaço</strong> ou <strong>F</strong> (Tela Cheia)</div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="nav-btns">
+        <button class="nav-btn" id="prevBtn" aria-label="Slide anterior">&larr; Anterior</button>
+        <button class="nav-btn" id="nextBtn" aria-label="Próximo slide">Próximo &rarr;</button>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      const slides = Array.from(document.querySelectorAll('.slide'));
+      const pills = Array.from(document.querySelectorAll('.star-pill'));
+      const counter = document.getElementById('slideCounter');
+      const progressFill = document.getElementById('progressFill');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      let current = 0;
+
+      function goToSlide(index) {
+        if (index < 0 || index >= slides.length) return;
+        current = index;
+        slides.forEach((slide, idx) => {
+          slide.classList.toggle('active', idx === current);
+        });
+        pills.forEach((pill, idx) => {
+          pill.classList.toggle('active', idx === current);
+        });
+        const formattedCurrent = String(current + 1).padStart(2, '0');
+        const formattedTotal = String(slides.length).padStart(2, '0');
+        counter.textContent = `${formattedCurrent} / ${formattedTotal}`;
+        progressFill.style.width = `${((current + 1) / slides.length) * 100}%`;
+        prevBtn.disabled = current === 0;
+        nextBtn.disabled = current === slides.length - 1;
+      }
+
+      prevBtn.addEventListener('click', () => goToSlide(current - 1));
+      nextBtn.addEventListener('click', () => goToSlide(current + 1));
+
+      pills.forEach((pill) => {
+        pill.addEventListener('click', () => {
+          const target = Number(pill.getAttribute('data-slide'));
+          goToSlide(target);
+        });
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowRight' || event.key === ' ' || event.key === 'PageDown') {
+          event.preventDefault();
+          goToSlide(current + 1);
+        } else if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
+          event.preventDefault();
+          goToSlide(current - 1);
+        } else if (event.key === 'Home') {
+          event.preventDefault();
+          goToSlide(0);
+        } else if (event.key === 'End') {
+          event.preventDefault();
+          goToSlide(slides.length - 1);
+        } else if (event.key.toLowerCase() === 'f') {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+          } else {
+            document.exitFullscreen().catch(() => {});
+          }
+        }
+      });
+
+      let touchStartX = 0;
+      document.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+      }, { passive: true });
+
+      document.addEventListener('touchend', (e) => {
+        const deltaX = e.changedTouches[0].screenX - touchStartX;
+        if (Math.abs(deltaX) > 50) {
+          if (deltaX < 0) goToSlide(current + 1);
+          else goToSlide(current - 1);
+        }
+      }, { passive: true });
+
+      goToSlide(0);
+    })();
+  </script>
+</body>
+</html>

@@ -1,3 +1,4 @@
+import argparse
 import json
 import logging
 import sys
@@ -13,6 +14,21 @@ logger = logging.getLogger(__name__)
 
 entry_path = PROJECT_ROOT / "data/entries/loan_data_row.json"
 entry_path_drifted = PROJECT_ROOT / "data/entries/loan_data_drifted.json"
+entry_path_fail = PROJECT_ROOT / "data/entries/loan_data_row_fail.json"
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse CLI arguments for the prediction pipeline."""
+    parser = argparse.ArgumentParser(
+        description="Run credit default inference with Pandera Data Contracts."
+    )
+    parser.add_argument(
+        "--input",
+        type=Path,
+        default=entry_path_drifted,
+        help="Path to the input JSON payload (single entry or batch).",
+    )
+    return parser.parse_args(argv)
 
 
 def main(path: str | Path = entry_path) -> None:
@@ -43,4 +59,5 @@ def main(path: str | Path = entry_path) -> None:
 
 
 if __name__ == "__main__":
-    main(entry_path_drifted)
+    cli_args = parse_args()
+    main(cli_args.input)
