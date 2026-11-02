@@ -10,6 +10,7 @@ class Contract(pa.DataFrameModel):
     annual_inc: Series[float] = pa.Field(
         gt=20_000,
         nullable=False,
+        coerce=True,
     )
 
     purpose: Series[str] = pa.Field(

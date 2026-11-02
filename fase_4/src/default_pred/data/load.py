@@ -89,7 +89,7 @@ def load_entries(data: dict) -> pd.DataFrame:
         raise TypeError("Expected a dictionary payload for batch loading.")
 
     if not any(isinstance(value, dict) for value in data.values()):
-        return pd.DataFrame([data])
+        return load_one_entry(data)
 
     df = pd.DataFrame(data)
     df = df.reset_index(drop=True)
@@ -97,7 +97,9 @@ def load_entries(data: dict) -> pd.DataFrame:
     # Batch drift payloads often include intentionally noisy rows, so avoid
     # hard Contract validation here; the single-entry path keeps that strictness.
     logger.info(
-        "Batch data loaded successfully; validation is deferred to per-row checks."
+        "Batch data loaded successfully (%d rows); "
+        "strict contract validation is applied on single-entry ingestion.",
+        len(df),
     )
     return df
 
@@ -108,9 +110,9 @@ def load_one_entry(data: dict) -> pd.DataFrame:
     normalized = _normalize_single_entry(data)
     df = pd.DataFrame([normalized])
     try:
-        _validated_df = Contract.validate(df, lazy=True)
+        validated_df = Contract.validate(df, lazy=True)
         logger.info("Data validation passed!")
-        return df
+        return validated_df
 
     except pa.errors.SchemaErrors:
         logger.error("Data validation failed.")

@@ -19,22 +19,23 @@ def feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
     df = df.drop(columns=df.columns[df.isna().mean() * 100 > 20])
 
     # 1. Adjusting target
-    df.loan_status = df.loan_status.map(
-        {
-            "Fully Paid": 0,
-            "Charged Off": 1,
-            "Default": 1,
-            "Late (31-120 days)": 1,
-            "Late (16-30 days)": 1,
-            "In Grace Period": 1,
-            "Current": 0,
-            "Does not meet the credit policy. Status:Fully Paid": 0,
-            "Does not meet the credit policy. Status:Charged Off": 1,
-        }
-    )
+    if "loan_status" in df.columns:
+        df["loan_status"] = df["loan_status"].map(
+            {
+                "Fully Paid": 0,
+                "Charged Off": 1,
+                "Default": 1,
+                "Late (31-120 days)": 1,
+                "Late (16-30 days)": 1,
+                "In Grace Period": 1,
+                "Current": 0,
+                "Does not meet the credit policy. Status:Fully Paid": 0,
+                "Does not meet the credit policy. Status:Charged Off": 1,
+            }
+        )
 
     # 2. Dropping ID and Title
-    df = df.drop(columns=["id", "title"])
+    df = df.drop(columns=["id", "title"], errors="ignore")
 
     # 3. Dropping categorical columns with more than 20% unique values
     cols_to_drop = [

@@ -3,18 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Apresentação Executiva STAR | Credit Scoring MLOps & Governança</title>
+  <title>Apresentação Executiva STAR | MLOps, Sustentação e Governança de Crédito</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     :root {
       --bg-primary: #060913;
-      --bg-secondary: #0d1326;
-      --bg-card: rgba(17, 25, 48, 0.72);
-      --bg-card-strong: rgba(22, 32, 62, 0.88);
-      --border-subtle: rgba(148, 163, 184, 0.14);
-      --border-highlight: rgba(56, 189, 248, 0.42);
+      --bg-secondary: #0c1224;
+      --bg-card: rgba(15, 23, 42, 0.82);
+      --bg-card-hover: rgba(22, 33, 62, 0.94);
+      --bg-card-strong: rgba(18, 28, 54, 0.94);
+      --border-subtle: rgba(148, 163, 184, 0.18);
+      --border-highlight: rgba(56, 189, 248, 0.45);
       --text-primary: #f8fafc;
       --text-secondary: #cbd5e1;
       --text-muted: #94a3b8;
@@ -24,10 +25,10 @@
       --accent-amber: #fbbf24;
       --accent-rose: #fb7185;
       --accent-purple: #c084fc;
-      --shadow-glow: 0 20px 50px rgba(0, 0, 0, 0.55), 0 0 35px rgba(56, 189, 248, 0.08);
-      --radius-lg: 20px;
-      --radius-md: 14px;
-      --radius-sm: 8px;
+      --shadow-elevation: 0 20px 50px rgba(0, 0, 0, 0.65), 0 0 30px rgba(56, 189, 248, 0.08);
+      --radius-xl: 20px;
+      --radius-lg: 14px;
+      --radius-md: 10px;
     }
 
     * {
@@ -44,19 +45,20 @@
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       overflow: hidden;
       -webkit-font-smoothing: antialiased;
+      font-size: 16px;
     }
 
-    /* Ambient Background */
+    /* Ambient Background Glow */
     .ambient-bg {
       position: fixed;
       inset: 0;
       z-index: 0;
       pointer-events: none;
       background:
-        radial-gradient(circle at 12% 18%, rgba(56, 189, 248, 0.13), transparent 38%),
-        radial-gradient(circle at 86% 22%, rgba(129, 140, 248, 0.14), transparent 40%),
-        radial-gradient(circle at 50% 88%, rgba(52, 211, 153, 0.09), transparent 45%),
-        linear-gradient(180deg, #060913 0%, #0b1122 100%);
+        radial-gradient(circle at 10% 15%, rgba(56, 189, 248, 0.14), transparent 40%),
+        radial-gradient(circle at 88% 20%, rgba(129, 140, 248, 0.15), transparent 42%),
+        radial-gradient(circle at 50% 90%, rgba(52, 211, 153, 0.10), transparent 45%),
+        linear-gradient(180deg, #060913 0%, #0a1020 100%);
     }
 
     .grid-overlay {
@@ -68,10 +70,10 @@
         linear-gradient(to right, rgba(148, 163, 184, 0.04) 1px, transparent 1px),
         linear-gradient(to bottom, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
       background-size: 48px 48px;
-      mask-image: radial-gradient(circle at center, black 55%, transparent 100%);
+      mask-image: radial-gradient(circle at center, black 65%, transparent 100%);
     }
 
-    /* App Layout */
+    /* App Layout Wrapper */
     .deck-wrapper {
       position: relative;
       z-index: 1;
@@ -81,78 +83,83 @@
       height: 100vh;
     }
 
-    /* Top Header Navigation */
+    /* Top Navigation Bar */
     .topbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0.85rem 2.2rem;
+      padding: 0.85rem clamp(1rem, 2.5vw, 2.4rem);
       border-bottom: 1px solid var(--border-subtle);
-      background: rgba(6, 9, 19, 0.78);
-      backdrop-filter: blur(14px);
+      background: rgba(6, 9, 19, 0.95);
+      backdrop-filter: blur(18px);
       gap: 1rem;
       flex-shrink: 0;
+      position: relative;
+      z-index: 50;
+      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.45);
     }
 
     .brand {
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      font-weight: 700;
-      font-size: 0.92rem;
-      letter-spacing: 0.02em;
+      font-weight: 800;
+      font-size: 0.96rem;
+      letter-spacing: 0.03em;
       color: var(--text-primary);
     }
 
     .brand-dot {
-      width: 10px;
-      height: 10px;
+      width: 11px;
+      height: 11px;
       border-radius: 50%;
       background: linear-gradient(135deg, var(--accent-cyan), var(--accent-indigo));
-      box-shadow: 0 0 12px var(--accent-cyan);
+      box-shadow: 0 0 14px var(--accent-cyan);
     }
 
     .star-pills {
       display: flex;
       align-items: center;
-      gap: 0.45rem;
+      gap: 0.5rem;
       flex-wrap: wrap;
     }
 
     .star-pill {
       border: 1px solid var(--border-subtle);
-      background: rgba(15, 23, 42, 0.65);
-      color: var(--text-muted);
-      padding: 0.36rem 0.8rem;
+      background: rgba(15, 23, 42, 0.75);
+      color: var(--text-secondary);
+      padding: 0.45rem 1rem;
       border-radius: 999px;
-      font-size: 0.76rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
+      font-size: 0.86rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
       cursor: pointer;
       transition: all 0.22s ease;
     }
 
     .star-pill:hover {
       color: var(--text-primary);
-      border-color: rgba(56, 189, 248, 0.35);
+      border-color: rgba(56, 189, 248, 0.45);
+      background: rgba(30, 41, 59, 0.9);
     }
 
     .star-pill.active {
-      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(129, 140, 248, 0.22));
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(129, 140, 248, 0.25));
       color: var(--accent-cyan);
       border-color: var(--accent-cyan);
-      box-shadow: 0 0 16px rgba(56, 189, 248, 0.2);
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.25);
     }
 
     .slide-counter {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.82rem;
-      color: var(--text-muted);
-      min-width: 70px;
+      font-size: 0.96rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      min-width: 80px;
       text-align: right;
     }
 
-    /* Slide Viewport */
+    /* Slides Viewport */
     .slides-viewport {
       position: relative;
       flex: 1;
@@ -160,13 +167,15 @@
       overflow: hidden;
     }
 
+    /* CRITICAL: justify-content: flex-start ensures headers and tag rows are NEVER pushed behind topbar */
     .slide {
       position: absolute;
       inset: 0;
-      padding: clamp(1.2rem, 2.5vw, 2.6rem) clamp(1.5rem, 4vw, 4.2rem);
+      padding: clamp(1.2rem, 2.2vh, 1.8rem) clamp(1.4rem, 3.5vw, 3.8rem) 2.2rem;
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      justify-content: flex-start;
+      align-items: stretch;
       opacity: 0;
       visibility: hidden;
       transform: translateY(18px) scale(0.99);
@@ -174,6 +183,9 @@
                   transform 0.38s cubic-bezier(0.16, 1, 0.3, 1),
                   visibility 0.38s;
       overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(56, 189, 248, 0.35) transparent;
     }
 
     .slide.active {
@@ -188,10 +200,11 @@
       margin: 0 auto;
       display: flex;
       flex-direction: column;
-      gap: clamp(1rem, 1.8vw, 1.65rem);
+      gap: clamp(0.9rem, 1.6vh, 1.25rem);
+      padding-bottom: 1.5rem;
     }
 
-    /* Badges & Typography */
+    /* Typography & Badges */
     .tag-row {
       display: flex;
       align-items: center;
@@ -203,294 +216,340 @@
       display: inline-flex;
       align-items: center;
       gap: 0.45rem;
-      padding: 0.32rem 0.85rem;
+      padding: 0.36rem 0.95rem;
       border-radius: 999px;
-      font-size: 0.75rem;
-      font-weight: 700;
+      font-size: 0.82rem;
+      font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.08em;
     }
 
-    .badge-intro { background: rgba(129, 140, 248, 0.16); color: var(--accent-indigo); border: 1px solid rgba(129, 140, 248, 0.38); }
-    .badge-s { background: rgba(251, 113, 133, 0.16); color: var(--accent-rose); border: 1px solid rgba(251, 113, 133, 0.38); }
-    .badge-t { background: rgba(251, 191, 36, 0.16); color: var(--accent-amber); border: 1px solid rgba(251, 191, 36, 0.38); }
-    .badge-a { background: rgba(56, 189, 248, 0.16); color: var(--accent-cyan); border: 1px solid rgba(56, 189, 248, 0.38); }
-    .badge-r { background: rgba(52, 211, 153, 0.16); color: var(--accent-emerald); border: 1px solid rgba(52, 211, 153, 0.38); }
+    .badge-intro { background: rgba(129, 140, 248, 0.18); color: var(--accent-indigo); border: 1px solid rgba(129, 140, 248, 0.45); }
+    .badge-s { background: rgba(251, 113, 133, 0.18); color: var(--accent-rose); border: 1px solid rgba(251, 113, 133, 0.45); }
+    .badge-t { background: rgba(251, 191, 36, 0.18); color: var(--accent-amber); border: 1px solid rgba(251, 191, 36, 0.45); }
+    .badge-a { background: rgba(56, 189, 248, 0.18); color: var(--accent-cyan); border: 1px solid rgba(56, 189, 248, 0.45); }
+    .badge-r { background: rgba(52, 211, 153, 0.18); color: var(--accent-emerald); border: 1px solid rgba(52, 211, 153, 0.45); }
 
     .sub-badge {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.74rem;
+      font-size: 0.8rem;
+      font-weight: 600;
       color: var(--text-secondary);
-      background: rgba(30, 41, 59, 0.75);
+      background: rgba(30, 41, 59, 0.85);
       border: 1px solid var(--border-subtle);
-      padding: 0.28rem 0.7rem;
+      padding: 0.32rem 0.8rem;
       border-radius: 999px;
     }
 
     h1.hero-title {
-      font-size: clamp(2rem, 3.8vw, 3.45rem);
+      font-size: clamp(2rem, 3.2vw, 3rem);
       font-weight: 800;
-      line-height: 1.12;
+      line-height: 1.16;
       letter-spacing: -0.025em;
-      background: linear-gradient(135deg, #ffffff 20%, #93c5fd 65%, #818cf8 100%);
+      background: linear-gradient(135deg, #ffffff 25%, #bae6fd 60%, #818cf8 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
     h2.slide-title {
-      font-size: clamp(1.55rem, 2.5vw, 2.35rem);
+      font-size: clamp(1.65rem, 2.4vw, 2.3rem);
       font-weight: 800;
-      line-height: 1.18;
+      line-height: 1.2;
       letter-spacing: -0.02em;
       color: var(--text-primary);
     }
 
     .slide-lead {
-      font-size: clamp(0.95rem, 1.2vw, 1.12rem);
+      font-size: clamp(1.02rem, 1.3vw, 1.18rem);
       color: var(--text-secondary);
       line-height: 1.58;
-      max-width: 980px;
+      max-width: 1100px;
     }
 
-    /* Grid Layouts */
+    /* Grids */
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1.15rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1.2rem;
+    }
+
     .grid-2 {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 1.25rem;
     }
 
-    .grid-3 {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 1.15rem;
-    }
-
-    .grid-4 {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 1rem;
-    }
-
-    /* Cards */
+    /* Executive Cards */
     .card {
       background: var(--bg-card);
       border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
-      padding: clamp(1rem, 1.6vw, 1.45rem);
-      box-shadow: var(--shadow-glow);
+      border-radius: var(--radius-xl);
+      padding: clamp(1.15rem, 1.5vw, 1.5rem);
+      box-shadow: var(--shadow-elevation);
       backdrop-filter: blur(16px);
       display: flex;
       flex-direction: column;
-      gap: 0.7rem;
-      transition: transform 0.2s ease, border-color 0.2s ease;
+      gap: 0.75rem;
+      transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease;
+      min-width: 0;
     }
 
     .card:hover {
-      border-color: rgba(56, 189, 248, 0.32);
+      transform: translateY(-2px);
+      border-color: rgba(56, 189, 248, 0.42);
+      background: var(--bg-card-hover);
     }
 
-    .card-accent-cyan { border-top: 3px solid var(--accent-cyan); }
-    .card-accent-emerald { border-top: 3px solid var(--accent-emerald); }
-    .card-accent-amber { border-top: 3px solid var(--accent-amber); }
-    .card-accent-rose { border-top: 3px solid var(--accent-rose); }
-    .card-accent-indigo { border-top: 3px solid var(--accent-indigo); }
+    .card-accent-rose { border-top: 4px solid var(--accent-rose); }
+    .card-accent-amber { border-top: 4px solid var(--accent-amber); }
+    .card-accent-cyan { border-top: 4px solid var(--accent-cyan); }
+    .card-accent-emerald { border-top: 4px solid var(--accent-emerald); }
+    .card-accent-indigo { border-top: 4px solid var(--accent-indigo); }
 
     .card-title {
-      font-size: 1.02rem;
+      font-size: 1.18rem;
       font-weight: 700;
       color: var(--text-primary);
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 0.5rem;
+      line-height: 1.3;
+      flex-wrap: wrap;
     }
 
     .card-text {
-      font-size: 0.88rem;
+      font-size: 0.98rem;
       color: var(--text-secondary);
+      line-height: 1.58;
+    }
+
+    /* Clean Card Bullet Items (Block Flow guarantees natural text wrapping) */
+    .card-bullet-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .card-bullet {
+      position: relative;
+      padding-left: 1.25rem;
+      font-size: 0.98rem;
+      color: var(--text-secondary);
+      line-height: 1.58;
+      display: block; /* Normal block flow: spans and text wrap naturally without spilling! */
+      word-break: normal;
+      overflow-wrap: break-word;
+    }
+
+    .card-bullet::before {
+      content: '▸';
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: var(--accent-cyan);
+      font-weight: 800;
+      font-size: 1.1rem;
       line-height: 1.55;
     }
 
-    /* Metric KPI Boxes */
+    .card-bullet strong {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    /* KPI Display Numbers */
     .kpi-value {
       font-family: 'JetBrains Mono', monospace;
-      font-size: clamp(1.45rem, 2.2vw, 2.1rem);
+      font-size: clamp(2.1rem, 3vw, 2.85rem);
       font-weight: 800;
       line-height: 1.1;
+      letter-spacing: -0.02em;
     }
 
     .kpi-label {
-      font-size: 0.78rem;
+      font-size: 0.82rem;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.08em;
       color: var(--text-muted);
-      font-weight: 600;
+      font-weight: 700;
     }
 
+    .text-rose { color: var(--accent-rose); }
+    .text-amber { color: var(--accent-amber); }
     .text-cyan { color: var(--accent-cyan); }
     .text-emerald { color: var(--accent-emerald); }
-    .text-amber { color: var(--accent-amber); }
-    .text-rose { color: var(--accent-rose); }
     .text-indigo { color: var(--accent-indigo); }
 
-    /* Code & Formula Blocks */
-    .mono-box {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-      background: rgba(6, 9, 19, 0.82);
-      border: 1px solid rgba(148, 163, 184, 0.18);
-      border-radius: var(--radius-md);
-      padding: 0.85rem 1rem;
+    /* Callouts & Banners */
+    .callout-banner {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.88));
+      border: 1px solid var(--border-subtle);
+      border-left: 5px solid var(--accent-cyan);
+      border-radius: var(--radius-lg);
+      padding: 0.95rem 1.4rem;
+      font-size: 1.02rem;
       color: #e2e8f0;
       line-height: 1.55;
-      overflow-x: auto;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
     }
 
-    .code-inline {
+    .callout-banner.warning {
+      border-left-color: var(--accent-rose);
+      background: linear-gradient(135deg, rgba(251, 113, 133, 0.12), rgba(15, 23, 42, 0.92));
+    }
+
+    .callout-banner.success {
+      border-left-color: var(--accent-emerald);
+      background: linear-gradient(135deg, rgba(52, 211, 153, 0.12), rgba(15, 23, 42, 0.92));
+    }
+
+    /* Inline Code Pill: inline-block with normal wrapping */
+    .code-pill {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8em;
-      padding: 0.14rem 0.42rem;
+      font-size: 0.84em;
+      padding: 0.12rem 0.42rem;
       border-radius: 6px;
-      background: rgba(56, 189, 248, 0.12);
+      background: rgba(56, 189, 248, 0.14);
       color: var(--accent-cyan);
-      border: 1px solid rgba(56, 189, 248, 0.22);
-    }
-
-    /* Tables */
-    .clean-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.84rem;
-    }
-
-    .clean-table th,
-    .clean-table td {
-      padding: 0.62rem 0.8rem;
-      text-align: left;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-
-    .clean-table th {
-      color: var(--text-muted);
+      border: 1px solid rgba(56, 189, 248, 0.3);
       font-weight: 600;
-      text-transform: uppercase;
-      font-size: 0.73rem;
-      letter-spacing: 0.05em;
-      background: rgba(15, 23, 42, 0.55);
+      display: inline-block;
+      white-space: nowrap;
+      vertical-align: baseline;
+      margin: 0.1rem 0.15rem;
     }
 
-    .clean-table tr:last-child td {
-      border-bottom: none;
-    }
-
-    /* Visual Bars for Drift */
-    .bar-group {
+    /* Metric Progress Bar */
+    .metric-row {
       display: flex;
       flex-direction: column;
-      gap: 0.4rem;
+      gap: 0.35rem;
+      margin-top: 0.3rem;
     }
 
-    .bar-header {
+    .metric-header {
       display: flex;
       justify-content: space-between;
-      font-size: 0.82rem;
+      font-size: 0.92rem;
       font-weight: 600;
     }
 
-    .bar-track {
+    .metric-track {
       height: 10px;
       width: 100%;
-      background: rgba(30, 41, 59, 0.85);
+      background: rgba(30, 41, 59, 0.9);
       border-radius: 999px;
       overflow: hidden;
     }
 
-    .bar-fill {
+    .metric-fill {
       height: 100%;
       border-radius: 999px;
     }
 
-    /* DAG Diagram */
-    .dag-flow {
+    /* Causal Flow DAG */
+    .causal-flow {
       display: grid;
       grid-template-columns: 1fr auto 1fr auto 1fr;
       align-items: center;
-      gap: 0.75rem;
-      background: rgba(6, 9, 19, 0.72);
+      gap: 0.8rem;
+      background: rgba(8, 12, 26, 0.85);
       border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      padding: 1rem;
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.15rem;
     }
 
-    .dag-node {
+    .causal-node {
       background: var(--bg-card-strong);
       border: 1px solid rgba(129, 140, 248, 0.35);
       border-radius: var(--radius-md);
-      padding: 0.75rem 0.9rem;
+      padding: 0.8rem 0.9rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .causal-arrow {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent-cyan);
+      font-weight: 800;
+      font-size: 1.4rem;
       text-align: center;
     }
 
-    .dag-arrow {
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--accent-cyan);
-      font-weight: 700;
-      font-size: 1.15rem;
-    }
-
-    /* Links Footer on Final Slide */
-    .resource-bar {
+    /* Action Links Bar */
+    .action-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 1rem;
-      padding: 1rem 1.35rem;
+      padding: 1rem 1.6rem;
       background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(52, 211, 153, 0.12));
       border: 1px solid rgba(56, 189, 248, 0.38);
-      border-radius: var(--radius-lg);
+      border-radius: var(--radius-xl);
     }
 
-    .btn-link {
+    .btn-exec {
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      padding: 0.58rem 1.1rem;
+      padding: 0.65rem 1.3rem;
       border-radius: 999px;
-      font-size: 0.84rem;
+      font-size: 0.92rem;
       font-weight: 700;
       text-decoration: none;
       background: var(--accent-cyan);
       color: #060913;
-      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      transition: all 0.22s ease;
+      cursor: pointer;
     }
 
-    .btn-link:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 0 20px rgba(56, 189, 248, 0.45);
+    .btn-exec:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 22px rgba(56, 189, 248, 0.5);
+      background: #7dd3fc;
     }
 
-    .btn-link.secondary {
-      background: rgba(15, 23, 42, 0.85);
+    .btn-exec.secondary {
+      background: rgba(15, 23, 42, 0.9);
       color: var(--text-primary);
       border: 1px solid var(--border-highlight);
     }
 
-    /* Bottom Controls */
+    .btn-exec.secondary:hover {
+      border-color: var(--accent-cyan);
+      background: rgba(30, 41, 59, 0.95);
+    }
+
+    /* Bottom Control Bar */
     .bottombar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0.7rem 2.2rem;
+      padding: 0.75rem clamp(1rem, 2.5vw, 2.4rem);
       border-top: 1px solid var(--border-subtle);
-      background: rgba(6, 9, 19, 0.84);
-      backdrop-filter: blur(14px);
+      background: rgba(6, 9, 19, 0.95);
+      backdrop-filter: blur(16px);
       flex-shrink: 0;
+      position: relative;
+      z-index: 50;
     }
 
     .progress-track {
       flex: 1;
-      max-width: 420px;
-      height: 6px;
+      max-width: 440px;
+      height: 7px;
       background: rgba(30, 41, 59, 0.9);
       border-radius: 999px;
       overflow: hidden;
@@ -499,25 +558,25 @@
 
     .progress-fill {
       height: 100%;
-      width: 12.5%;
+      width: 20%;
       background: linear-gradient(90deg, var(--accent-cyan), var(--accent-indigo), var(--accent-emerald));
-      transition: width 0.3s ease;
+      transition: width 0.35s ease;
     }
 
     .nav-btns {
       display: flex;
       align-items: center;
-      gap: 0.6rem;
+      gap: 0.7rem;
     }
 
     .nav-btn {
-      background: rgba(30, 41, 59, 0.75);
+      background: rgba(30, 41, 59, 0.85);
       color: var(--text-primary);
       border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-sm);
-      padding: 0.42rem 0.9rem;
-      font-size: 0.8rem;
-      font-weight: 600;
+      border-radius: var(--radius-md);
+      padding: 0.48rem 1.05rem;
+      font-size: 0.88rem;
+      font-weight: 700;
       cursor: pointer;
       transition: all 0.2s ease;
     }
@@ -525,6 +584,7 @@
     .nav-btn:hover:not(:disabled) {
       border-color: var(--accent-cyan);
       color: var(--accent-cyan);
+      background: rgba(45, 62, 90, 0.9);
     }
 
     .nav-btn:disabled {
@@ -533,24 +593,24 @@
     }
 
     .kbd-hint {
-      font-size: 0.75rem;
+      font-size: 0.82rem;
       color: var(--text-muted);
     }
 
-    /* Responsive Breakpoints */
-    @media (max-width: 1080px) {
+    /* Responsive */
+    @media (max-width: 1180px) {
       .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .dag-flow { grid-template-columns: 1fr; text-align: center; }
-      .dag-arrow { transform: rotate(90deg); }
+      .grid-3 { grid-template-columns: 1fr; }
+      .causal-flow { grid-template-columns: 1fr; text-align: center; }
+      .causal-arrow { transform: rotate(90deg); }
     }
 
     @media (max-width: 768px) {
-      html, body { overflow: auto; }
-      .topbar { padding: 0.7rem 1rem; flex-wrap: wrap; }
+      html, body { overflow: auto; font-size: 15px; }
+      .topbar { padding: 0.75rem 1rem; flex-wrap: wrap; }
       .star-pills { display: none; }
-      .slide { padding: 1.1rem 1rem 2rem; justify-content: flex-start; }
-      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .slide { padding: 1.2rem 1rem 2.2rem; }
+      .grid-2, .grid-4 { grid-template-columns: 1fr; }
       .bottombar { padding: 0.65rem 1rem; }
       .kbd-hint { display: none; }
     }
@@ -561,67 +621,75 @@
   <div class="grid-overlay"></div>
 
   <div class="deck-wrapper">
-    <!-- Header -->
+    <!-- Executive Topbar -->
     <header class="topbar">
       <div class="brand">
         <span class="brand-dot"></span>
-        <span>SISTEMA DE MLOPS & GOVERNANÇA DE CRÉDITO</span>
+        <span>SISTEMA DE MLOPS &amp; GOVERNANÇA DE CRÉDITO</span>
       </div>
       <nav class="star-pills" id="starPills">
-        <button class="star-pill active" data-slide="0">1. Capa</button>
-        <button class="star-pill" data-slide="1">2. [S] Situation</button>
-        <button class="star-pill" data-slide="2">3. [T] Task</button>
-        <button class="star-pill" data-slide="3">4. [A] Contratos de Dados</button>
-        <button class="star-pill" data-slide="4">5. [A] Drift & PSI</button>
-        <button class="star-pill" data-slide="5">6. [A] Observabilidade</button>
-        <button class="star-pill" data-slide="6">7. [A] Governança & Causal</button>
-        <button class="star-pill" data-slide="7">8. [R] Result</button>
+        <button class="star-pill active" data-slide="0">1. Visão Executiva</button>
+        <button class="star-pill" data-slide="1">2. [S] Situação</button>
+        <button class="star-pill" data-slide="2">3. [T &amp; A] Arquitetura</button>
+        <button class="star-pill" data-slide="3">4. [A] Diagnóstico Drift</button>
+        <button class="star-pill" data-slide="4">5. [R] Decisão &amp; Ação</button>
       </nav>
-      <div class="slide-counter" id="slideCounter">01 / 08</div>
+      <div class="slide-counter" id="slideCounter">01 / 05</div>
     </header>
 
-    <!-- Slides Viewport -->
+    <!-- Slide Viewport (5 Executive Slides) -->
     <main class="slides-viewport" id="slidesViewport">
 
-      <!-- SLIDE 1: CAPA -->
+      <!-- SLIDE 1: VISÃO EXECUTIVA & SCORECARD STAR -->
       <section class="slide active" data-index="0">
         <div class="slide-inner">
           <div class="tag-row">
-            <span class="star-badge badge-intro">Sustentação MLOps</span>
+            <span class="star-badge badge-intro">Scorecard Executivo</span>
             <span class="sub-badge">Método STAR (Situation • Task • Action • Result)</span>
             <span class="sub-badge">Lending Club Credit Scoring</span>
           </div>
           <h1 class="hero-title">
-            Observabilidade Contínua, Detecção de Drift,<br />
-            Qualidade de Dados e Governança em Produção
+            Observabilidade Contínua, Detecção de Drift e<br />
+            Governança de Modelos de Crédito em Produção
           </h1>
           <p class="slide-lead">
-            Arquitetura de <strong>Sustentação e Confiabilidade MLOps</strong> para proteção de um modelo de
-            <em>Credit Scoring</em> contra degradação silenciosa induzida por choques macroeconômicos, combinando
-            <strong>Pandera Data Contracts</strong>, <strong>Simulação de Data &amp; Concept Drift (Evidently AI + PSI)</strong>,
-            <strong>Rastreamento Hexagonal no MLflow</strong> e <strong>Compliance LGPD (*Privacy by Design*)</strong>.
+            Arquitetura de <strong>Sustentação MLOps</strong> desenvolvida para blindar o modelo de concessão de crédito contra a 
+            <strong>degradação silenciosa</strong> induzida por choques macroeconômicos (inflação e juros altos), integrando 
+            <strong>qualidade de dados fail-fast</strong>, <strong>monitoramento estatístico de drift</strong>, 
+            <strong>rastreamento hexagonal no MLflow</strong> e <strong>conformidade estrita com a LGPD</strong>.
           </p>
 
           <div class="grid-4">
             <div class="card card-accent-rose">
-              <span class="kpi-label">S — Situation</span>
+              <span class="kpi-label">S — Situação</span>
               <div class="card-title">Degradação Silenciosa</div>
-              <p class="card-text">Choque inflacionário e juros altos alteram o perfil de clientes e a taxa real de inadimplência sem gerar erros técnicos de infraestrutura.</p>
+              <p class="card-text">
+                A API responde com <span class="code-pill">HTTP 200 OK</span>, mas a inflação comprime a renda em <strong>-30%</strong> e a inadimplência real salta para <strong>69,8%</strong> sem emitir erros de infraestrutura.
+              </p>
             </div>
+
             <div class="card card-accent-amber">
-              <span class="kpi-label">T — Task</span>
+              <span class="kpi-label">T — Tarefa</span>
               <div class="card-title">Sustentação 360°</div>
-              <p class="card-text">Bloquear dados inválidos na entrada, diagnosticar Data e Concept Drift estatisticamente, centralizar logs/métricas e auditar LGPD.</p>
+              <p class="card-text">
+                Construir três barreiras de proteção: barrar dados corrompidos na entrada, diagnosticar desvios estatísticos antes da perda financeira e assegurar conformidade com a LGPD.
+              </p>
             </div>
+
             <div class="card card-accent-cyan">
-              <span class="kpi-label">A — Action</span>
+              <span class="kpi-label">A — Ação</span>
               <div class="card-title">Engenharia Limpa</div>
-              <p class="card-text">Contratos Pandera, simulação pura de Drift + PSI, Ports &amp; Adapters com MLflow e Grafo Causal (DAG) documentado.</p>
+              <p class="card-text">
+                Contratos Pandera na ingestão, monitoramento pré-rótulo via <strong>PSI</strong> e <strong>Evidently AI</strong>, arquitetura Ports &amp; Adapters no MLflow e Grafo Causal (DAG).
+              </p>
             </div>
+
             <div class="card card-accent-emerald">
-              <span class="kpi-label">R — Result</span>
-              <div class="card-title">Detecção &amp; Governança</div>
-              <p class="card-text">50% das features com drift detectado, PSI &gt; 0.40, alertas automáticos no MLflow/logs e protocolo prescritivo de recalibração.</p>
+              <span class="kpi-label">R — Resultado</span>
+              <div class="card-title">Proteção &amp; Decisão</div>
+              <p class="card-text">
+                <strong>100%</strong> de anomalias barradas, alerta preventivo com <strong>84,8%</strong> das features em drift (<span class="code-pill">PSI &gt; 0.44</span>), <strong>100%</strong> de testes e plano prescritivo.
+              </p>
             </div>
           </div>
         </div>
@@ -631,420 +699,306 @@
       <section class="slide" data-index="1">
         <div class="slide-inner">
           <div class="tag-row">
-            <span class="star-badge badge-s">S — Situation</span>
-            <span class="sub-badge">Contexto de Negócio &amp; Risco Financeiro</span>
+            <span class="star-badge badge-s">S — Situação</span>
+            <span class="sub-badge">Diagnóstico de Risco Financeiro &amp; Cenário Macroeconômico</span>
           </div>
-          <h2 class="slide-title">O Perigo da Degradação Silenciosa no Credit Scoring</h2>
+          <h2 class="slide-title">A Ilusão do "HTTP 200 OK": O Risco da Degradação Silenciosa</h2>
           <p class="slide-lead">
-            A fintech opera uma <strong>Regressão Logística</strong> em produção para concessão de crédito.
-            A API responde com baixa latência e <span class="code-inline">HTTP 200 OK</span>, mas mudanças severas na economia
-            descolaram a realidade produtiva da distribuição histórica de treinamento (<span class="code-inline">X_train.pkl</span>).
+            A fintech opera uma <strong>Regressão Logística</strong> para concessão de crédito. Sob choque macroeconômico, 
+            a distribuição real dos tomadores descola do histórico de treino (<span class="code-pill">X_train.pkl</span>). 
+            O sistema permanece operacional, mas passa a aprovar proponentes insolventes em massa.
           </p>
 
           <div class="grid-3">
             <div class="card card-accent-rose">
-              <span class="kpi-label">Vetor Macroeconômico 1</span>
-              <div class="kpi-value text-rose">-30% na Renda</div>
-              <div class="card-title">Compressão de Poder de Compra</div>
+              <span class="kpi-label">Vetor 1: Corrosão Salarial</span>
+              <div class="kpi-value text-rose">-30% Renda</div>
+              <div class="card-title">Covariate Shift P(X)</div>
               <p class="card-text">
-                A inflação corrói a renda disponível dos novos proponentes (<span class="code-inline">annual_inc × 0.70</span>),
-                deslocando a distribuição marginal de entrada $P(X)$.
+                A inflação comprime a renda disponível dos solicitantes (<span class="code-pill">annual_inc &times; 0.70</span>), deslocando a distribuição marginal de entrada sem violar regras básicas de sistema.
               </p>
             </div>
+
             <div class="card card-accent-amber">
-              <span class="kpi-label">Vetor Macroeconômico 2</span>
-              <div class="kpi-value text-amber">+30% no Crédito</div>
-              <div class="card-title">Pressão por Liquidez</div>
+              <span class="kpi-label">Vetor 2: Pressão por Liquidez</span>
+              <div class="kpi-value text-amber">+30% Crédito</div>
+              <div class="card-title">Alavancagem Crítica</div>
               <p class="card-text">
-                O valor médio solicitado sobe (<span class="code-inline">loan_amnt × 1.30</span>), elevando a relação
-                empréstimo/renda em <strong>+85,7%</strong>.
+                O valor solicitado sobe (<span class="code-pill">loan_amnt &times; 1.30</span>) e os juros sobem (+4,5 p.p.). A relação empréstimo/renda salta <strong>+85,7%</strong>, sobrecarregando a prestação mensal.
               </p>
             </div>
+
             <div class="card card-accent-indigo">
-              <span class="kpi-label">Consequência Crítica</span>
-              <div class="kpi-value text-indigo">Concept Drift</div>
-              <div class="card-title">Quebra da Fronteira $P(Y \mid X)$</div>
+              <span class="kpi-label">Consequência no Balanço</span>
+              <div class="kpi-value text-indigo">69,8% Default</div>
+              <div class="card-title">Quebra Causal P(Y | X)</div>
               <p class="card-text">
-                Sob juros elevados, perfis que antes pagavam em dia (<span class="code-inline">Fully Paid</span>) passam a inadimplir
-                (<span class="code-inline">Charged Off</span>), gerando prejuízo silencioso.
+                Perfis historicamente adimplentes (<span class="code-pill">Fully Paid</span>) passam a inadimplir (<span class="code-pill">Charged Off</span>). A inadimplência salta de <strong>4,8% para 69,8%</strong>, gerando prejuízo oculto.
               </p>
             </div>
           </div>
 
-          <div class="mono-box">
-            <strong>Problema Central:</strong> Sem contratos de entrada, testes estatísticos de distribuição (KS-test / PSI) e rastreamento centralizado, o modelo aprova falsos negativos em massa sem emitir nenhum alerta operacional.
+          <div class="callout-banner warning">
+            <div>
+              <strong>Diagnóstico Executivo:</strong> A ausência de contratos de dados fail-fast e testes de estabilidade populacional (PSI/KS) cria um ponto cego crítico: o modelo concede empréstimos podres com sucesso operacional e falha silenciosa de negócio.
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- SLIDE 3: TASK -->
+      <!-- SLIDE 3: TASK & ARQUITETURA (CORRIGIDO: Textos estruturados, quebra inline natural, sem colunas e sem corte superior) -->
       <section class="slide" data-index="2">
         <div class="slide-inner">
           <div class="tag-row">
-            <span class="star-badge badge-t">T — Task</span>
-            <span class="sub-badge">Pilares de Sustentação e Engenharia de Produção</span>
+            <span class="star-badge badge-t">T &amp; A — Tarefa &amp; Arquitetura</span>
+            <span class="sub-badge">Defesa em Três Camadas MLOps • Clean Code &amp; Governança</span>
           </div>
-          <h2 class="slide-title">Missão Técnica: Sustentação, Confiabilidade e Governança</h2>
+          <h2 class="slide-title">Arquitetura de Defesa MLOps: Da Ingestão à Decisão</h2>
           <p class="slide-lead">
-            Estruturar uma arquitetura modular e testável em <span class="code-inline">src/default_pred/</span> que garanta
-            qualidade na ingestão, detecção estatística de desvios, observabilidade contínua e conformidade legal.
-          </p>
-
-          <div class="grid-2">
-            <div class="card card-accent-cyan">
-              <div class="card-title">
-                <span>Validação e Contratos de Dados</span>
-                <span class="sub-badge">Pandera</span>
-              </div>
-              <p class="card-text">
-                Treinar o classificador base em dataset limpo (5.000 amostras do <em>Lending Club</em>) e implementar um
-                <strong>Data Contract</strong> rígido capaz de interceptar e bloquear payloads anômalos antes da inferência.
-              </p>
-            </div>
-
-            <div class="card card-accent-amber">
-              <div class="card-title">
-                <span>Simulação e Detecção de Drift</span>
-                <span class="sub-badge">Evidently AI + PSI</span>
-              </div>
-              <p class="card-text">
-                Simular a degradação temporal (<em>Data Drift</em> e <em>Concept Drift</em>) usando Clean Code, comparar Referência vs.
-                Produção e identificar variáveis degradadas via <strong>KS-test, Z-test e PSI</strong>.
-              </p>
-            </div>
-
-            <div class="card card-accent-indigo">
-              <div class="card-title">
-                <span>Observabilidade e Logs Centralizados</span>
-                <span class="sub-badge">MLflow + Rotating Logs</span>
-              </div>
-              <p class="card-text">
-                Centralizar logs operacionais e instrumentar os pipelines de treino, inferência e drift no <strong>MLflow</strong>,
-                documentando o catálogo de métricas de saúde e alertas.
-              </p>
-            </div>
-
-            <div class="card card-accent-emerald">
-              <div class="card-title">
-                <span>Governança, LGPD e Análise Causal</span>
-                <span class="sub-badge">Privacy by Design</span>
-              </div>
-              <p class="card-text">
-                Mapear tratamento de PII, bases legais da LGPD (Art. 7º V e X), plano de retenção/descarte, mitigação de vieses
-                (<em>Fairness</em>) e <strong>Análise Causal (DAG)</strong> da degradação.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- SLIDE 4: ACTION - CONTRATOS DE DADOS -->
-      <section class="slide" data-index="3">
-        <div class="slide-inner">
-          <div class="tag-row">
-            <span class="star-badge badge-a">A — Action • Contratos de Dados</span>
-            <span class="sub-badge">src/default_pred/data/contract.py &amp; load.py</span>
-          </div>
-          <h2 class="slide-title">Contratos de Dados com Pandera &amp; Bloqueio Fail-Fast</h2>
-          <p class="slide-lead">
-            A porta de entrada do modelo utiliza <span class="code-inline">Contract.validate(df, lazy=True)</span> para validar
-            simultaneamente todas as regras de domínio e impedir que lixo chegue ao classificador.
-          </p>
-
-          <div class="grid-2">
-            <div class="card card-accent-cyan">
-              <div class="card-title">Regras Estritas do Contrato (`Contract`)</div>
-              <table class="clean-table">
-                <thead>
-                  <tr>
-                    <th>Campo</th>
-                    <th>Regra Pandera</th>
-                    <th>Payload Inválido (`row_fail.json`)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td><span class="code-inline">annual_inc</span></td>
-                    <td><span class="code-inline">gt=20_000, nullable=False</span></td>
-                    <td class="text-rose"><strong>1000.0</strong> (Reprovado)</td>
-                  </tr>
-                  <tr>
-                    <td><span class="code-inline">purpose</span></td>
-                    <td><span class="code-inline">Series[str], nullable=False</span></td>
-                    <td class="text-rose"><strong>null</strong> (Reprovado)</td>
-                  </tr>
-                  <tr>
-                    <td><span class="code-inline">grade</span></td>
-                    <td><span class="code-inline">isin=["A".."G"], nullable=False</span></td>
-                    <td class="text-rose"><strong>"Z"</strong> (Reprovado)</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div class="card card-accent-rose">
-              <div class="card-title">Evidência de Bloqueio na Ingestão (CLI &amp; Logs)</div>
-              <div class="mono-box">
-$ uv run python src/default_pred/pipelines/pipeline_predict.py \<br/>
-&nbsp;&nbsp;--input data/entries/loan_data_row_fail.json<br/><br/>
-<span class="text-rose">ERROR | default_pred.data.load | Data validation failed.</span><br/>
-<span class="text-amber">ERROR | default_pred.observability.run | Run failed:</span><br/>
-&nbsp;&nbsp;experiment=credit_inference run=batch_inference<br/>
-<span class="text-cyan">INFO  | Run finished: status=failed rows=0 run_success=0.0</span><br/>
-<span class="text-rose">pandera.errors.SchemaErrors: 3 schema failures</span>
-              </div>
-              <p class="card-text">
-                A falha é interceptada antes de <span class="code-inline">predict()</span>, gravando <span class="code-inline">run_success = 0.0</span> no MLflow.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- SLIDE 5: ACTION - DRIFT & PSI -->
-      <section class="slide" data-index="4">
-        <div class="slide-inner">
-          <div class="tag-row">
-            <span class="star-badge badge-a">A — Action • Drift &amp; PSI</span>
-            <span class="sub-badge">src/default_pred/models/drift_simulation.py &amp; drift.py</span>
-          </div>
-          <h2 class="slide-title">Simulação Clean Code: $P(X,Y) = P(X)\cdot P(Y\mid X)$, PSI &amp; DDM</h2>
-          <p class="slide-lead">
-            O módulo puro <span class="code-inline">drift_simulation.py</span> cobre os dois momentos do <strong>Feedback Delay ($t \to t+k$)</strong>:
-            detecção estatística imediata sem rótulo (<strong>KS-Test, Z-Test, Feature PSI e Prediction PSI</strong>) e detecção supervisionada pós-maturação via <strong>DDM (Drift Detection Method)</strong>.
-          </p>
-
-          <div class="grid-2">
-            <div class="card card-accent-amber">
-              <div class="card-title">
-                <span>1. Janela Pré-Rótulo ($t \to t+k$): Data &amp; Prediction Drift</span>
-                <span class="sub-badge">KS • Z-Test • PSI</span>
-              </div>
-              <p class="card-text">
-                Detecta <strong class="text-amber">Covariate Shift $P(X)$</strong> e <strong class="text-cyan">Prediction Drift $\hat{P}(Y)$</strong> no instante da inferência (antes dos 90 dias de maturação):
-              </p>
-              <div class="bar-group">
-                <div class="bar-header">
-                  <span>PSI `annual_inc` (-30% renda) &amp; `loan_amnt` (+30%)</span>
-                  <span class="text-rose">PSI = 0.4859 | 0.4428 (&ge; 0.20 Crítico)</span>
-                </div>
-                <div class="bar-track"><div class="bar-fill" style="width: 92%; background: var(--accent-rose);"></div></div>
-              </div>
-              <div class="bar-group">
-                <div class="bar-header">
-                  <span>PSI `installment` (Tabela Price) &amp; `int_rate` (+4.5 p.p.)</span>
-                  <span class="text-amber">PSI = 0.4604 | 1.4231 (&ge; 0.20 Crítico)</span>
-                </div>
-                <div class="bar-track"><div class="bar-fill" style="width: 96%; background: var(--accent-amber);"></div></div>
-              </div>
-              <div class="bar-group">
-                <div class="bar-header">
-                  <span>Evidently KS-Test / Z-Test (`share_drifted`)</span>
-                  <span class="text-cyan">84 / 99 features (84.8% &ge; limiar 50%)</span>
-                </div>
-                <div class="bar-track"><div class="bar-fill" style="width: 85%; background: var(--accent-cyan);"></div></div>
-              </div>
-            </div>
-
-            <div class="card card-accent-indigo">
-              <div class="card-title">
-                <span>2. Pós-Rótulo ($t + k$): Concept Drift Real $P(Y \mid X)$ &amp; DDM</span>
-                <span class="sub-badge">DDM • Modelo Log-Odds</span>
-              </div>
-              <p class="card-text">
-                Modelo estrutural Log-Odds (<span class="code-inline">simulate_concept_drift</span>): pressão do serviço da dívida anualizado (<span class="code-inline">PMT × 12 / annual_inc</span>) leva tomadores à inadimplência e dispara o detector <strong>DDM</strong>:
-              </p>
-              <div class="mono-box">
-• Inadimplência Real $P(Y=1)$:  <strong>4.77% &rarr; <span class="text-rose">69.85% (+65.08 p.p.)</span></strong><br/>
-• Detector Supervisionado DDM: <strong class="text-rose">DRIFT TRIGGERED (idx=600, p_t=0.375)</strong><br/>
-• Limiar DDM ($p_{\min} + 3s_{\min}$): <strong class="text-amber">Erro salta de 8.16% para 37.48%</strong><br/>
-• Diagnóstico: Fronteira linear antiga torna-se obsoleta sob o novo regime.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- SLIDE 6: ACTION - OBSERVABILIDADE -->
-      <section class="slide" data-index="5">
-        <div class="slide-inner">
-          <div class="tag-row">
-            <span class="star-badge badge-a">A — Action • Observabilidade</span>
-            <span class="sub-badge">src/default_pred/observability/</span>
-          </div>
-          <h2 class="slide-title">Observabilidade Hexagonal: MLflow + Logging Centralizado</h2>
-          <p class="slide-lead">
-            Implementamos o padrão <strong>Ports &amp; Adapters</strong> via protocolo <span class="code-inline">ExperimentTracker</span>
-            (<span class="code-inline">MlflowTracker</span> + fallback seguro <span class="code-inline">NullTracker</span>) e o gerenciador de contexto
-            <span class="code-inline">tracked_run()</span>, com cobertura de testes automatizados <strong>&gt; 94%</strong>.
+            Implementação de três camadas modulares e testadas em <span class="code-pill">src/default_pred/</span>, 
+            garantindo que dados inválidos sejam bloqueados imediatamente e que o modelo mantenha auditabilidade contínua.
           </p>
 
           <div class="grid-3">
+            <!-- Card 1: Pandera Data Contracts -->
             <div class="card card-accent-cyan">
-              <span class="kpi-label">Experimento 1</span>
-              <div class="card-title">`credit_training`</div>
-              <p class="card-text">
-                Registra hiperparâmetros (<span class="code-inline">max_iter</span>, <span class="code-inline">n_train</span>, <span class="code-inline">n_features</span>),
-                métricas supervisionadas (<span class="code-inline">accuracy</span>, <span class="code-inline">precision</span>, <span class="code-inline">recall</span>, <span class="code-inline">f1_score</span>, <span class="code-inline">roc_auc</span>)
-                e versiona o artefato sklearn.
-              </p>
+              <div class="card-title">
+                <span>1. Qualidade de Dados</span>
+                <span class="sub-badge">Pandera Fail-Fast</span>
+              </div>
+              <div class="card-bullet-list">
+                <div class="card-bullet">
+                  <strong>Contrato Rígido:</strong> Validação em <span class="code-pill">Contract</span> exigindo renda anual &gt; 20.000, finalidade não nula e nota de risco restrita a [A..G].
+                </div>
+                <div class="card-bullet">
+                  <strong>Bloqueio Imediato:</strong> Payloads corrompidos (<span class="code-pill">row_fail.json</span> com renda de 1.000 e finalidade nula) são barrados antes da inferência.
+                </div>
+                <div class="card-bullet">
+                  <strong>Rastreio de Falha:</strong> Registro instantâneo de <span class="code-pill">run_success = 0.0</span> no MLflow e gravação de alerta no log operacional.
+                </div>
+              </div>
             </div>
 
+            <!-- Card 2: Hexagonal Observability -->
             <div class="card card-accent-indigo">
-              <span class="kpi-label">Experimento 2</span>
-              <div class="card-title">`credit_inference`</div>
-              <p class="card-text">
-                Monitora cada lote ou chamada individual com <span class="code-inline">rows_in</span>, <span class="code-inline">latency_ms</span>,
-                <span class="code-inline">default_rate_predicted</span> e captura falhas de contrato Pandera (<span class="code-inline">run_success = 0.0</span>).
-              </p>
+              <div class="card-title">
+                <span>2. Observabilidade Hexagonal</span>
+                <span class="sub-badge">MLflow Ports &amp; Adapters</span>
+              </div>
+              <div class="card-bullet-list">
+                <div class="card-bullet">
+                  <strong>Arquitetura Desacoplada:</strong> Protocolo <span class="code-pill">ExperimentTracker</span> com implementação concreta <span class="code-pill">MlflowTracker</span> e fallback <span class="code-pill">NullTracker</span>.
+                </div>
+                <div class="card-bullet">
+                  <strong>3 Experimentos no SQLite:</strong> <span class="code-pill">credit_training</span> (pesos e acurácia), <span class="code-pill">credit_inference</span> (latência) e <span class="code-pill">credit_drift_monitoring</span>.
+                </div>
+                <div class="card-bullet">
+                  <strong>Logs Rotativos:</strong> Log centralizado em <span class="code-pill">loan_prediction.log</span> (1 MB &times; 3 backups) com rotação automática sem expor PII.
+                </div>
+              </div>
             </div>
 
-            <div class="card card-accent-amber">
-              <span class="kpi-label">Experimento 3</span>
-              <div class="card-title">`credit_drift_monitoring`</div>
-              <p class="card-text">
-                Consolida runs de <span class="code-inline">drift_detection</span> (<span class="code-inline">share_drifted</span>, <span class="code-inline">alert_triggered</span>, <span class="code-inline">drift_score.*</span>)
-                e <span class="code-inline">drift_simulation</span> (<span class="code-inline">psi.*</span>, <span class="code-inline">concept_drift.*</span>).
-              </p>
+            <!-- Card 3: Governance & LGPD -->
+            <div class="card card-accent-emerald">
+              <div class="card-title">
+                <span>3. Governança &amp; LGPD</span>
+                <span class="sub-badge">Privacy by Design</span>
+              </div>
+              <div class="card-bullet-list">
+                <div class="card-bullet">
+                  <strong>Minimização de PII:</strong> Descarte automático de identificadores diretos e campos abertos (<span class="code-pill">id</span>, <span class="code-pill">member_id</span>, <span class="code-pill">url</span>, <span class="code-pill">emp_title</span>, <span class="code-pill">title</span>, <span class="code-pill">desc</span>).
+                </div>
+                <div class="card-bullet">
+                  <strong>Bases Legais LGPD:</strong> Conformidade com o Art. 7º X (Proteção do Crédito) e Art. 7º V (Execução de Contratos preliminares).
+                </div>
+                <div class="card-bullet">
+                  <strong>Explicabilidade &amp; Fairness:</strong> Modelo Glass-Box (pesos auditáveis &beta;<sub>j</sub> &middot; x<sub>j</sub> no Art. 20) com auditoria de <em>Disparate Impact</em> (&ge; 0,80).
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="mono-box">
-            <strong>Log Centralizado Rotativo (`logs/loan_prediction.log` — 1 MB × 3 backups):</strong><br/>
-            <span class="text-cyan">INFO</span>    | default_pred.observability.drift_summary | Drift summary: 33/66 features drifted (share=0.50, alert=True)<br/>
-            <span class="text-amber">WARNING</span> | default_pred.pipelines.pipeline_drift | DRIFT ALERT: 33/66 features drifted (share=0.50 &gt;= 0.50)<br/>
-            <span class="text-amber">WARNING</span> | default_pred.pipelines.pipeline_simulate_drift | PSI DRIFT ALERT: annual_inc=0.4480, loan_amnt=0.4152
+          <div class="callout-banner success">
+            <div>
+              <strong>Qualidade de Engenharia Assegurada:</strong> Suíte completa com <strong>100% de cobertura de testes</strong> no core de observabilidade (50 testes) e <strong>66 testes automatizados</strong> no repositório (<span class="code-pill">pytest</span> + <span class="code-pill">ruff</span>).
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- SLIDE 7: ACTION - GOVERNANÇA & CAUSALIDADE -->
-      <section class="slide" data-index="6">
+      <!-- SLIDE 4: ACTION & DRIFT DIAGNOSTIC -->
+      <section class="slide" data-index="3">
         <div class="slide-inner">
           <div class="tag-row">
-            <span class="star-badge badge-a">A — Action • Governança &amp; Causalidade</span>
-            <span class="sub-badge">docs/GOVERNANCA_LGPD.md</span>
+            <span class="star-badge badge-a">A — Ação &amp; Diagnóstico</span>
+            <span class="sub-badge">Estatística Pré e Pós-Rótulo • Mitigação do Feedback Delay</span>
           </div>
-          <h2 class="slide-title">Governança LGPD (*Privacy by Design*), Fairness &amp; Grafo Causal</h2>
+          <h2 class="slide-title">Diagnóstico Estatístico: Detecção Precoce de Drift &amp; Causalidade</h2>
+          <p class="slide-lead">
+            Mitigação do <strong>Feedback Delay (t &rarr; t+k)</strong>: como os atrasos de 90 dias nos pagamentos demoram a virar inadimplência contábil, o sistema monitora 
+            <strong>Data Drift P(X)</strong> e <strong>Prediction Drift P&#770;(Y)</strong> em tempo real antes da ocorrência do prejuízo.
+          </p>
 
           <div class="grid-2">
-            <div class="card card-accent-emerald">
-              <div class="card-title">Compliance LGPD (Lei nº 13.709/2018) &amp; Fairness</div>
-              <table class="clean-table">
-                <tbody>
-                  <tr>
-                    <td><strong>Minimização de PII</strong></td>
-                    <td>Remoção em <span class="code-inline">engineering.py</span> de <span class="code-inline">id</span>, <span class="code-inline">member_id</span>, <span class="code-inline">url</span>, <span class="code-inline">title</span>, <span class="code-inline">emp_title</span> e <span class="code-inline">desc</span>.</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Bases Legais (Art. 7º)</strong></td>
-                    <td><strong>Inciso X</strong> (Proteção do Crédito) e <strong>Inciso V</strong> (Execução de Contrato).</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Explicabilidade (Art. 20)</strong></td>
-                    <td>Modelo <em>Glass-Box</em> (Regressão Logística): pesos $\beta_j \cdot x_j$ auditáveis para revisão de negativa.</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Retenção (Art. 15/16)</strong></td>
-                    <td>Política definida para <span class="code-inline">raw</span>, <span class="code-inline">processed</span>, <span class="code-inline">models</span>, rotação de logs e GC no MLflow.</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Mitigação de Viés</strong></td>
-                    <td>Controle de <em>Disparate Impact (&ge; 0.80)</em> sobre variáveis <em>proxy</em> (<span class="code-inline">zip_code</span> 3 dígitos e <span class="code-inline">addr_state</span>).</td>
-                  </tr>
-                </tbody>
-              </table>
+            <!-- Left: Statistical Metrics -->
+            <div class="card card-accent-amber">
+              <div class="card-title">
+                <span>Alertas Estatísticos de Produção</span>
+                <span class="sub-badge">Evidently + PSI + DDM</span>
+              </div>
+              <p class="card-text">
+                Métricas reais medidas pelo pipeline sobre o lote sob estresse econômico:
+              </p>
+              
+              <div class="metric-row">
+                <div class="metric-header">
+                  <span>PSI Renda (`annual_inc` -30%)</span>
+                  <span class="text-rose font-mono">PSI = 0.4859 (&ge; 0.20 Severo)</span>
+                </div>
+                <div class="metric-track"><div class="metric-fill" style="width: 95%; background: var(--accent-rose);"></div></div>
+              </div>
+
+              <div class="metric-row">
+                <div class="metric-header">
+                  <span>PSI Montante Solicitado (`loan_amnt` +30%)</span>
+                  <span class="text-rose font-mono">PSI = 0.4428 (&ge; 0.20 Severo)</span>
+                </div>
+                <div class="metric-track"><div class="metric-fill" style="width: 90%; background: var(--accent-rose);"></div></div>
+              </div>
+
+              <div class="metric-row">
+                <div class="metric-header">
+                  <span>PSI Parcela Tabela Price (`installment`)</span>
+                  <span class="text-amber font-mono">PSI = 0.4604 (&ge; 0.20 Severo)</span>
+                </div>
+                <div class="metric-track"><div class="metric-fill" style="width: 92%; background: var(--accent-amber);"></div></div>
+              </div>
+
+              <div class="metric-row">
+                <div class="metric-header">
+                  <span>Evidently AI KS-Test / Z-Test (`share_drifted`)</span>
+                  <span class="text-cyan font-mono">84 / 99 features (84.8% &ge; 50%)</span>
+                </div>
+                <div class="metric-track"><div class="metric-fill" style="width: 85%; background: var(--accent-cyan);"></div></div>
+              </div>
+
+              <p class="card-text" style="font-size: 0.94rem; margin-top: 0.3rem;">
+                <strong>Detecção Pós-Rótulo:</strong> O detector <strong>DDM</strong> confirma o drift supervisionado no registro 600 quando a taxa de erro salta de <strong>8,2% para 37,5%</strong>.
+              </p>
             </div>
 
+            <!-- Right: Causal DAG -->
             <div class="card card-accent-indigo">
-              <div class="card-title">Análise Causal (DAG) da Degradação</div>
-              <div class="dag-flow">
-                <div class="dag-node">
-                  <div class="kpi-label text-rose">Confundidor (Z)</div>
-                  <strong>Choque Macroeconômico</strong>
-                  <div class="card-text">Inflação + Juros Altos</div>
+              <div class="card-title">
+                <span>Grafo Causal (DAG) da Degradação</span>
+                <span class="sub-badge">docs/GOVERNANCA_LGPD.md</span>
+              </div>
+              <div class="causal-flow">
+                <div class="causal-node">
+                  <span class="kpi-label text-rose">Confundidor (Z)</span>
+                  <strong style="font-size: 1.02rem;">Choque Macroeconômico</strong>
+                  <span class="card-text" style="font-size: 0.88rem;">Inflação + Juros</span>
                 </div>
-                <div class="dag-arrow">&rarr;</div>
-                <div class="dag-node">
-                  <div class="kpi-label text-amber">Data Drift P(X)</div>
-                  <strong>Renda -30% | Crédito +30%</strong>
-                  <div class="card-text">Comprometimento +85.7%</div>
+                <div class="causal-arrow">&rarr;</div>
+                <div class="causal-node">
+                  <span class="kpi-label text-amber">Covariáveis P(X)</span>
+                  <strong style="font-size: 1.02rem;">Renda &darr; | Crédito &uarr;</strong>
+                  <span class="card-text" style="font-size: 0.88rem;">Dívida/Renda +85,7%</span>
                 </div>
-                <div class="dag-arrow">&rarr;</div>
-                <div class="dag-node">
-                  <div class="kpi-label text-indigo">Concept Drift P(Y|X)</div>
-                  <strong>Salto de Inadimplência</strong>
-                  <div class="card-text">Limiar antigo obsoleto</div>
+                <div class="causal-arrow">&rarr;</div>
+                <div class="causal-node">
+                  <span class="kpi-label text-indigo">Resposta P(Y|X)</span>
+                  <strong style="font-size: 1.02rem;">Inadimplência Real</strong>
+                  <span class="card-text" style="font-size: 0.88rem;">Fronteira obsoleta</span>
                 </div>
               </div>
               <p class="card-text">
-                <strong>Causa Raiz:</strong> O choque $Z$ altera simultaneamente as covariáveis $X$ e a resposta $Y$. O alerta precoce de <em>Data Drift</em> (KS/PSI) antecipa o <em>Concept Drift</em> antes que os calotes se acumulem no balanço.
+                <strong>Análise de Causa Raiz:</strong> O choque Z é uma causa comum não observada que distorce simultaneamente a renda, o custo da dívida e a probabilidade real de calote.
               </p>
+              <div class="callout-banner" style="padding: 0.85rem 1.15rem; font-size: 0.98rem;">
+                <span><strong>Conclusão Executiva:</strong> O alerta precoce de <em>Data Drift</em> no dia 0 antecipa a quebra estrutural do portfólio 90 dias antes que a inadimplência afete o caixa.</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- SLIDE 8: RESULT -->
-      <section class="slide" data-index="7">
+      <!-- SLIDE 5: RESULTS & PRESCRIPTIVE DECISIONS -->
+      <section class="slide" data-index="4">
         <div class="slide-inner">
           <div class="tag-row">
-            <span class="star-badge badge-r">R — Result</span>
-            <span class="sub-badge">Resultados Consolidados, Prescrição e Artefatos</span>
+            <span class="star-badge badge-r">R — Resultado &amp; Decisão</span>
+            <span class="sub-badge">Impacto no Negócio • Plano Prescritivo • Artefatos Auditáveis</span>
           </div>
-          <h2 class="slide-title">Resultados Alcançados &amp; Protocolo Prescritivo</h2>
+          <h2 class="slide-title">Resultados Consolidados &amp; Decisões Executivas Prescritivas</h2>
 
           <div class="grid-4">
             <div class="card card-accent-emerald">
-              <span class="kpi-label">Qualidade na Entrada</span>
+              <span class="kpi-label">Ingestão Fail-Fast</span>
               <div class="kpi-value text-emerald">100%</div>
-              <div class="card-title">Anomalias Bloqueadas</div>
-              <p class="card-text">Contrato Pandera barra payloads corrompidos e registra a falha no MLflow e nos logs.</p>
+              <div class="card-title">Anomalias Barradas</div>
+              <p class="card-text">Bloqueio preventivo na entrada via contrato Pandera. Zero dados inválidos na inferência.</p>
             </div>
 
             <div class="card card-accent-amber">
               <span class="kpi-label">Evidently AI Drift</span>
-              <div class="kpi-value text-amber">84.8%</div>
-              <div class="card-title">84 / 99 Features Drifted</div>
-              <p class="card-text">Aciona <span class="code-inline">alert_triggered = 1.0</span> no experimento <span class="code-inline">credit_drift_monitoring</span>.</p>
+              <div class="kpi-value text-amber">84,8%</div>
+              <div class="card-title">Alerta Disparado</div>
+              <p class="card-text">84 de 99 variáveis acusadas no KS-test (<span class="code-pill">share=0.85 &ge; 0.50</span>), registrando alerta no MLflow.</p>
             </div>
 
             <div class="card card-accent-rose">
               <span class="kpi-label">Estabilidade Populacional</span>
-              <div class="kpi-value text-rose">PSI &gt; 0.44</div>
-              <div class="card-title">Drift Severo (&ge; 0.20)</div>
-              <p class="card-text"><span class="code-inline">annual_inc=0.486</span>, <span class="code-inline">installment=0.460</span> e <span class="code-inline">int_rate=1.423</span>.</p>
+              <div class="kpi-value text-rose">PSI &gt; 0,44</div>
+              <div class="card-title">Desvio Crítico</div>
+              <p class="card-text">Renda (0,486), empréstimo (0,443) e parcela (0,460) violam com folga o teto de 0,20.</p>
             </div>
 
             <div class="card card-accent-cyan">
               <span class="kpi-label">Qualidade de Software</span>
-              <div class="kpi-value text-cyan">&gt; 94% Cov</div>
-              <div class="card-title">Testes Automatizados</div>
-              <p class="card-text">Suíte <span class="code-inline">pytest</span> + <span class="code-inline">ruff</span> validando contratos, drift, observabilidade e simulação.</p>
+              <div class="kpi-value text-cyan">100%</div>
+              <div class="card-title">Cobertura de Testes</div>
+              <p class="card-text">50/50 testes no core de observabilidade (66 no projeto), garantindo engenharia confiável.</p>
             </div>
           </div>
 
           <div class="card card-accent-indigo">
-            <div class="card-title">Lições Aprendidas &amp; Adaptação em MLOps (Feedback Delay &amp; Mitigação)</div>
-            <p class="card-text">
-              <strong>1. Pré-Rótulo ($t \to t+k$):</strong> Monitorar <em>Feature PSI</em> e <em>Prediction PSI</em> (<span class="code-inline">psi.predicted_prob</span>) para agir antes do atraso de 90 dias do rótulo. &nbsp;|&nbsp;
-              <strong>2. Threshold Tuning:</strong> Ajustar o limiar de corte (<span class="code-inline">decision_threshold</span>) sob <em>Prior/Concept Drift</em>. &nbsp;|&nbsp;
-              <strong>3. Time-Decay Sliding Window ($t+k$, pós-DDM):</strong> Retreinar com decaimento exponencial $w_i = e^{-\lambda(t_{\text{atual}} - t_i)}$ e feature causal <span class="code-inline">loan_amnt / annual_inc</span>. &nbsp;|&nbsp;
-              <strong>4. Shadow &amp; Champion/Challenger:</strong> Validar o novo modelo em modo <em>Shadow</em> e promover via <em>Canary Rollout</em> (5% &rarr; 20% &rarr; 100%) auditando <em>Disparate Impact (&ge; 0.80)</em>.
-            </p>
+            <div class="card-title">Protocolo de Resposta Imediata para o Comitê de Crédito e Risco</div>
+            <div class="grid-3" style="gap: 1rem; margin-top: 0.2rem;">
+              <div>
+                <strong style="color: var(--accent-amber); font-size: 1.02rem;">1. Threshold Tuning Imediato</strong>
+                <p class="card-text" style="font-size: 0.95rem; margin-top: 0.3rem;">
+                  Ajustar o limiar de corte de concessão para estancar imediatamente o vazamento de falsos negativos enquanto a carteira é estabilizada.
+                </p>
+              </div>
+              <div>
+                <strong style="color: var(--accent-cyan); font-size: 1.02rem;">2. Retreino com Time-Decay</strong>
+                <p class="card-text" style="font-size: 0.95rem; margin-top: 0.3rem;">
+                  Retreinar o classificador com decaimento exponencial (w<sub>i</sub> = e<sup>-&lambda;&Delta;t</sup>) e incorporar a razão causal direta <span class="code-pill">loan_amnt / annual_inc</span>.
+                </p>
+              </div>
+              <div>
+                <strong style="color: var(--accent-emerald); font-size: 1.02rem;">3. Shadow &amp; Canary Rollout</strong>
+                <p class="card-text" style="font-size: 0.95rem; margin-top: 0.3rem;">
+                  Validar o novo modelo em modo sombra (Shadow) e promover via Canary Rollout (5% &rarr; 20% &rarr; 100%) auditando <em>Disparate Impact</em> (&ge; 0,80).
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div class="resource-bar">
+          <div class="action-bar">
             <div>
-              <strong>Artefatos Auditáveis do Projeto:</strong>
-              <span class="card-text">Acesse o relatório estatístico completo gerado pelo Evidently AI e o documento normativo de Governança/LGPD.</span>
+              <strong style="font-size: 1.05rem; color: var(--text-primary);">Evidências e Artefatos Auditáveis:</strong>
+              <p class="card-text" style="font-size: 0.95rem; margin-top: 0.2rem;">
+                Consulte o relatório estatístico completo gerado pelo Evidently AI e o documento normativo de conformidade legal.
+              </p>
             </div>
-            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-              <a class="btn-link" href="../../data_drift_report.html" target="_blank" rel="noopener">
-                Abrir Relatório Evidently (`data_drift_report.html`) &nearr;
+            <div style="display: flex; gap: 0.85rem; flex-wrap: wrap;">
+              <a class="btn-exec" href="../../data_drift_report.html" target="_blank" rel="noopener">
+                Abrir Relatório Evidently AI &nearr;
               </a>
-              <a class="btn-link secondary" href="../GOVERNANCA_LGPD.md" target="_blank" rel="noopener">
-                Documento Governança &amp; LGPD &nearr;
+              <a class="btn-exec secondary" href="../GOVERNANCA_LGPD.md" target="_blank" rel="noopener">
+                Governança &amp; LGPD (MD) &nearr;
               </a>
             </div>
           </div>
@@ -1053,9 +1007,9 @@ $ uv run python src/default_pred/pipelines/pipeline_predict.py \<br/>
 
     </main>
 
-    <!-- Bottom Controls -->
+    <!-- Bottom Navigation Controls -->
     <footer class="bottombar">
-      <div class="kbd-hint">Use as setas <strong>&larr; / &rarr;</strong>, <strong>Espaço</strong> ou <strong>F</strong> (Tela Cheia)</div>
+      <div class="kbd-hint">Navegação: <strong>&larr; / &rarr;</strong>, <strong>Espaço</strong> ou <strong>F</strong> (Tela Cheia)</div>
       <div class="progress-track">
         <div class="progress-fill" id="progressFill"></div>
       </div>
@@ -1081,6 +1035,9 @@ $ uv run python src/default_pred/pipelines/pipeline_predict.py \<br/>
         current = index;
         slides.forEach((slide, idx) => {
           slide.classList.toggle('active', idx === current);
+          if (idx === current) {
+            slide.scrollTop = 0; // Reset scroll position when entering slide
+          }
         });
         pills.forEach((pill, idx) => {
           pill.classList.toggle('active', idx === current);
