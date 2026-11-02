@@ -38,6 +38,17 @@ def _normalize_single_entry(data: dict) -> dict:
     return normalized
 
 
+def _validate_contract(df: pd.DataFrame) -> pd.DataFrame:
+    """Validate a DataFrame (single entry or batch) against the Pandera Contract."""
+    try:
+        validated_df = Contract.validate(df, lazy=True)
+        logger.info("Data validation passed (%d row(s))!", len(validated_df))
+        return validated_df
+    except pa.errors.SchemaErrors:
+        logger.error("Data validation failed.")
+        raise
+
+
 def download_dataset_if_missing(target_path: str | Path) -> Path:
     """Download the Lending Club dataset from Kaggle via kagglehub if missing."""
     target_path = Path(target_path)
@@ -82,7 +93,7 @@ def load_dataset(path: str | Path) -> pd.DataFrame:
 
 
 def load_entries(data: dict) -> pd.DataFrame:
-    """Load a full dataset from a dict-of-dicts payload such as a drifted JSON file."""
+    """Load and validate a batch dataset from a dict-of-dicts payload."""
     logger.info("Loading multiple entries from the provided data dictionary")
 
     if not isinstance(data, dict):
@@ -91,29 +102,13 @@ def load_entries(data: dict) -> pd.DataFrame:
     if not any(isinstance(value, dict) for value in data.values()):
         return load_one_entry(data)
 
-    df = pd.DataFrame(data)
-    df = df.reset_index(drop=True)
-
-    # Batch drift payloads often include intentionally noisy rows, so avoid
-    # hard Contract validation here; the single-entry path keeps that strictness.
-    logger.info(
-        "Batch data loaded successfully (%d rows); "
-        "strict contract validation is applied on single-entry ingestion.",
-        len(df),
-    )
-    return df
+    df = pd.DataFrame(data).reset_index(drop=True)
+    return _validate_contract(df)
 
 
 def load_one_entry(data: dict) -> pd.DataFrame:
-    """Load a single entry from a dictionary."""
+    """Load and validate a single entry from a dictionary."""
     logger.info("Loading a single entry from the provided data dictionary")
     normalized = _normalize_single_entry(data)
     df = pd.DataFrame([normalized])
-    try:
-        validated_df = Contract.validate(df, lazy=True)
-        logger.info("Data validation passed!")
-        return validated_df
-
-    except pa.errors.SchemaErrors:
-        logger.error("Data validation failed.")
-        raise
+    return _validate_contract(df)
