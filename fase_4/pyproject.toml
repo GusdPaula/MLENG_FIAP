@@ -1,5 +1,5 @@
 [project]
-name = "fase-4"
+name = "default-pred"
 version = "0.1.0"
 description = "ML engineering project for default prediction"
 requires-python = ">=3.12"
@@ -38,11 +38,11 @@ indent-style = "space"
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 
-# Coverage gate (>= 90%) applies to the Stage 3 observability code only.
+# Coverage gate (>= 90%) applies to the observability code.
 # Run with: uv run pytest --cov --cov-report=term-missing
 [tool.coverage.run]
 source = ["src/default_pred"]
-# Stage 1/2 code and shared glue are out of the gate; only new Stage 3 code counts.
+# Focus on the core observability and monitoring layer.
 omit = [
     "src/default_pred/config.py",
     "src/default_pred/data/*",

@@ -1,4 +1,4 @@
-# Tech Challenge — Fase 4: Observabilidade Contínua, Detecção de Drift, Qualidade de Dados e Governança em Produção
+# Sistema de Observabilidade Contínua, Detecção de Drift, Qualidade de Dados e Governança em Produção
 
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](./pyproject.toml)
 [![Pandera](https://img.shields.io/badge/Data_Contracts-Pandera-00A67E?style=for-the-badge)](./src/default_pred/data/contract.py)
@@ -13,19 +13,19 @@
 
 Uma fintech de concessão de crédito opera um classificador de **Credit Scoring** (predição de inadimplência / *default*) em produção. Com mudanças macroeconômicas recentes — **inflação persistente e elevação da taxa de juros** — a diretoria identificou indícios de degradação silenciosa nas decisões do modelo.
 
-Este projeto implementa a camada completa de **Sustentação, Confiabilidade, Observabilidade e Governança (MLOps)** estruturada em 4 etapas:
+Este projeto implementa a camada completa de **Sustentação, Confiabilidade, Observabilidade e Governança (MLOps)** para modelos de risco de crédito, estruturada em quatro pilares fundamentais:
 
-1. **Etapa 1 — Validação de Dados e Contratos (*Data Contracts*):** Treinamento do classificador baseline (`LogisticRegression`) sobre o dataset *Lending Club* e proteção da ingestão com regras estritas via **Pandera** (`Contract`), bloqueando registros inválidos (*fail-fast*).
-2. **Etapa 2 — Simulação e Detecção Estatística de Drift:** Simulação reprodutível de **Data Drift** ($P(X)$) e **Concept Drift** ($P(Y \mid X)$) sob estresse econômico (`drift_simulation.py`) e detecção estatística automatizada com **Evidently AI** (Kolmogorov-Smirnov e Z-test) combinada ao cálculo explícito de **PSI (*Population Stability Index*)**.
-3. **Etapa 3 — Observabilidade de Pipelines e Modelos:** Arquitetura Hexagonal (*Ports & Adapters*) integrando **MLflow** (`mlflow.db` com 3 experimentos dedicados) e **Logging Centralizado Rotativo** (`logs/loan_prediction.log`).
-4. **Etapa 4 — Governança, LGPD e Análise Causal:** Mapeamento de PII (*Privacy by Design* e *by Default*), enquadramento na Lei nº 13.709/2018 (LGPD), mitigação de vieses (*Fairness*), Grafo Causal (DAG) da degradação e apresentação executiva no método **STAR**.
+* **Validação de Dados e Contratos (*Data Contracts*):** Treinamento do classificador baseline (`LogisticRegression`) sobre o dataset *Lending Club* e proteção da ingestão com regras estritas via **Pandera** (`Contract`), bloqueando registros inválidos (*fail-fast*).
+* **Simulação e Detecção Estatística de Drift:** Simulação reprodutível de **Data Drift** ($P(X)$) e **Concept Drift** ($P(Y \mid X)$) sob estresse econômico (`drift_simulation.py`) e detecção estatística automatizada com **Evidently AI** (Kolmogorov-Smirnov e Z-test) combinada ao cálculo explícito de **PSI (*Population Stability Index*)**.
+* **Observabilidade de Pipelines e Modelos:** Arquitetura Hexagonal (*Ports & Adapters*) integrando **MLflow** (`mlflow.db` com 3 experimentos dedicados) e **Logging Centralizado Rotativo** (`logs/loan_prediction.log`).
+* **Governança, LGPD e Análise Causal:** Mapeamento de PII (*Privacy by Design* e *by Default*), enquadramento na Lei nº 13.709/2018 (LGPD), mitigação de vieses (*Fairness*), Grafo Causal (DAG) da degradação e apresentação executiva no método **STAR**.
 
 ---
 
 ## 2. Arquitetura do Projeto
 
 ```
-fase_4/
+.
 ├── data/
 │   ├── raw/                        # Dataset bruto Lending Club (baixado sob demanda via kagglehub)
 │   ├── processed/                  # Datasets de referência escalonados (X_train.pkl, X_test.pkl, ...)
@@ -67,10 +67,10 @@ fase_4/
 │   │   ├── drift_summary.py        # Parser agnóstico do snapshot Evidently e regra de alerta
 │   │   └── instrumentation.py      # Orquestradores track_training e track_inference
 │   ├── pipelines/
-│   │   ├── pipeline_train.py           # Pipeline CLI de treinamento (Etapa 1 + Etapa 3)
-│   │   ├── pipeline_predict.py         # Pipeline CLI de predição e validação de contrato (Etapa 1 + 3)
-│   │   ├── pipeline_simulate_drift.py  # Pipeline CLI de simulação Data/Concept Drift + PSI (Etapa 2 + 3)
-│   │   └── pipeline_drift.py           # Pipeline CLI de detecção Evidently e alerta (Etapa 2 + 3)
+│   │   ├── pipeline_train.py           # Pipeline CLI de treinamento com rastreamento MLflow
+│   │   ├── pipeline_predict.py         # Pipeline CLI de predição e validação de contrato
+│   │   ├── pipeline_simulate_drift.py  # Pipeline CLI de simulação Data/Concept Drift + PSI
+│   │   └── pipeline_drift.py           # Pipeline CLI de detecção Evidently e alerta
 │   └── utils/
 │       └── logging.py              # Configuração idempotente do RotatingFileHandler
 ├── tests/                          # Suíte de testes unitários e de integração (pytest + coverage)
@@ -83,7 +83,7 @@ fase_4/
 ## 3. Guia de Instalação e Execução Reprodutível
 
 ### 3.1 Pré-requisitos e Instalação
-O projeto utiliza Python $\ge 3.12$ e o gerenciador de pacotes [**uv**](https://docs.astral.sh/uv/). A partir do diretório `fase_4/`:
+O projeto utiliza Python $\ge 3.12$ e o gerenciador de pacotes [**uv**](https://docs.astral.sh/uv/). A partir do diretório raiz:
 
 ```bash
 uv sync
@@ -91,9 +91,9 @@ uv sync
 
 > **Nota sobre o Dataset:** Caso `data/raw/loan_data.csv` não exista localmente, a função [`download_dataset_if_missing()`](./src/default_pred/data/load.py) realiza automaticamente o download do *Lending Club Loan Data* via `kagglehub` e prepara a amostra de 5.000 registros na primeira execução.
 
-### 3.2 Executando os Pipelines (Etapas 1, 2 e 3)
+### 3.2 Executando os Pipelines
 
-| Etapa / Caso de Uso | Comando de Execução | Resultado Esperado |
+| Caso de Uso | Comando de Execução | Resultado Esperado |
 | :--- | :--- | :--- |
 | **1. Treinar Modelo Base** | `uv run python src/default_pred/pipelines/pipeline_train.py` | Processa `loan_data.csv`, salva o dataset de referência `data/processed/X_train.pkl`, serializa `logistic_regression_model.pkl` e registra a run no experimento `credit_training` do MLflow. |
 | **2. Inferência Válida (Lote/Registro)** | `uv run python src/default_pred/pipelines/pipeline_predict.py --input data/entries/loan_data_row.json` | Valida o registro no contrato Pandera (`Data validation passed!`), executa a predição e registra latência e taxa prevista no experimento `credit_inference`. |
@@ -119,9 +119,9 @@ uv run ruff check src tests
 
 ---
 
-## 4. Detalhamento Técnico por Etapa
+## 4. Detalhamento Técnico dos Componentes
 
-### Etapa 1 — Validação de Dados e Contratos (*Data Contracts*)
+### Validação de Dados e Contratos (*Data Contracts*)
 
 O contrato de dados foi implementado em [`src/default_pred/data/contract.py`](./src/default_pred/data/contract.py) com **Pandera** (`pa.DataFrameModel`), aplicando validação *lazy* (`Contract.validate(df, lazy=True)`) em [`load_one_entry()`](./src/default_pred/data/load.py) para capturar todas as violações de schema simultaneamente antes da inferência:
 
@@ -135,22 +135,27 @@ Além da execução via CLI (`pipeline_predict.py --input data/entries/loan_data
 
 ---
 
-### Etapa 2 — Simulação Clean Code e Detecção Estatística de Drift
+### Simulação e Detecção Estatística de Drift
 
-A Etapa 2 separa claramente o **Dataset de Referência** (`data/processed/X_train.pkl`, aprendido no treino) do **Dataset de Produção Degradado** (`data/entries/loan_data_drifted.json` e `loan_data_concept_drifted.json`):
+O sistema separa claramente o **Dataset de Referência** (`data/processed/X_train.pkl`, aprendido no treino) do **Dataset de Produção Degradado** (`data/entries/loan_data_drifted.json` e `loan_data_concept_drifted.json`):
 
-1. **Simulação de *Data Drift* e *Concept Drift* ([`src/default_pred/models/drift_simulation.py`](./src/default_pred/models/drift_simulation.py)):**
-   * **Data Drift ($P(X)$ — `simulate_data_drift`):** Simula o choque inflacionário reduzindo a renda anual em **30%** (`annual_inc * 0.7`) e elevando o montante solicitado em **30%** (`loan_amnt * 1.3`).
-   * **Concept Drift ($P(Y \mid X)$ — `simulate_concept_drift`):** Simula a mudança estrutural no comportamento de pagamento — clientes anteriormente adimplentes (`Fully Paid`) submetidos a comprometimento elevado (`loan_amnt / annual_inc >= 0.25`) ou *grades* de maior risco (`D–G`) passam a inadimplir (`Charged Off`) sob o choque de juros, degradando o F1-Score e o Recall do modelo baseline.
-2. **Testes Estatísticos Aplicados ([`drift.py`](./src/default_pred/models/drift.py) e [`drift_simulation.py`](./src/default_pred/models/drift_simulation.py)):**
-   * **Teste de Kolmogorov-Smirnov (KS-test — Evidently `DataDriftPreset`):** Aplicado às variáveis numéricas contínuas (`threshold = 0.05` para o *p-value*). Nas features afetadas (`annual_inc`, `loan_amnt`, etc.), $p\text{-value} \ll 0.05$, confirmando rejeição da hipótese nula de mesma distribuição.
-   * **Z-test de Proporções (Evidently `DataDriftPreset`):** Aplicado às variáveis binárias codificadas via *One-Hot* (`threshold = 0.05`).
-   * **PSI (*Population Stability Index* — `calculate_psi`):** Calculado em 10 decis sobre a distribuição de referência ($\text{PSI} = \sum (p_i - q_i)\ln(p_i / q_i)$). Valores de $\text{PSI} \ge 0.20$ em `annual_inc` e `loan_amnt` atestam deslocamento populacional severo.
-3. **Relatório Visual Interativo:** Gerado em [`data_drift_report.html`](./data_drift_report.html), evidenciando que **50% das features monitoradas (33 de 66 colunas ativas)** sofreram drift estatisticamente significativo (`share_drifted = 0.50 >= 0.50`), acionando o alerta operacional.
+1. **Simulação de *Data Drift*, *Prediction Drift* e *Concept Drift* ([`src/default_pred/models/drift_simulation.py`](./src/default_pred/models/drift_simulation.py)):**
+   * **Decomposição Conjunta $P(X, Y) = P(X) \cdot P(Y \mid X)$:**
+     * **Covariate Shift (*Data Drift* — `simulate_data_drift`):** Altera $P(X)$ mantendo $P(Y \mid X)$ constante — simula o choque inflacionário reduzindo a renda anual em **30%** (`annual_inc * 0.7`) e elevando o montante solicitado em **30%** (`loan_amnt * 1.3`).
+     * **Prior Probability Shift:** Deslocamento na prevalência global $P(Y=1)$ (de `4.09%` para `51.07%`), exigindo calibração de limiar de decisão (`concept_drift.decision_threshold`).
+     * **Concept Drift Real (*Posterior Shift* — `simulate_concept_drift`):** Altera a própria verdade fundamental $P(Y \mid X)$ (dinâmica combinada **Incremental** pela inflação e **Súbita** pelo choque de juros) — clientes anteriormente adimplentes (`Fully Paid`) com `loan_amnt / annual_inc >= 0.25` ou *grades* `D–G` passam a inadimplir (`Charged Off`), derrubando F1-Score (`-45%` relativo, `delta = -0.0521`), Recall (`-9.56 p.p.`), ROC-AUC (`-0.1616`) e Acurácia (`91.81% -> 47.33%`).
+2. **Testes Estatísticos Pré-Rótulo ($t \to t+k$) e Detecção Supervisionada Pós-Rótulo ($t+k$ sob *Feedback Delay*):**
+   * **Antes da chegada do rótulo ($t \to t+k$, sem *Ground Truth*):**
+     * **Teste de Kolmogorov-Smirnov (KS-test — Evidently `DataDriftPreset`):** $p\text{-value} < 0.05$ para variáveis contínuas.
+     * **Z-test de Proporções (Evidently `DataDriftPreset`):** $p\text{-value} < 0.05$ para variáveis binárias (*One-Hot*).
+     * **PSI de Features e Prediction Drift (`calculate_psi`):** $\text{PSI} = \sum (\text{Real}_i - \text{Base}_i)\ln(\text{Real}_i / \text{Base}_i) \ge 0.20$, acusando drift severo em `psi.annual_inc = 0.4859`, `psi.loan_amnt = 0.4428`, `psi.installment = 0.4604` (Tabela Price) e `psi.int_rate = 1.4231`.
+   * **Após a chegada do rótulo ($t+k$, maturação de 90 dias):**
+     * **Algoritmo DDM (*Drift Detection Method* — `detect_concept_drift_ddm`):** Monitora a probabilidade de erro sequencial $p_t$ e o desvio padrão $s_t = \sqrt{p_t(1-p_t)/t}$, disparando **Nível de Aviso** ($p_t + s_t \ge p_{\min} + 2s_{\min}$) e **Nível de Drift** ($p_t + s_t \ge p_{\min} + 3s_{\min}$, acionado no índice `first_drift_idx = 600` com salto de erro de `8.16%` para `37.48%`).
+3. **Relatório Visual Interativo:** Gerado em [`data_drift_report.html`](./data_drift_report.html), evidenciando que **84,8% das features monitoradas (84 de 99 colunas ativas)** sofreram drift estatisticamente significativo (`share_drifted = 0.85 >= 0.50`), acionando o alerta operacional (`DRIFT ALERT`).
 
 ---
 
-### Etapa 3 — Observabilidade de Pipelines e Modelos (MLflow + Logs)
+### Observabilidade de Pipelines e Modelos (MLflow + Logs)
 
 A camada de observabilidade em [`src/default_pred/observability/`](./src/default_pred/observability/) segue o padrão **Ports and Adapters**: os pipelines dependem apenas do protocolo [`ExperimentTracker`](./src/default_pred/observability/tracker.py), sendo injetados em produção com [`MlflowTracker`](./src/default_pred/observability/mlflow_tracker.py) (persistindo em `sqlite:///mlflow.db`) ou [`NullTracker`](./src/default_pred/observability/null_tracker.py) caso o backend esteja indisponível.
 
@@ -170,7 +175,7 @@ Todas as execuções utilizam o context manager [`tracked_run()`](./src/default_
 | **`credit_drift_monitoring`** | `drift_detection` | Parâmetros | `reference_rows`, `production_rows`, `alert_threshold` | Tamanhos das janelas comparadas e limiar configurado (`0.50`). |
 | **`credit_drift_monitoring`** | `drift_detection` | Métricas | `n_features`, `n_drifted_features`, `share_drifted`, `alert_triggered`, `drift_score.<feature>` | Quantidade e fração de variáveis degradadas, flag de alerta (`1.0` se `share_drifted >= 0.50`) e score individual por coluna. |
 | **`credit_drift_monitoring`** | `drift_detection` | Artefato | `data_drift_report.html` | Relatório visual completo gerado pelo Evidently AI. |
-| **`credit_drift_monitoring`** | `drift_simulation` | Métricas | `psi.annual_inc`, `psi.loan_amnt`, `psi_drifted_count`, `baseline.default_rate`, `concept_drift.default_rate`, `concept_drift.default_rate_delta`, `concept_drift.f1_delta`, `concept_drift.recall_delta`, `concept_drift.roc_auc_delta` | Índices PSI por variável e quantificação da perda de performance do modelo causada pelo *Concept Drift*. |
+| **`credit_drift_monitoring`** | `drift_simulation` | Métricas | `psi.annual_inc`, `psi.loan_amnt`, `psi.predicted_prob`, `psi_drifted_count`, `ddm.p_min`, `ddm.s_min`, `ddm.p_current`, `ddm.s_current`, `ddm.warning_triggered`, `ddm.drift_triggered`, `baseline.default_rate`, `concept_drift.default_rate`, `concept_drift.default_rate_delta`, `concept_drift.f1_delta`, `concept_drift.recall_delta`, `concept_drift.roc_auc_delta` | Índices PSI de features e de predição (*Feedback Delay* $t \to t+k$), gatilhos supervisionados do algoritmo **DDM** ($t+k$) e perda de performance do modelo causada pelo *Concept Drift*. |
 
 #### Logging Centralizado Rotativo
 * **Arquivo:** `logs/loan_prediction.log` (configurado via [`setup_logging()`](./src/default_pred/utils/logging.py) com `RotatingFileHandler` de `1 MB` e até `3` backups).
@@ -178,7 +183,7 @@ Todas as execuções utilizam o context manager [`tracked_run()`](./src/default_
 
 ---
 
-### Etapa 4 — Governança, LGPD, Mitigação de Vieses e Análise Causal
+### Governança, LGPD, Mitigação de Vieses e Análise Causal
 
 A documentação profunda de Governança e Análise Causal encontra-se em **[`docs/GOVERNANCA_LGPD.md`](./docs/GOVERNANCA_LGPD.md)**. Abaixo está a síntese executiva dos pilares implementados:
 
@@ -194,7 +199,7 @@ A documentação profunda de Governança e Análise Causal encontra-se em **[`do
 
 ## 5. Apresentação Executiva — Método STAR
 
-Para apoiar a demonstração em vídeo ($\le 5\text{ minutos}$) estruturada no método **STAR** (*Situation, Task, Action, Result*), o projeto disponibiliza uma apresentação web interativa, estilizada e responsiva:
+Para apoiar a demonstração executiva estruturada no método **STAR** (*Situation, Task, Action, Result*), o projeto disponibiliza uma apresentação web interativa, estilizada e responsiva:
 
 * **Apresentação HTML (Slides STAR):** [`docs/presentation/index.html`](./docs/presentation/index.html)
 * **Relatório Estatístico do Evidently AI:** [`data_drift_report.html`](./data_drift_report.html)

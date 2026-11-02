@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tech Challenge Fase 4 — Apresentação STAR | Credit Scoring MLOps & Governança</title>
+  <title>Apresentação Executiva STAR | Credit Scoring MLOps & Governança</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -565,16 +565,16 @@
     <header class="topbar">
       <div class="brand">
         <span class="brand-dot"></span>
-        <span>FIAP POS TECH • MLET FASE 4</span>
+        <span>SISTEMA DE MLOPS & GOVERNANÇA DE CRÉDITO</span>
       </div>
       <nav class="star-pills" id="starPills">
         <button class="star-pill active" data-slide="0">1. Capa</button>
         <button class="star-pill" data-slide="1">2. [S] Situation</button>
         <button class="star-pill" data-slide="2">3. [T] Task</button>
-        <button class="star-pill" data-slide="3">4. [A] Etapa 1: Contratos</button>
-        <button class="star-pill" data-slide="4">5. [A] Etapa 2: Drift & PSI</button>
-        <button class="star-pill" data-slide="5">6. [A] Etapa 3: Observabilidade</button>
-        <button class="star-pill" data-slide="6">7. [A] Etapa 4: LGPD & Causal</button>
+        <button class="star-pill" data-slide="3">4. [A] Contratos de Dados</button>
+        <button class="star-pill" data-slide="4">5. [A] Drift & PSI</button>
+        <button class="star-pill" data-slide="5">6. [A] Observabilidade</button>
+        <button class="star-pill" data-slide="6">7. [A] Governança & Causal</button>
         <button class="star-pill" data-slide="7">8. [R] Result</button>
       </nav>
       <div class="slide-counter" id="slideCounter">01 / 08</div>
@@ -587,7 +587,7 @@
       <section class="slide active" data-index="0">
         <div class="slide-inner">
           <div class="tag-row">
-            <span class="star-badge badge-intro">Tech Challenge • Fase 4</span>
+            <span class="star-badge badge-intro">Sustentação MLOps</span>
             <span class="sub-badge">Método STAR (Situation • Task • Action • Result)</span>
             <span class="sub-badge">Lending Club Credit Scoring</span>
           </div>
@@ -682,9 +682,9 @@
         <div class="slide-inner">
           <div class="tag-row">
             <span class="star-badge badge-t">T — Task</span>
-            <span class="sub-badge">Requisitos Obrigatórios da Fase 4</span>
+            <span class="sub-badge">Pilares de Sustentação e Engenharia de Produção</span>
           </div>
-          <h2 class="slide-title">Missão Técnica: 4 Etapas de Sustentação e Confiabilidade</h2>
+          <h2 class="slide-title">Missão Técnica: Sustentação, Confiabilidade e Governança</h2>
           <p class="slide-lead">
             Estruturar uma arquitetura modular e testável em <span class="code-inline">src/default_pred/</span> que garanta
             qualidade na ingestão, detecção estatística de desvios, observabilidade contínua e conformidade legal.
@@ -693,7 +693,7 @@
           <div class="grid-2">
             <div class="card card-accent-cyan">
               <div class="card-title">
-                <span>Etapa 1 — Validação e Contratos (25%)</span>
+                <span>Validação e Contratos de Dados</span>
                 <span class="sub-badge">Pandera</span>
               </div>
               <p class="card-text">
@@ -704,7 +704,7 @@
 
             <div class="card card-accent-amber">
               <div class="card-title">
-                <span>Etapa 2 — Simulação e Detecção de Drift (25%)</span>
+                <span>Simulação e Detecção de Drift</span>
                 <span class="sub-badge">Evidently AI + PSI</span>
               </div>
               <p class="card-text">
@@ -715,7 +715,7 @@
 
             <div class="card card-accent-indigo">
               <div class="card-title">
-                <span>Etapa 3 — Observabilidade e Logs (20%)</span>
+                <span>Observabilidade e Logs Centralizados</span>
                 <span class="sub-badge">MLflow + Rotating Logs</span>
               </div>
               <p class="card-text">
@@ -726,7 +726,7 @@
 
             <div class="card card-accent-emerald">
               <div class="card-title">
-                <span>Etapa 4 — Governança, LGPD e Causalidade (15% + 15%)</span>
+                <span>Governança, LGPD e Análise Causal</span>
                 <span class="sub-badge">Privacy by Design</span>
               </div>
               <p class="card-text">
@@ -738,11 +738,11 @@
         </div>
       </section>
 
-      <!-- SLIDE 4: ACTION - ETAPA 1 -->
+      <!-- SLIDE 4: ACTION - CONTRATOS DE DADOS -->
       <section class="slide" data-index="3">
         <div class="slide-inner">
           <div class="tag-row">
-            <span class="star-badge badge-a">A — Action • Etapa 1</span>
+            <span class="star-badge badge-a">A — Action • Contratos de Dados</span>
             <span class="sub-badge">src/default_pred/data/contract.py &amp; load.py</span>
           </div>
           <h2 class="slide-title">Contratos de Dados com Pandera &amp; Bloqueio Fail-Fast</h2>
@@ -801,77 +801,75 @@ $ uv run python src/default_pred/pipelines/pipeline_predict.py \<br/>
         </div>
       </section>
 
-      <!-- SLIDE 5: ACTION - ETAPA 2 -->
+      <!-- SLIDE 5: ACTION - DRIFT & PSI -->
       <section class="slide" data-index="4">
         <div class="slide-inner">
           <div class="tag-row">
-            <span class="star-badge badge-a">A — Action • Etapa 2</span>
+            <span class="star-badge badge-a">A — Action • Drift &amp; PSI</span>
             <span class="sub-badge">src/default_pred/models/drift_simulation.py &amp; drift.py</span>
           </div>
-          <h2 class="slide-title">Simulação Clean Code de Data &amp; Concept Drift + PSI</h2>
+          <h2 class="slide-title">Simulação Clean Code: $P(X,Y) = P(X)\cdot P(Y\mid X)$, PSI &amp; DDM</h2>
           <p class="slide-lead">
-            Construímos um módulo dedicado e puro (<span class="code-inline">drift_simulation.py</span> + <span class="code-inline">pipeline_simulate_drift.py</span>)
-            com <span class="code-inline">@dataclass(frozen=True)</span> que simula ambos os tipos de drift e calcula o <strong>PSI</strong> em conjunto com o <strong>Evidently AI</strong>.
+            O módulo puro <span class="code-inline">drift_simulation.py</span> cobre os dois momentos do <strong>Feedback Delay ($t \to t+k$)</strong>:
+            detecção estatística imediata sem rótulo (<strong>KS-Test, Z-Test, Feature PSI e Prediction PSI</strong>) e detecção supervisionada pós-maturação via <strong>DDM (Drift Detection Method)</strong>.
           </p>
 
           <div class="grid-2">
             <div class="card card-accent-amber">
               <div class="card-title">
-                <span>1. Data Drift $P(X)$ &amp; Testes Estatísticos</span>
-                <span class="sub-badge">KS-Test • Z-Test • PSI</span>
+                <span>1. Janela Pré-Rótulo ($t \to t+k$): Data &amp; Prediction Drift</span>
+                <span class="sub-badge">KS • Z-Test • PSI</span>
               </div>
               <p class="card-text">
-                Compara <span class="code-inline">X_train.pkl</span> (Referência) vs. Lote Degradado (1.000 amostras com <span class="code-inline">annual_inc × 0.7</span> e <span class="code-inline">loan_amnt × 1.3</span>):
+                Detecta <strong class="text-amber">Covariate Shift $P(X)$</strong> e <strong class="text-cyan">Prediction Drift $\hat{P}(Y)$</strong> no instante da inferência (antes dos 90 dias de maturação):
               </p>
               <div class="bar-group">
                 <div class="bar-header">
-                  <span>PSI `annual_inc` (-30% renda)</span>
-                  <span class="text-rose">PSI = 0.4576 (&ge; 0.20 Crítico)</span>
+                  <span>PSI `annual_inc` (-30% renda) &amp; `loan_amnt` (+30%)</span>
+                  <span class="text-rose">PSI = 0.4859 | 0.4428 (&ge; 0.20 Crítico)</span>
                 </div>
-                <div class="bar-track"><div class="bar-fill" style="width: 90%; background: var(--accent-rose);"></div></div>
+                <div class="bar-track"><div class="bar-fill" style="width: 92%; background: var(--accent-rose);"></div></div>
               </div>
               <div class="bar-group">
                 <div class="bar-header">
-                  <span>PSI `loan_amnt` (+30% empréstimo)</span>
-                  <span class="text-amber">PSI = 0.2861 (&ge; 0.20 Crítico)</span>
+                  <span>PSI `installment` (Tabela Price) &amp; `int_rate` (+4.5 p.p.)</span>
+                  <span class="text-amber">PSI = 0.4604 | 1.4231 (&ge; 0.20 Crítico)</span>
                 </div>
-                <div class="bar-track"><div class="bar-fill" style="width: 68%; background: var(--accent-amber);"></div></div>
+                <div class="bar-track"><div class="bar-fill" style="width: 96%; background: var(--accent-amber);"></div></div>
               </div>
               <div class="bar-group">
                 <div class="bar-header">
                   <span>Evidently KS-Test / Z-Test (`share_drifted`)</span>
-                  <span class="text-cyan">33 / 66 features (50.0% &ge; limiar 50%)</span>
+                  <span class="text-cyan">84 / 99 features (84.8% &ge; limiar 50%)</span>
                 </div>
-                <div class="bar-track"><div class="bar-fill" style="width: 50%; background: var(--accent-cyan);"></div></div>
+                <div class="bar-track"><div class="bar-fill" style="width: 85%; background: var(--accent-cyan);"></div></div>
               </div>
             </div>
 
             <div class="card card-accent-indigo">
               <div class="card-title">
-                <span>2. Concept Drift $P(Y \mid X)$ Simulado</span>
-                <span class="sub-badge">Posterior Shift</span>
+                <span>2. Pós-Rótulo ($t + k$): Concept Drift Real $P(Y \mid X)$ &amp; DDM</span>
+                <span class="sub-badge">DDM • Modelo Log-Odds</span>
               </div>
               <p class="card-text">
-                Em <span class="code-inline">simulate_concept_drift()</span>, tomadores antes adimplentes (<span class="code-inline">Fully Paid</span>)
-                com razão <span class="code-inline">loan_amnt / annual_inc &ge; 0.25</span> ou <span class="code-inline">grade D–G</span>
-                sofrem transição estocástica para inadimplência (<span class="code-inline">Charged Off</span>):
+                Modelo estrutural Log-Odds (<span class="code-inline">simulate_concept_drift</span>): pressão do serviço da dívida anualizado (<span class="code-inline">PMT × 12 / annual_inc</span>) leva tomadores à inadimplência e dispara o detector <strong>DDM</strong>:
               </p>
               <div class="mono-box">
-• Inadimplência Real (Baseline):   <strong>4.09%</strong><br/>
-• Inadimplência Pós-Concept Drift: <strong class="text-rose">51.07% (+46.98 p.p.)</strong><br/>
-• Impacto na Acurácia do Modelo:   <strong class="text-amber">Queda de 95.91% para 48.93% (-46.98 p.p.)</strong><br/>
-• Diagnóstico: Fronteira linear antiga subestima severamente os novos inadimplentes.
+• Inadimplência Real $P(Y=1)$:  <strong>4.77% &rarr; <span class="text-rose">69.85% (+65.08 p.p.)</span></strong><br/>
+• Detector Supervisionado DDM: <strong class="text-rose">DRIFT TRIGGERED (idx=600, p_t=0.375)</strong><br/>
+• Limiar DDM ($p_{\min} + 3s_{\min}$): <strong class="text-amber">Erro salta de 8.16% para 37.48%</strong><br/>
+• Diagnóstico: Fronteira linear antiga torna-se obsoleta sob o novo regime.
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- SLIDE 6: ACTION - ETAPA 3 -->
+      <!-- SLIDE 6: ACTION - OBSERVABILIDADE -->
       <section class="slide" data-index="5">
         <div class="slide-inner">
           <div class="tag-row">
-            <span class="star-badge badge-a">A — Action • Etapa 3</span>
+            <span class="star-badge badge-a">A — Action • Observabilidade</span>
             <span class="sub-badge">src/default_pred/observability/</span>
           </div>
           <h2 class="slide-title">Observabilidade Hexagonal: MLflow + Logging Centralizado</h2>
@@ -920,11 +918,11 @@ $ uv run python src/default_pred/pipelines/pipeline_predict.py \<br/>
         </div>
       </section>
 
-      <!-- SLIDE 7: ACTION - ETAPA 4 -->
+      <!-- SLIDE 7: ACTION - GOVERNANÇA & CAUSALIDADE -->
       <section class="slide" data-index="6">
         <div class="slide-inner">
           <div class="tag-row">
-            <span class="star-badge badge-a">A — Action • Etapa 4</span>
+            <span class="star-badge badge-a">A — Action • Governança &amp; Causalidade</span>
             <span class="sub-badge">docs/GOVERNANCA_LGPD.md</span>
           </div>
           <h2 class="slide-title">Governança LGPD (*Privacy by Design*), Fairness &amp; Grafo Causal</h2>
@@ -1006,16 +1004,16 @@ $ uv run python src/default_pred/pipelines/pipeline_predict.py \<br/>
 
             <div class="card card-accent-amber">
               <span class="kpi-label">Evidently AI Drift</span>
-              <div class="kpi-value text-amber">50.0%</div>
-              <div class="card-title">33 / 66 Features Drifted</div>
+              <div class="kpi-value text-amber">84.8%</div>
+              <div class="card-title">84 / 99 Features Drifted</div>
               <p class="card-text">Aciona <span class="code-inline">alert_triggered = 1.0</span> no experimento <span class="code-inline">credit_drift_monitoring</span>.</p>
             </div>
 
             <div class="card card-accent-rose">
               <span class="kpi-label">Estabilidade Populacional</span>
-              <div class="kpi-value text-rose">PSI &gt; 0.41</div>
+              <div class="kpi-value text-rose">PSI &gt; 0.44</div>
               <div class="card-title">Drift Severo (&ge; 0.20)</div>
-              <p class="card-text"><span class="code-inline">psi.annual_inc = 0.448</span> e <span class="code-inline">psi.loan_amnt = 0.415</span> medidos via Clean Code.</p>
+              <p class="card-text"><span class="code-inline">annual_inc=0.486</span>, <span class="code-inline">installment=0.460</span> e <span class="code-inline">int_rate=1.423</span>.</p>
             </div>
 
             <div class="card card-accent-cyan">
@@ -1027,12 +1025,12 @@ $ uv run python src/default_pred/pipelines/pipeline_predict.py \<br/>
           </div>
 
           <div class="card card-accent-indigo">
-            <div class="card-title">Lições Aprendidas &amp; Plano Prescritivo de Resposta ao Alerta</div>
+            <div class="card-title">Lições Aprendidas &amp; Adaptação em MLOps (Feedback Delay &amp; Mitigação)</div>
             <p class="card-text">
-              <strong>1. Triagem Automatizada:</strong> Diferenciar falha de schema (Pandera) de mudança genuína de distribuição (KS/PSI). &nbsp;|&nbsp;
-              <strong>2. Contenção Imediata:</strong> Reduzir preventivamente o <em>decision threshold</em> (ex.: $0.50 \to 0.35$) ao detectar compressão de renda. &nbsp;|&nbsp;
-              <strong>3. Feature Causal:</strong> Incluir a razão explícita <span class="code-inline">loan_amnt / annual_inc</span> e variáveis macroeconômicas. &nbsp;|&nbsp;
-              <strong>4. Retreinamento Governado:</strong> Atualizar <span class="code-inline">X_train.pkl</span> auditando <em>Disparate Impact (&ge; 0.80)</em>.
+              <strong>1. Pré-Rótulo ($t \to t+k$):</strong> Monitorar <em>Feature PSI</em> e <em>Prediction PSI</em> (<span class="code-inline">psi.predicted_prob</span>) para agir antes do atraso de 90 dias do rótulo. &nbsp;|&nbsp;
+              <strong>2. Threshold Tuning:</strong> Ajustar o limiar de corte (<span class="code-inline">decision_threshold</span>) sob <em>Prior/Concept Drift</em>. &nbsp;|&nbsp;
+              <strong>3. Time-Decay Sliding Window ($t+k$, pós-DDM):</strong> Retreinar com decaimento exponencial $w_i = e^{-\lambda(t_{\text{atual}} - t_i)}$ e feature causal <span class="code-inline">loan_amnt / annual_inc</span>. &nbsp;|&nbsp;
+              <strong>4. Shadow &amp; Champion/Challenger:</strong> Validar o novo modelo em modo <em>Shadow</em> e promover via <em>Canary Rollout</em> (5% &rarr; 20% &rarr; 100%) auditando <em>Disparate Impact (&ge; 0.80)</em>.
             </p>
           </div>
 

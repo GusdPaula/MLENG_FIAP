@@ -10,6 +10,7 @@ from default_pred.models.drift_simulation import (
     build_simulation_report,
     calculate_feature_psi,
     calculate_psi,
+    detect_concept_drift_ddm,
     evaluate_concept_drift_impact,
     sample_production_window,
     simulate_concept_drift,
@@ -58,8 +59,8 @@ class DummyClassifier:
         return np.zeros(len(X), dtype=int)
 
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
-        probs = np.column_stack([np.full(len(X), 0.8), np.full(len(X), 0.2)])
-        return probs
+        scores = np.linspace(0.05, 0.35, len(X))
+        return np.column_stack([1.0 - scores, scores])
 
 
 class DummyScaler:
@@ -154,13 +155,32 @@ def test_calculate_psi_distinguishes_stable_and_drifted_distributions() -> None:
     assert calculate_psi(pd.Series(dtype=float), df["annual_inc"]) == 0.0
 
 
+def test_detect_concept_drift_ddm_triggers_warning_and_drift() -> None:
+    stable_errors = np.zeros(50, dtype=int)
+    stable_errors[::10] = 1  # 10% error rate in baseline window
+    drifted_errors = np.ones(60, dtype=int)  # sudden spike to 100% error rate
+    stream = np.concatenate([stable_errors, drifted_errors])
+
+    ddm = detect_concept_drift_ddm(stream, min_instances=20)
+    assert ddm.warning_triggered is True
+    assert ddm.drift_triggered is True
+    assert ddm.first_drift_index is not None
+    assert ddm.p_current > ddm.p_min
+
+    empty_ddm = detect_concept_drift_ddm([])
+    assert empty_ddm.drift_triggered is False
+    assert empty_ddm.first_drift_index is None
+
+
 def test_evaluate_concept_drift_impact_and_report_metrics() -> None:
     y_base = np.array([0, 0, 0, 0, 1, 1, 0, 0, 0, 1])
     y_concept = np.array([0, 1, 1, 0, 1, 1, 1, 0, 1, 1])
     y_pred = np.array([0, 0, 0, 0, 1, 1, 0, 0, 0, 1])
     y_prob = np.array([0.1, 0.2, 0.2, 0.1, 0.9, 0.8, 0.2, 0.1, 0.3, 0.9])
 
-    impact = evaluate_concept_drift_impact(y_base, y_concept, y_pred, y_prob)
+    impact = evaluate_concept_drift_impact(
+        y_base, y_concept, y_pred, y_prob, ddm_min_instances=5
+    )
     assert impact.baseline_metrics["f1_score"] == 1.0
     assert impact.drifted_metrics["f1_score"] < impact.baseline_metrics["f1_score"]
     assert impact.f1_delta < 0.0
@@ -181,7 +201,9 @@ def test_pipeline_simulate_drift_tracks_metrics_and_saves_artifact(
     model = DummyClassifier(feature_cols)
     scaler = DummyScaler(["annual_inc", "loan_amnt"])
     out_json = tmp_path / "simulated_drift.json"
-    config = DriftSimulationConfig(sample_size=80, random_state=42)
+    config = DriftSimulationConfig(
+        sample_size=80, random_state=42, ddm_min_instances=20
+    )
 
     report = pipeline_simulate_drift.run(
         tracker=tracker,
@@ -200,6 +222,8 @@ def test_pipeline_simulate_drift_tracks_metrics_and_saves_artifact(
     assert tracker.metrics["psi.annual_inc"] > 0.2
     assert tracker.metrics["psi.loan_amnt"] > 0.2
     assert tracker.metrics["psi_drifted_count"] == 2.0
+    assert "psi.predicted_prob" in tracker.metrics
+    assert tracker.metrics["ddm.drift_triggered"] == 1.0
     assert "concept_drift.default_rate_delta" in tracker.metrics
     assert set(report.drifted_psi_features) == {"annual_inc", "loan_amnt"}
 
@@ -213,8 +237,13 @@ def test_build_simulation_report_and_predict_cli_parse_args(tmp_path: Path) -> N
         y_baseline=[0, 1, 0, 1],
         y_concept_drifted=[1, 1, 1, 1],
         y_pred=[0, 1, 0, 1],
+        y_prob=[0.1, 0.9, 0.2, 0.8],
+        reference_prob=[0.05, 0.85, 0.1, 0.75],
     )
-    assert "psi.annual_inc" in report.to_metrics()
+    metrics = report.to_metrics()
+    assert "psi.annual_inc" in metrics
+    assert "psi.predicted_prob" in metrics
+    assert "ddm.drift_triggered" in metrics
 
     custom_path = tmp_path / "fail.json"
     parsed = pipeline_predict.parse_args(["--input", str(custom_path)])
