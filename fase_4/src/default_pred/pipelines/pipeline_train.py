@@ -12,6 +12,7 @@ if str(SRC_ROOT) not in sys.path:
 
 def main() -> None:
     from default_pred.config import (
+        LOG_DIR,
         MODEL_DIR,
         PROCESSED_DATA_DIR,
         RANDOM_STATE,
@@ -23,6 +24,11 @@ def main() -> None:
     from default_pred.features.engineering import feature_engineering
     from default_pred.features.preprocessing import split_and_scale
     from default_pred.models.train import train_logistic_regression
+    from default_pred.observability.factory import build_tracker
+    from default_pred.observability.instrumentation import track_training
+    from default_pred.utils.logging import setup_logging
+
+    setup_logging(LOG_DIR)
 
     # Load and preprocess the dataset
     df = load_dataset(os.path.join(RAW_DATA_DIR, "loan_data.csv"))
@@ -47,9 +53,18 @@ def main() -> None:
     feature_columns_path = os.path.join(MODEL_DIR, "feature_columns.pkl")
     joblib.dump(feature_columns, feature_columns_path)
 
-    # Train the logistic regression model and save it
-    model, _metrics, _class_report, _conf_matrix = train_logistic_regression(
-        X_train, X_test, y_train, y_test, max_iter=1000, class_weight=None
+    # Train the logistic regression model (tracked) and save it
+    model = track_training(
+        build_tracker(),
+        train_logistic_regression,
+        X_train,
+        X_test,
+        y_train,
+        y_test,
+        max_iter=1000,
+        class_weight=None,
+        test_size=TEST_SIZE,
+        random_state=RANDOM_STATE,
     )
     model_path = os.path.join(MODEL_DIR, "logistic_regression_model.pkl")
     joblib.dump(model, model_path)

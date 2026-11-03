@@ -2,3 +2,7 @@
 **/__pycache__/
 *.csv
 *.pkl
+mlflow.db
+mlruns/
+logs/
+.coverage
