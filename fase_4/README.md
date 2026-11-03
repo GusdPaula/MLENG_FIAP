@@ -125,11 +125,17 @@ uv run ruff check src tests
 
 O contrato de dados foi implementado em [`src/default_pred/data/contract.py`](./src/default_pred/data/contract.py) com **Pandera** (`pa.DataFrameModel`), aplicando validação *lazy* (`Contract.validate(df, lazy=True)`) em [`load_one_entry()`](./src/default_pred/data/load.py) para capturar todas as violações de schema simultaneamente antes da inferência:
 
-| Coluna Validada | Tipo Esperado | Regra Estrita (Pandera) | Racional de Negócio | Valor no Payload Inválido (`loan_data_row_fail.json`) |
+| Coluna Validada / Checagem | Tipo Esperado | Regra Estrita (Pandera) | Racional de Negócio | Valor no Payload Inválido (`loan_data_row_fail.json`) |
 | :--- | :---: | :--- | :--- | :--- |
+| **`id`** | `int` | `gt=0`, `unique=True`, `nullable=False` | Identificador unívoco do contrato de crédito, sem duplicatas. | `-1` / duplicata ❌ *(Reprovado)* |
+| **`loan_amnt`** | `float` | `gt=0`, `le=100_000`, `nullable=False` | Valor do empréstimo dentro do teto operacional de crédito pessoal ($100k). | `0.0` ou `> 100k` ❌ *(Reprovado)* |
+| **`term`** | `str` | `isin=[" 36 months", " 60 months", ...]`, `nullable=False` | Prazo de amortização padronizado pelo catálogo de produtos. | `"12 months"` ❌ *(Reprovado)* |
 | **`annual_inc`** | `float` | `gt=20_000`, `nullable=False` | Renda anual mínima exigida pela política de crédito e prevenção de erros de escala/digitação. | `1000.0` ❌ *(Reprovado)* |
 | **`purpose`** | `str` | `nullable=False` | Finalidade do empréstimo é obrigatória para enquadramento da operação (Art. 6º, I LGPD). | `null` ❌ *(Reprovado)* |
 | **`grade`** | `str` | `isin=["A", "B", "C", "D", "E", "F", "G"]`, `nullable=False` | Faixa de risco interna deve pertencer estritamente ao domínio oficial de *rating*. | `"Z"` ❌ *(Reprovado)* |
+| **`issue_d`** | `str` | `str_matches=r"^[A-Z][a-z]{2}-\d{4}$"`, `nullable=False` | Mês/ano de emissão em formato padrão (`Mon-YYYY`). | `"2020-01-01"` ❌ *(Reprovado)* |
+| **`earliest_cr_line`** | `str` | `str_matches=r"^[A-Z][a-z]{2}-\d{4}$"`, `nullable=False` | Data de abertura da primeira linha de crédito em formato padrão (`Mon-YYYY`). | Formato inválido ❌ *(Reprovado)* |
+| **`check_temporal_consistency`** | *check* | `earliest_cr_line <= issue_d` | Validação temporal cruzada: linha de crédito não pode ser posterior à concessão do empréstimo. | Data inconsistente ❌ *(Reprovado)* |
 
 Além da execução via CLI (`pipeline_predict.py --input data/entries/loan_data_row_fail.json`), o bloqueio é validado continuamente pelo teste automatizado [`tests/test_predict_single_fail_contract.py`](./tests/test_predict_single_fail_contract.py).
 
@@ -179,7 +185,7 @@ Todas as execuções utilizam o context manager [`tracked_run()`](./src/default_
 
 #### Logging Centralizado Rotativo
 * **Arquivo:** `logs/loan_prediction.log` (configurado via [`setup_logging()`](./src/default_pred/utils/logging.py) com `RotatingFileHandler` de `1 MB` e até `3` backups).
-* **Eventos Registrados:** Início e fim de cada run (`duration_ms`, `status`, `rows`), bloqueios de contrato (`ERROR | default_pred.data.load | Data validation failed.`), alertas de drift (`WARNING | default_pred.pipelines.pipeline_drift | DRIFT ALERT: 33/66 features drifted`) e alertas de PSI.
+* **Eventos Registrados:** Início e fim de cada run (`duration_ms`, `status`, `rows`), bloqueios de contrato (`ERROR | default_pred.data.load | Data validation failed.`), alertas de drift (`WARNING | default_pred.pipelines.pipeline_drift | DRIFT ALERT: 84/99 features drifted (share=0.85 >= 0.50)`) e alertas de PSI.
 
 ---
 

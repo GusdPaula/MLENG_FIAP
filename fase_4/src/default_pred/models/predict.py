@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 
 import joblib
 import numpy as np
@@ -12,8 +13,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def predict(df: pd.DataFrame) -> np.ndarray:
-    """Load the trained model and make a prediction for a single entry."""
+def predict(
+    df: pd.DataFrame,
+    report_path: str | Path | None = None,
+    check_drift: bool = True,
+) -> np.ndarray:
+    """Load the trained model and make a prediction for a single entry or batch."""
 
     logger.info(f"Loading model from {MODEL_DIR}/logistic_regression_model.pkl")
     model_path = os.path.join(MODEL_DIR, "logistic_regression_model.pkl")
@@ -45,19 +50,26 @@ def predict(df: pd.DataFrame) -> np.ndarray:
         df = pd.concat([df[other_columns], scaled_df], axis=1)
         df = df.reindex(columns=model_columns)
 
-    try:
-        from default_pred.models.drift import detect_data_drift
+    if check_drift:
+        try:
+            from default_pred.models.drift import detect_data_drift
 
-        logger.info("Checking for data drift before making predictions")
-        _result = detect_data_drift(X_test=df)
-    except Exception:
-        logger.warning(
-            "Data drift check failed; continuing with prediction without it.",
-            exc_info=True,
-        )
+            # Use dedicated inference drift report path to avoid clobbering baseline
+            output_target = (
+                Path(report_path)
+                if report_path is not None
+                else MODEL_DIR.parent / "logs" / "inference_drift_report.html"
+            )
+            output_target.parent.mkdir(parents=True, exist_ok=True)
+            logger.info("Checking for data drift before making predictions")
+            _result = detect_data_drift(X_test=df, output_path=output_target)
+        except Exception:
+            logger.warning(
+                "Data drift check failed; continuing with prediction without it.",
+                exc_info=True,
+            )
 
     logger.info("Making prediction for the input data")
-    # Make prediction
     prediction = model.predict(df)
     logger.info(f"Prediction: {prediction}")
 

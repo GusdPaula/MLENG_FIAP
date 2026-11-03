@@ -1,8 +1,0 @@
-pandas
-numpy
-ipykernel
-matplotlib
-scikit-learn
-openpyxl
-seaborn
-pandera

@@ -56,6 +56,9 @@ logger = logging.getLogger(__name__)
 
 RUN_NAME = "drift_simulation"
 DEFAULT_SIMULATED_OUTPUT_PATH = (
+    PROJECT_ROOT / "data" / "entries" / "loan_data_concept_drifted.json"
+)
+DEFAULT_COVARIATE_DRIFT_PATH = (
     PROJECT_ROOT / "data" / "entries" / "loan_data_drifted.json"
 )
 
@@ -168,6 +171,10 @@ def run(
             output_json_path.parent.mkdir(parents=True, exist_ok=True)
             both_drifted_raw.to_json(output_json_path, index=False)
             tracker.log_artifact(output_json_path)
+
+            if output_json_path == DEFAULT_SIMULATED_OUTPUT_PATH:
+                DEFAULT_COVARIATE_DRIFT_PATH.parent.mkdir(parents=True, exist_ok=True)
+                data_drifted_raw.to_json(DEFAULT_COVARIATE_DRIFT_PATH, index=False)
 
         return report
 
