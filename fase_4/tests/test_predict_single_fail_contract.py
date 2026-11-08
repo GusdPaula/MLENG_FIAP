@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 
 import pandera.pandas as pa
@@ -34,6 +35,64 @@ def test_load_one_entry_coerces_integer_fields():
     assert df["annual_inc"].dtype == "float64"
     assert df["loan_amnt"].dtype == "float64"
     assert df.loc[0, "annual_inc"] == 55000.0
+
+
+def test_load_one_entry_accepts_low_positive_individual_income():
+    row = _load_valid_row()
+    row["application_type"] = "Individual"
+    row["annual_inc"] = 12_000.0
+    df = load_one_entry(row)
+
+    assert df.loc[0, "annual_inc"] == 12_000.0
+
+
+def test_load_one_entry_accepts_joint_app_with_zero_primary_income():
+    row = _load_valid_row()
+    row["application_type"] = "Joint App"
+    row["annual_inc"] = 0.0
+    row["annual_inc_joint"] = 85_000.0
+    df = load_one_entry(row)
+
+    assert df.loc[0, "annual_inc"] == 0.0
+    assert df.loc[0, "annual_inc_joint"] == 85_000.0
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"application_type": "Individual", "annual_inc": 0.0},
+        {"application_type": "Individual", "annual_inc": -500.0},
+        {"application_type": "Individual", "annual_inc": 25_000_000.0},
+        {
+            "application_type": "Joint App",
+            "annual_inc": 0.0,
+            "annual_inc_joint": 0.0,
+        },
+        {
+            "application_type": "Joint App",
+            "annual_inc": 0.0,
+            "annual_inc_joint": None,
+        },
+    ],
+)
+def test_load_one_entry_rejects_income_anomalies(overrides: dict):
+    row = _load_valid_row()
+    row.update(overrides)
+
+    with pytest.raises(pa.errors.SchemaErrors):
+        load_one_entry(row)
+
+
+def test_load_one_entry_emits_warning_when_installment_exceeds_income(caplog):
+    row = _load_valid_row()
+    row["annual_inc"] = 1_000.0
+    row["installment"] = 200.0  # 200 * 12 = 2400 > 1000
+
+    with caplog.at_level(logging.WARNING):
+        df = load_one_entry(row)
+
+    assert len(df) == 1
+    assert any("Contract Layer 3 Warning" in rec.message for rec in caplog.records)
 
 
 def test_load_entries_blocks_invalid_batch_and_duplicate_ids():

@@ -768,10 +768,10 @@
               </div>
               <div class="card-bullet-list">
                 <div class="card-bullet">
-                  <strong>Contrato Rígido:</strong> Validação em <span class="code-pill">Contract</span> exigindo renda anual &gt; 20.000, finalidade não nula e nota de risco restrita a [A..G].
+                  <strong>Contrato em 3 Camadas:</strong> Validação em <span class="code-pill">Contract</span> separando anomalia de política: domínio <span class="code-pill">0 &le; annual_inc &le; 10M</span>, consistência condicional (<span class="code-pill">Individual</span> vs. <span class="code-pill">Joint App</span>) e alerta de comprometimento.
                 </div>
                 <div class="card-bullet">
-                  <strong>Bloqueio Imediato:</strong> Payloads corrompidos (<span class="code-pill">row_fail.json</span> com renda de 1.000 e finalidade nula) são barrados antes da inferência.
+                  <strong>Bloqueio Imediato:</strong> Payloads corrompidos (<span class="code-pill">row_fail.json</span> com renda negativa <span class="code-pill">-1000</span>, finalidade nula e grade <span class="code-pill">Z</span>) são barrados antes da inferência.
                 </div>
                 <div class="card-bullet">
                   <strong>Rastreio de Falha:</strong> Registro instantâneo de <span class="code-pill">run_success = 0.0</span> no MLflow e gravação de alerta no log operacional.
@@ -812,7 +812,7 @@
                   <strong>Bases Legais LGPD:</strong> Conformidade com o Art. 7º X (Proteção do Crédito) e Art. 7º V (Execução de Contratos preliminares).
                 </div>
                 <div class="card-bullet">
-                  <strong>Explicabilidade &amp; Fairness:</strong> Modelo Glass-Box (pesos auditáveis &beta;<sub>j</sub> &middot; x<sub>j</sub> no Art. 20) com auditoria de <em>Disparate Impact</em> (&ge; 0,80).
+                  <strong>Explicabilidade &amp; Fairness:</strong> Modelo Glass-Box (pesos auditáveis &beta;<sub>j</sub> &middot; x<sub>j</sub> no Art. 20), exclusão de proxies geográficos (<span class="code-pill">zip_code</span> e <span class="code-pill">addr_state</span>) das features do modelo e retenção de <span class="code-pill">addr_state</span> só para auditoria de <em>Disparate Impact</em> (&ge; 0,80).
                 </div>
               </div>
             </div>
@@ -877,13 +877,13 @@
               <div class="metric-row">
                 <div class="metric-header">
                   <span>Evidently AI KS-Test / Z-Test (`share_drifted`)</span>
-                  <span class="text-cyan font-mono">84 / 99 features (84.8% &ge; 50%)</span>
+                  <span class="text-cyan font-mono">72 / 84 features (85.7% &ge; 50%)</span>
                 </div>
-                <div class="metric-track"><div class="metric-fill" style="width: 85%; background: var(--accent-cyan);"></div></div>
+                <div class="metric-track"><div class="metric-fill" style="width: 86%; background: var(--accent-cyan);"></div></div>
               </div>
 
               <p class="card-text" style="font-size: 0.94rem; margin-top: 0.3rem;">
-                <strong>Detecção Pós-Rótulo:</strong> O detector <strong>DDM</strong> confirma o drift supervisionado no registro 600 quando a taxa de erro salta de <strong>8,2% para 37,5%</strong>.
+                <strong>Detecção Pós-Rótulo:</strong> O detector <strong>DDM</strong> confirma o drift supervisionado no registro 713 quando a taxa de erro salta de <strong>11,9% para 39,2%</strong>.
               </p>
             </div>
 
@@ -942,9 +942,9 @@
 
             <div class="card card-accent-amber">
               <span class="kpi-label">Evidently AI Drift</span>
-              <div class="kpi-value text-amber">84,8%</div>
+              <div class="kpi-value text-amber">85,7%</div>
               <div class="card-title">Alerta Disparado</div>
-              <p class="card-text">84 de 99 variáveis acusadas no KS-test (<span class="code-pill">share=0.85 &ge; 0.50</span>), registrando alerta no MLflow.</p>
+              <p class="card-text">72 de 84 variáveis ativas acusadas no KS-test (<span class="code-pill">share=0.86 &ge; 0.50</span>), registrando alerta no MLflow.</p>
             </div>
 
             <div class="card card-accent-rose">

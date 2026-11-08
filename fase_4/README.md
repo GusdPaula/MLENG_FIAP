@@ -24,6 +24,65 @@ Este projeto implementa a camada completa de **Sustentação, Confiabilidade, Ob
 
 ## 2. Arquitetura do Projeto
 
+### 2.1 Visão Geral do Fluxo MLOps (End-to-End)
+
+```mermaid
+flowchart TB
+    subgraph S1["1. Ingestão & Contratos de Dados (Pandera)"]
+        RAW[("data/raw/loan_data.csv<br/>(Lending Club - 5.000 amostras)")]
+        PAY["Payloads JSON de Produção<br/>(loan_data_row / drifted / fail)"]
+        CONTRACT{"Contract.validate()<br/>(Domínio & Consistência em 3 Camadas)"}
+        REJECT["Bloqueio Fail-Fast (422)<br/>run_success = 0.0"]
+    end
+
+    subgraph S2["2. Engenharia de Features & Governança (LGPD / Fairness)"]
+        FE["feature_engineering()<br/>• Remove PII direto (id, member_id, url, desc...)<br/>• Remove Leakage pós-concessão (38 cols)<br/>• Remove Proxies Geográficos (zip_code & addr_state)"]
+        AUDIT["Atributo Retido p/ Auditoria<br/>addr_state (Fora do Modelo)<br/>Controle F1/F2: Disparate Impact >= 0.80"]
+        SPLIT["split_and_scale()<br/>StandardScaler + X_train.pkl (Referência)"]
+    end
+
+    subgraph S3["3. Modelagem & Inferência Glass-Box (Art. 20 LGPD)"]
+        TRAIN["pipeline_train.py<br/>LogisticRegression (Pesos β_j · x_j)"]
+        MODEL[("models/<br/>model.pkl | scaler.pkl | feature_columns.pkl")]
+        PRED["pipeline_predict.py<br/>Predição + Alinhamento de Schema"]
+    end
+
+    subgraph S4["4. Simulação & Monitoramento de Drift (Pré e Pós-Rótulo)"]
+        SIM["pipeline_simulate_drift.py<br/>• Choque Macroeconômico (Renda -30%, Dívida +30%)<br/>• PSI Features & Prediction Drift (t -> t+k)<br/>• DDM Concept Drift Supervisionado (t+k)"]
+        DRIFT["pipeline_drift.py<br/>Evidently AI (KS-Test / Z-Test)<br/>Gera data_drift_report.html"]
+    end
+
+    subgraph S5["5. Observabilidade Hexagonal (Ports & Adapters)"]
+        TRACKER["ExperimentTracker Protocol<br/>(MlflowTracker / NullTracker)"]
+        MLFLOW[("mlflow.db + mlruns/<br/>• credit_training<br/>• credit_inference<br/>• credit_drift_monitoring")]
+        LOGS[("logs/loan_prediction.log<br/>RotatingFileHandler (Sem PII)")]
+    end
+
+    RAW --> CONTRACT
+    PAY --> CONTRACT
+    CONTRACT -- "Inválido (Anomalia)" --> REJECT
+    CONTRACT -- "Válido" --> FE
+    FE -. "Separado antes do treino" .-> AUDIT
+    FE --> SPLIT
+    SPLIT --> TRAIN
+    TRAIN --> MODEL
+    MODEL --> PRED
+    SPLIT -- "Referência (X_train)" --> DRIFT
+    SPLIT -- "Base p/ Estresse" --> SIM
+    SIM -- "Lote Degradado" --> DRIFT
+    MODEL --> SIM
+
+    REJECT --> TRACKER
+    TRAIN --> TRACKER
+    PRED --> TRACKER
+    SIM --> TRACKER
+    DRIFT --> TRACKER
+    TRACKER --> MLFLOW
+    TRACKER --> LOGS
+```
+
+### 2.2 Estrutura de Diretórios
+
 ```
 .
 ├── data/
@@ -120,23 +179,55 @@ uv run ruff check src tests
 
 ## 4. Detalhamento Técnico dos Componentes
 
-### Validação de Dados e Contratos (*Data Contracts*)
+### Validação de Dados e Contratos (*Data Contracts* em 3 Camadas)
 
-O contrato de dados foi implementado em [`src/default_pred/data/contract.py`](./src/default_pred/data/contract.py) com **Pandera** (`pa.DataFrameModel`), aplicando validação *lazy* (`Contract.validate(df, lazy=True)`) em [`load_one_entry()`](./src/default_pred/data/load.py) para capturar todas as violações de schema simultaneamente antes da inferência:
+O contrato de dados foi implementado em [`src/default_pred/data/contract.py`](./src/default_pred/data/contract.py) com **Pandera** (`pa.DataFrameModel`), aplicando validação *lazy* (`Contract.validate(df, lazy=True)`) em [`load_one_entry()`](./src/default_pred/data/load.py) e [`load_entries()`](./src/default_pred/data/load.py) para capturar todas as violações de schema simultaneamente antes da inferência.
 
-| Coluna Validada / Checagem | Tipo Esperado | Regra Estrita (Pandera) | Racional de Negócio | Valor no Payload Inválido (`loan_data_row_fail.json`) |
+Em vez de misturar **política de concessão de crédito** (ex.: um corte arbitrário de renda mínima) com **qualidade de dados**, o contrato separa estritamente a **detecção de anomalias em 3 camadas** da **decisão probabilística do modelo**:
+
+```mermaid
+flowchart LR
+    IN["Payload de Entrada<br/>(JSON / CSV)"] --> C1
+
+    subgraph PANDERA["Barreira de Qualidade de Dados (Contract - Pandera)"]
+        C1{"Camada 1: Domínio<br/>0 <= annual_inc <= 10M<br/>grade in [A..G], purpose != null"}
+        C2{"Camada 2: Consistência<br/>Individual: annual_inc > 0<br/>Joint App: annual_inc_joint > 0"}
+        C3{"Camada 3: Alerta (Warning)<br/>installment * 12 > renda_efetiva?"}
+    end
+
+    C1 -- "Violou (ex: -1000, null, 'Z')" --> ERR["Bloqueio Imediato (Fail-Fast)<br/>SchemaErrors | run_success = 0.0"]
+    C1 -- "OK" --> C2
+    C2 -- "Renda Efetiva == 0" --> ERR
+    C2 -- "OK (inclui Joint App c/ inc=0 e joint=85k)" --> C3
+    C3 -- "Sim" --> WARN["Log Warning (Suspeita)<br/>Segue p/ Inferência"]
+    C3 -- "Não" --> SANIT
+
+    WARN --> SANIT
+
+    subgraph GOV["Sanitização & Fairness (engineering.py)"]
+        SANIT["Descarte de Proxies Geográficos:<br/>• zip_code -> Removido<br/>• addr_state -> Removido das Features"]
+        FAIR["Auditoria Regional (Fora do Modelo):<br/>addr_state avaliado no Controle F1 (DI >= 0.80)"]
+    end
+
+    SANIT -.-> FAIR
+    SANIT --> DEC["Decisão de Crédito (LogisticRegression)<br/>Avalia capacidade real (dti, installment, renda)<br/>Explicável via log-odds (Art. 20 LGPD)"]
+```
+
+| Coluna Validada / Checagem | Tipo Esperado | Regra Estrita (Pandera) | Racional Técnico e de Qualidade de Dados | Valor no Payload Inválido (`loan_data_row_fail.json`) |
 | :--- | :---: | :--- | :--- | :--- |
 | **`id`** | `int` | `gt=0`, `unique=True`, `nullable=False` | Identificador unívoco do contrato de crédito, sem duplicatas. | `-1` / duplicata ❌ *(Reprovado)* |
 | **`loan_amnt`** | `float` | `gt=0`, `le=100_000`, `nullable=False` | Valor do empréstimo dentro do teto operacional de crédito pessoal ($100k). | `0.0` ou `> 100k` ❌ *(Reprovado)* |
 | **`term`** | `str` | `isin=[" 36 months", " 60 months", ...]`, `nullable=False` | Prazo de amortização padronizado pelo catálogo de produtos. | `"12 months"` ❌ *(Reprovado)* |
-| **`annual_inc`** | `float` | `gt=20_000`, `nullable=False` | Renda anual mínima exigida pela política de crédito e prevenção de erros de escala/digitação. | `1000.0` ❌ *(Reprovado)* |
+| **`annual_inc` *(Camada 1 — Domínio)*** | `float` | `ge=0`, `le=10_000_000`, `nullable=False` | Bloqueia valores negativos, nulos ou erros grosseiros de escala/digitação (ex.: centavos ou $110M). | `-1000.0` ❌ *(Reprovado)* |
+| **`check_effective_income_positive` *(Camada 2 — Consistência)*** | *check* | `Individual`: `annual_inc > 0`<br/>`Joint App`: `max(annual_inc, annual_inc_joint) > 0` | Impede renda efetiva zero em propostas individuais, mas preserva propostas conjuntas legítimas (`Joint App`) onde o titular primário tem `annual_inc == 0` e a renda familiar está em `annual_inc_joint`. | `Individual` com `annual_inc <= 0` ❌ *(Reprovado)* |
+| **Comprometimento Extremo *(Camada 3 — Warning)*** | *log warning* | `installment * 12 > renda_efetiva` | Emite `WARNING` operacional no log para auditoria quando a parcela anualizada supera 100% da renda efetiva, sem bloquear a inferência. | Registra `Contract Layer 3 Warning` ⚠️ |
 | **`purpose`** | `str` | `nullable=False` | Finalidade do empréstimo é obrigatória para enquadramento da operação (Art. 6º, I LGPD). | `null` ❌ *(Reprovado)* |
 | **`grade`** | `str` | `isin=["A", "B", "C", "D", "E", "F", "G"]`, `nullable=False` | Faixa de risco interna deve pertencer estritamente ao domínio oficial de *rating*. | `"Z"` ❌ *(Reprovado)* |
 | **`issue_d`** | `str` | `str_matches=r"^[A-Z][a-z]{2}-\d{4}$"`, `nullable=False` | Mês/ano de emissão em formato padrão (`Mon-YYYY`). | `"2020-01-01"` ❌ *(Reprovado)* |
 | **`earliest_cr_line`** | `str` | `str_matches=r"^[A-Z][a-z]{2}-\d{4}$"`, `nullable=False` | Data de abertura da primeira linha de crédito em formato padrão (`Mon-YYYY`). | Formato inválido ❌ *(Reprovado)* |
 | **`check_temporal_consistency`** | *check* | `earliest_cr_line <= issue_d` | Validação temporal cruzada: linha de crédito não pode ser posterior à concessão do empréstimo. | Data inconsistente ❌ *(Reprovado)* |
 
-Além da execução via CLI (`pipeline_predict.py --input data/entries/loan_data_row_fail.json`), o bloqueio é validado continuamente pelo teste automatizado [`tests/test_predict_single_fail_contract.py`](./tests/test_predict_single_fail_contract.py).
+Além da execução via CLI (`pipeline_predict.py --input data/entries/loan_data_row_fail.json`), o bloqueio e os cenários de aplicações individuais e conjuntas são validados continuamente por [`tests/test_predict_single_fail_contract.py`](./tests/test_predict_single_fail_contract.py).
 
 ---
 
@@ -147,16 +238,16 @@ O sistema separa claramente o **Dataset de Referência** (`data/processed/X_trai
 1. **Simulação de *Data Drift*, *Prediction Drift* e *Concept Drift* ([`src/default_pred/models/drift_simulation.py`](./src/default_pred/models/drift_simulation.py)):**
    * **Decomposição Conjunta $P(X, Y) = P(X) \cdot P(Y \mid X)$:**
      * **Covariate Shift (*Data Drift* — `simulate_data_drift`):** Altera $P(X)$ mantendo $P(Y \mid X)$ constante — simula o choque inflacionário reduzindo a renda anual em **30%** (`annual_inc * 0.7`) e elevando o montante solicitado em **30%** (`loan_amnt * 1.3`).
-     * **Prior Probability Shift:** Deslocamento na prevalência global $P(Y=1)$ (de `4.09%` para `51.07%`), exigindo calibração de limiar de decisão (`concept_drift.decision_threshold`).
-     * **Concept Drift Real (*Posterior Shift* — `simulate_concept_drift`):** Altera a própria verdade fundamental $P(Y \mid X)$ (dinâmica combinada **Incremental** pela inflação e **Súbita** pelo choque de juros) — clientes anteriormente adimplentes (`Fully Paid`) com `loan_amnt / annual_inc >= 0.25` ou *grades* `D–G` passam a inadimplir (`Charged Off`), derrubando F1-Score (`-45%` relativo, `delta = -0.0521`), Recall (`-9.56 p.p.`), ROC-AUC (`-0.1616`) e Acurácia (`91.81% -> 47.33%`).
+     * **Prior Probability Shift:** Deslocamento na prevalência global $P(Y=1)$ (de `7.30%` na base elegível para `69.64%` sob choque severo), exigindo calibração de limiar de decisão (`concept_drift.decision_threshold = 0.0445`).
+     * **Concept Drift Real (*Posterior Shift* — `simulate_concept_drift`):** Altera a própria verdade fundamental $P(Y \mid X)$ (dinâmica combinada **Incremental** pela inflação e **Súbita** pelo choque de juros) — clientes anteriormente adimplentes (`Fully Paid`) com `loan_amnt / annual_inc >= 0.25` ou *grades* `D–G` passam a inadimplir (`Charged Off`), derrubando F1-Score (`0.1600 -> 0.1404`, `delta = -0.0196`), Recall (`-8.24 p.p.`), ROC-AUC (`0.6289 -> 0.5545`, `delta = -0.0744`) e Acurácia (`87.74% -> 33.87%`).
 2. **Testes Estatísticos Pré-Rótulo ($t \to t+k$) e Detecção Supervisionada Pós-Rótulo ($t+k$ sob *Feedback Delay*):**
    * **Antes da chegada do rótulo ($t \to t+k$, sem *Ground Truth*):**
      * **Teste de Kolmogorov-Smirnov (KS-test — Evidently `DataDriftPreset`):** $p\text{-value} < 0.05$ para variáveis contínuas.
      * **Z-test de Proporções (Evidently `DataDriftPreset`):** $p\text{-value} < 0.05$ para variáveis binárias (*One-Hot*).
-     * **PSI de Features e Prediction Drift (`calculate_psi`):** $\text{PSI} = \sum (\text{Real}_i - \text{Base}_i)\ln(\text{Real}_i / \text{Base}_i) \ge 0.20$, acusando drift severo em `psi.annual_inc = 0.4859`, `psi.loan_amnt = 0.4428`, `psi.installment = 0.4604` (Tabela Price) e `psi.int_rate = 1.4231`.
+     * **PSI de Features e Prediction Drift (`calculate_psi`):** $\text{PSI} = \sum (\text{Real}_i - \text{Base}_i)\ln(\text{Real}_i / \text{Base}_i) \ge 0.20$, acusando drift severo em `psi.annual_inc = 0.4859`, `psi.loan_amnt = 0.4428`, `psi.installment = 0.4604` (Tabela Price), `psi.int_rate = 1.4231` e `psi.predicted_prob = 2.0333`.
    * **Após a chegada do rótulo ($t+k$, maturação de 90 dias):**
-     * **Algoritmo DDM (*Drift Detection Method* — `detect_concept_drift_ddm`):** Monitora a probabilidade de erro sequencial $p_t$ e o desvio padrão $s_t = \sqrt{p_t(1-p_t)/t}$, disparando **Nível de Aviso** ($p_t + s_t \ge p_{\min} + 2s_{\min}$) e **Nível de Drift** ($p_t + s_t \ge p_{\min} + 3s_{\min}$, acionado no índice `first_drift_idx = 600` com salto de erro de `8.16%` para `37.48%`).
-3. **Relatório Visual Interativo:** Gerado em [`data_drift_report.html`](./data_drift_report.html), evidenciando que **84,8% das features monitoradas (84 de 99 colunas ativas)** sofreram drift estatisticamente significativo (`share_drifted = 0.85 >= 0.50`), acionando o alerta operacional (`DRIFT ALERT`).
+     * **Algoritmo DDM (*Drift Detection Method* — `detect_concept_drift_ddm`):** Monitora a probabilidade de erro sequencial $p_t$ e o desvio padrão $s_t = \sqrt{p_t(1-p_t)/t}$, disparando **Nível de Aviso** ($p_t + s_t \ge p_{\min} + 2s_{\min}$) e **Nível de Drift** ($p_t + s_t \ge p_{\min} + 3s_{\min}$, acionado no índice `first_drift_idx = 713` com salto de erro de `11.89%` para `39.20%`).
+3. **Relatório Visual Interativo:** Gerado em [`data_drift_report.html`](./data_drift_report.html), evidenciando que **85,7% das features ativas avaliadas pelo Evidently (72 de 84 colunas com variância não nula, de um total de 99 colunas no modelo)** sofreram drift estatisticamente significativo (`share_drifted = 0.8571 >= 0.50`), acionando o alerta operacional (`DRIFT ALERT`).
 
 ---
 
@@ -206,8 +297,8 @@ O modelo baseline foi construído sobre o dataset **Lending Club Loan Data** (`d
 | **`title`** | Texto Livre informacional | Médio (pode conter nomes próprios ou detalhes pessoais no título do empréstimo) | Descarte explícito no bloco de PII (`pii_columns`) | **Removido** |
 | **`emp_title`** | Quase-Identificador / Texto Livre (Cargo/Empregador) | Alto (combinação de cargo específico + empregador + CEP permite singularização do indivíduo) | Descarte explícito no bloco de PII (`pii_columns`) | **Removido** |
 | **`desc`** | Texto Livre (Descrição detalhada do pedido) | Crítico (textos abertos frequentemente contêm PII, dados familiares ou de saúde) | Descarte explícito no bloco de PII (`pii_columns`) | **Removido** |
-| **`zip_code`** | Quase-Identificador Geográfico (CEP parcial) | Médio / Alto risco ético de *redlining* indireto | Descarte explícito e definitivo em `engineering.py` para mitigação de viés discriminatório (Controle F3 de Fairness) | **Removido Definitivamente** |
-| **`addr_state`** | Quase-Identificador Geográfico (UF/Estado) | Baixo isoladamente; Médio quando combinado a renda | Codificado via *One-Hot Encoding* (`pd.get_dummies`) em variáveis binárias (`addr_state_CA`, `addr_state_NY`, etc.) | **Mantido (Agregado Estadual)** — monitorado sob controle de *Fairness* |
+| **`zip_code`** | Quase-Identificador Geográfico (3 dígitos do ZIP code / CEP parcial) | Médio / Alto risco de singularização e *redlining* indireto | Descarte explícito e definitivo em `engineering.py` (Controle F3 de Fairness) | **Removido Definitivamente** |
+| **`addr_state`** | Quase-Identificador Geográfico (UF/Estado) | Médio (proxy regional e degradação de AUC por esparsidade em *One-Hot*) | Descarte explícito das features preditivas em `engineering.py` (Controle F3); retido apenas na base bruta para auditoria externa de *Disparate Impact* (Controles F1/F2) | **Removido das Features do Modelo** *(Retido só p/ Auditoria)* |
 
 ##### Controles Técnicos de *Privacy by Default* nos Logs e Experimentos
 1. **Desacoplamento de Payload nos Logs Operacionais:** O arquivo rotativo `logs/loan_prediction.log` ([`utils/logging.py`](./src/default_pred/utils/logging.py)) registra exclusivamente metadados de ciclo de vida (`experiment`, `run_name`, `status`, `duration_ms`, `rows`) e alertas agregados de drift. Nenhum valor individual de renda, documento ou dado nominal de clientes é impresso nos arquivos de log.
@@ -220,7 +311,7 @@ O modelo baseline foi construído sobre o dataset **Lending Club Loan Data** (`d
 ##### 2.1 Princípios Atendidos (Art. 6º da LGPD)
 * **Finalidade e Adequação (Art. 6º, I e II):** Os dados financeiros e cadastrais são processados com o propósito específico, legítimo e explícito de estimar a probabilidade de inadimplência (*default*) na concessão de crédito.
 * **Necessidade / Minimização (Art. 6º, III):** Das 151 colunas brutas, identificadores diretos (`id`, `member_id`, `url`), campos de texto livre (`title`, `emp_title`, `desc`) e variáveis de vazamento temporal pós-concessão são eliminados no pré-processamento, retendo-se apenas variáveis estritamente correlacionadas à capacidade de pagamento e histórico creditício no momento da originação.
-* **Qualidade dos Dados (Art. 6º, V):** Materializado tecnicamente na camada de ingestão por meio do contrato de dados Pandera ([`Contract`](./src/default_pred/data/contract.py)), que impede que registros corrompidos, nulos em campos críticos (`purpose`, `grade`), com valores fora de domínio (`annual_inc <= 20000`) ou com datas inconsistentes gerem decisões automatizadas incorretas.
+* **Qualidade dos Dados (Art. 6º, V):** Materializado tecnicamente na camada de ingestão por meio do contrato de dados Pandera ([`Contract`](./src/default_pred/data/contract.py)), que impede que registros corrompidos, nulos em campos críticos (`purpose`, `grade`), com anomalias de renda (`annual_inc < 0`, `> 10_000_000` ou renda efetiva zero considerando `Individual` vs. `Joint App`) ou com datas inconsistentes gerem decisões automatizadas incorretas.
 * **Transparência e Prestação de Contas (Art. 6º, VI e X):** Materializado na camada de monitoramento e observabilidade via relatórios auditáveis de drift (`data_drift_report.html`) e rastreabilidade completa de execuções no MLflow (`credit_training`, `credit_inference`, `credit_drift_monitoring`).
 * **Prevenção e Segurança (Art. 6º, VII e VIII):** Bloqueio *fail-fast* na ingestão e monitoramento contínuo de degradação estatística (*Data Drift* e *Concept Drift*).
 
@@ -253,26 +344,48 @@ Em conformidade com os **Artigos 15 e 16 da LGPD** (término do tratamento e eli
 
 ---
 
-#### 4. Mitigação de Vieses Algorítmicos e Justiça (*Fairness*)
+#### 4. Mitigação de Vieses Algorítmicos, Justiça (*Fairness*) e Evidências Empíricas de Engenharia
 
-##### Diagnóstico de Variáveis *Proxy* e Risco de *Redlining* Indireto
-Mesmo após a remoção de identificadores pessoais diretos e de atributos protegidos explícitos (como gênero, raça ou estado civil, que não integram o vetor de features), um modelo de crédito pode sofrer de **discriminação indireta (*Disparate Impact*)** caso utilize variáveis altamente correlacionadas com recortes demográficos vulneráveis (Art. 6º, IX da LGPD — Princípio da Não Discriminação):
+##### 4.1 Diagnóstico Empírico e Evolução Arquitetural: Exclusão de `zip_code` e `addr_state`
+Mesmo após a remoção de identificadores pessoais diretos e de atributos protegidos explícitos (como gênero, raça ou estado civil), um modelo de crédito pode sofrer de **discriminação indireta (*Disparate Impact*)** caso utilize variáveis geográficas correlacionadas com recortes socioeconômicos vulneráveis (Art. 6º, IX da LGPD — Princípio da Não Discriminação).
 
-1. **`zip_code` (3 primeiros dígitos do CEP) e `addr_state` (Unidade Federativa):**
-   * Regiões postais historicamente apresentam forte segregação socioeconômica e demográfica. Tratar `zip_code` como variável numérica contínua também introduz uma ordenação artificial entre regiões geográficas. Isso pode configurar *redlining* algorítmico (penalização de solicitantes solventes apenas pelo código postal de residência).
-   * **Ação Corretiva Implementada:** A coluna `zip_code` foi **definitivamente descartada** do pipeline em [`engineering.py`](./src/default_pred/features/engineering.py), preservando apenas a agregação ampla em `addr_state` para auditoria regional.
-2. **`annual_inc` (Renda Anual) e Regra Rígida do Contrato (`gt=20_000`):**
-   * O contrato Pandera ([`Contract`](./src/default_pred/data/contract.py)) bloqueia entradas com `annual_inc <= 20000`. Em cenários de compressão salarial inflacionária (-30% na renda real), esse corte estático pode excluir desproporcionalmente trabalhadores jovens ou de regiões com menor custo de vida.
+* **Evolução do Tratamento Geográfico no Pipeline:**
+  * Na versão inicial do pré-processamento, a coluna `zip_code` (3 primeiros dígitos do código postal americano, ex.: `"945xx"`) era convertida em inteiro contínuo (`945`), o que introduzia uma ordenação numérica artificial entre regiões geográficas.
+  * Na refatoração de governança e eliminação de *leakage*, `zip_code` foi removido em [`engineering.py`](./src/default_pred/features/engineering.py). Para eliminar a assimetria conceitual de manter a Unidade Federativa (`addr_state`) como preditor direto no classificador linear, **`addr_state` também foi excluído do vetor de features preditivas**, permanecendo apenas na camada bruta para auditoria externa de *Fairness*.
+* **Validação Empírica Pós-Implementação e Aceitação da Perda de Dados (`data/raw/loan_data.csv`, $N = 5.000$):**
+  > **Nota de Transparência Metodológica:** A remoção inicial de `zip_code` foi tomada por princípio de minimização de dados (LGPD Art. 6º, III) e prevenção de *redlining*. O estudo quantitativo abaixo foi conduzido sobre a amostra de 5.000 registros para medir o impacto preditivo real e fundamentar tecnicamente a decisão:
+  1. **Alta Esparsidade e Risco de Singularização do `zip_code`:** Existem **738 códigos postais distintos** na amostra de 5.000 linhas (`14,76%` de cardinalidade relativa). Desses, **399 códigos postais (`54,1%`) possuem menos de 5 registros** (somando 844 clientes), e apenas 46 códigos possuem $\ge 20$ registros. Combinado a renda e cargo, um `zip_code` com $< 5$ ocorrências atua como quase-identificador de altíssimo risco de reidentificação e causa *overfitting* severo se codificado via *One-Hot* ou *Target Encoding*.
+  2. **Impacto no Poder Preditivo (ROC-AUC 5-Fold Cross-Validation com `LogisticRegression`):**
+     * **Modelo Base Financeiro** (`annual_inc`, `dti`, `int_rate`, `loan_amnt`, `installment`): $\text{ROC-AUC} = \mathbf{0.6900}$.
+     * **Modelo Base + `addr_state` (50 dummies *One-Hot*):** $\text{ROC-AUC} = \mathbf{0.6576}$ (**queda de $-3,24\text{ p.p.}$** por diluição de graus de liberdade em 50 estados frente a ~309 eventos de *default*).
+     * **Modelo Base + `addr_state` + `zip_code` numérico (abordagem legada):** $\text{ROC-AUC} = \mathbf{0.6574}$ (**ganho nulo / variação de $-0,02\text{ p.p.}$**).
+  3. **Decisão de Engenharia e Aceitação Consciente da Perda:** Aceita-se integralmente o descarte de `zip_code` e `addr_state` do vetor de features (`feature_columns.pkl`) porque a perda de poder preditivo é **nula (na verdade, a remoção das 50 dummies de estado recupera $+3,24\text{ p.p.}$ de ROC-AUC nas features financeiras base)**, ao mesmo tempo em que se elimina 100% do risco de um cliente receber uma recusa explicada por *"residir no estado/CEP X"* (Art. 20 da LGPD).
 
-##### Controles Prescritivos de Governança e *Fairness*
-Para mitigar esses riscos no ciclo de vida do modelo, ficam estabelecidos três controles prescritivos:
+##### 4.2 Revisão Crítica do Corte de Renda (`annual_inc > 20_000` $\to$ Validação de Anomalias em 3 Camadas)
+O enunciado do desafio técnico solicita a criação de regras rígidas de qualidade de dados para **interceptar anomalias** (citando *"limites de renda"* e *"renda não pode ser nula"* como exemplos). Na primeira versão do contrato Pandera, havia sido adotado um corte estático `annual_inc > 20_000`. Uma análise crítica dos dados revelou quatro limitações técnicas nessa abordagem inicial:
+
+1. **Ausência de Evidência Estatística de Risco:** Na base amostral ($N = 5.000$), os **145 registros (`2,90%`) com `annual_inc <= 20_000`** apresentam taxa de inadimplência de **`6,90%`** (~10 casos), estatisticamente indistinguível da taxa de **`6,16%`** dos 4.855 registros acima de $20k. Sob o choque inflacionário simulado de `-30%` na renda, esse corte estático passaria a bloquear automaticamente **`6,68%` (334 propostas)** na porta de entrada da API sem avaliação pelo modelo.
+2. **Erro Grave em Propostas Conjuntas (`application_type == "Joint App"`):** Todos os **21 registros com `annual_inc < 5_000`** na base (incluindo **16 registros com `annual_inc == 0.0`**) são aplicações conjuntas (`Joint App`) legítimas nas quais o solicitante primário não possui renda individual, mas a **renda familiar conjunta (`annual_inc_joint`) varia de $42.000 a $156.000** (com `54,5%` de verificação documental *Verified*). O corte `gt=20_000` barrava 100% desses casais solventes como se fossem dados corrompidos.
+3. **Mistura entre Qualidade de Dado e Política de Crédito:** Bloquear um solicitante real de baixa renda na camada de schema (retornando erro de contrato `SchemaErrors` em vez de uma predição do modelo) impede a explicabilidade exigida pelo Art. 20 da LGPD e cria viés de sobrevivência no monitoramento de drift.
+4. **Correção Implementada (3 Camadas em [`contract.py`](./src/default_pred/data/contract.py) e [`load.py`](./src/default_pred/data/load.py)):**
+   * **Camada 1 (Domínio):** `0 <= annual_inc <= 10_000_000` e não nulo (bloqueia valores negativos como `-1000.0` em `loan_data_row_fail.json` e erros de digitação/escala na casa de dezenas de milhões).
+   * **Camada 2 (Consistência Condicional):** Exige renda efetiva estritamente positiva (`annual_inc > 0` para `Individual` e `max(annual_inc, annual_inc_joint) > 0` para `Joint App`).
+   * **Camada 3 (Alerta Não-Bloqueante):** Emite `WARNING` nos logs quando `installment * 12 > renda_efetiva` (21 casos na amostra bruta), permitindo auditoria sem recusar silenciosamente na ingestão.
+
+##### 4.3 Controles Prescritivos de Governança e *Fairness*
+Para mitigar riscos discriminatórios no ciclo de vida do modelo, operam três controles complementares:
 * **Controle F1 — Auditoria de Razão de Impacto Desproporcional (*Disparate Impact Ratio — Regra dos 80%*):**
-  Antes de promover qualquer retreinamento em `credit_training`, calcular a taxa de aprovação ($P(\hat{Y}=0)$) segmentada por macro-região (`addr_state`):
+  Utilizando a coluna `addr_state` retida fora do modelo no dataset bruto, auditar periodicamente a taxa de aprovação ($P(\hat{Y}=0)$) segmentada por macro-região antes de promover retreinamentos em `credit_training`:
   $$\text{DI} = \frac{P(\hat{Y} = 0 \mid \text{Grupo Regional Protegido})}{P(\hat{Y} = 0 \mid \text{Grupo Regional de Referência})} \ge 0.80$$
 * **Controle F2 — Igualdade de Oportunidade (*Equal Opportunity Difference*):**
-  Monitorar a diferença na Taxa de Verdadeiros Positivos (e Falsos Positivos — clientes adimplentes classificados erroneamente como inadimplentes) entre estados para garantir que o erro do modelo não recaia sistematicamente sobre uma mesma região.
-* **Controle F3 — Remoção Definitiva de `zip_code`:**
-  Em conformidade com a minimização de efeito discriminatório, a coluna `zip_code` foi excluída do vetor de features, substituída exclusivamente por indicadores diretos de capacidade financeira individual (`dti`, `installment`, `annual_inc`, `revol_util`).
+  Monitorar a diferença na Taxa de Verdadeiros Positivos e Falsos Positivos entre estados para garantir que o erro do classificador não recaia sistematicamente sobre uma mesma região.
+* **Controle F3 — Remoção Definitiva de `zip_code` e `addr_state` do Vetor de Features ([`engineering.py`](./src/default_pred/features/engineering.py)):**
+  Ambas as variáveis geográficas são descartadas antes da codificação *One-Hot* e do treinamento/inferência, garantindo que a decisão de crédito dependa exclusivamente de variáveis financeiras e comportamentais individuais (`dti`, `installment`, `annual_inc`, `revol_util`, `grade`).
+
+##### 4.4 Limitações Metodológicas Conhecidas (Análise de *Spatial Leakage* e Censura Temporal)
+Em alinhamento às boas práticas de transparência científica e MLOps, registram-se três limitações estruturais da base amostral atual que devem ser consideradas na evolução produtiva:
+1. **Avaliação de *Spatial Leakage* e Split Aleatório:** Como tanto `zip_code` quanto `addr_state` foram removidos das features do modelo e não há *Target Encoding* geográfico, **não existe vazamento espacial direto de alvo** no preditor. Contudo, [`split_and_scale()`](./src/default_pred/features/preprocessing.py) utiliza `train_test_split` aleatório estratificado (sem `GroupKFold` por estado), o que mede performance de interpolação nos mesmos estados da operação atual, e o descarte de colunas com `> 20%` de nulos em [`feature_engineering()`](./src/default_pred/features/engineering.py) ocorre antes do split.
+2. **Concentração Temporal e Censura à Direita nos Rótulos (`Current`):** A amostra de 5.000 registros extraída do *Lending Club* concentra-se na safra `issue_d == "Mar-2018"`, na qual **`80,7%` (4.035 contratos) ainda estavam com status `Current` (em andamento)** no momento do snapshot e foram mapeados para a classe `0` (junto aos `656` contratos `Fully Paid`, contra `309` inadimplentes). Trata-se de **censura à direita (*right-censoring*)**: contratos em curso ainda podem inadimplir até o vencimento de 36/60 meses, o que dilui o sinal supervisionado no treino base e explica a baixa sensibilidade inicial do classificador linear sem ajuste de limiar.
 
 ---
 

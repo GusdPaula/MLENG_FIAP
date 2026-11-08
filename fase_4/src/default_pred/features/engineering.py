@@ -86,8 +86,9 @@ def feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
     ]
     df = df.drop(columns=post_origination_leakage_columns, errors="ignore")
 
-    # 4. Dropping proxy for redlining / algorithmic fairness (Controle F3 LGPD)
-    df = df.drop(columns=["zip_code"], errors="ignore")
+    # 4. Dropping geographic proxies for redlining / fairness (Controle F3 LGPD)
+    # addr_state is preserved only in raw data for external Disparate Impact audit
+    df = df.drop(columns=["zip_code", "addr_state"], errors="ignore")
 
     # 5. Dropping columns with missing values % > 20 (evaluated when sample > 10)
     if len(df) > 10:
@@ -151,7 +152,6 @@ def feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
         "home_ownership",
         "verification_status",
         "purpose",
-        "addr_state",
         "initial_list_status",
         "disbursement_method",
         "application_type",

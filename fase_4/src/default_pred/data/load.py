@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import pandera.pandas as pa
 
-from default_pred.data.contract import Contract
+from default_pred.data.contract import Contract, compute_effective_income
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,6 +42,18 @@ def _validate_contract(df: pd.DataFrame) -> pd.DataFrame:
     """Validate a DataFrame (single entry or batch) against the Pandera Contract."""
     try:
         validated_df = Contract.validate(df, lazy=True)
+        if "installment" in validated_df.columns:
+            installments = pd.to_numeric(
+                validated_df["installment"], errors="coerce"
+            ).fillna(0.0)
+            effective_inc = compute_effective_income(validated_df)
+            extreme_mask = (installments * 12.0) > effective_inc
+            if extreme_mask.any():
+                logger.warning(
+                    "Contract Layer 3 Warning: %d row(s) have annualized installment "
+                    "(installment * 12) exceeding effective annual income.",
+                    int(extreme_mask.sum()),
+                )
         logger.info("Data validation passed (%d row(s))!", len(validated_df))
         return validated_df
     except pa.errors.SchemaErrors:
