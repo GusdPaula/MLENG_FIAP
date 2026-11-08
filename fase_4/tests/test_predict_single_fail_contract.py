@@ -46,14 +46,22 @@ def test_load_one_entry_accepts_low_positive_individual_income():
     assert df.loc[0, "annual_inc"] == 12_000.0
 
 
-def test_load_one_entry_accepts_joint_app_with_zero_primary_income():
+def test_load_one_entry_accepts_high_income_above_ten_million():
+    row = _load_valid_row()
+    row["annual_inc"] = 25_000_000.0
+    df = load_one_entry(row)
+
+    assert df.loc[0, "annual_inc"] == 25_000_000.0
+
+
+def test_load_one_entry_accepts_joint_app_with_positive_income():
     row = _load_valid_row()
     row["application_type"] = "Joint App"
-    row["annual_inc"] = 0.0
+    row["annual_inc"] = 50_000.0
     row["annual_inc_joint"] = 85_000.0
     df = load_one_entry(row)
 
-    assert df.loc[0, "annual_inc"] == 0.0
+    assert df.loc[0, "annual_inc"] == 50_000.0
     assert df.loc[0, "annual_inc_joint"] == 85_000.0
 
 
@@ -62,16 +70,21 @@ def test_load_one_entry_accepts_joint_app_with_zero_primary_income():
     [
         {"application_type": "Individual", "annual_inc": 0.0},
         {"application_type": "Individual", "annual_inc": -500.0},
-        {"application_type": "Individual", "annual_inc": 25_000_000.0},
+        {"application_type": "Individual", "annual_inc": None},
         {
             "application_type": "Joint App",
             "annual_inc": 0.0,
-            "annual_inc_joint": 0.0,
+            "annual_inc_joint": 85_000.0,
         },
         {
             "application_type": "Joint App",
-            "annual_inc": 0.0,
-            "annual_inc_joint": None,
+            "annual_inc": -100.0,
+            "annual_inc_joint": 85_000.0,
+        },
+        {
+            "application_type": "Joint App",
+            "annual_inc": 50_000.0,
+            "annual_inc_joint": -500.0,
         },
     ],
 )

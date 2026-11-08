@@ -190,15 +190,15 @@ flowchart LR
     IN["Payload de Entrada<br/>(JSON / CSV)"] --> C1
 
     subgraph PANDERA["Barreira de Qualidade de Dados (Contract - Pandera)"]
-        C1{"Camada 1: Domínio<br/>0 <= annual_inc <= 10M<br/>grade in [A..G], purpose != null"}
-        C2{"Camada 2: Consistência<br/>Individual: annual_inc > 0<br/>Joint App: annual_inc_joint > 0"}
+        C1{"Camada 1: Domínio<br/>annual_inc > 0 (não nula e positiva)<br/>grade in [A..G], purpose != null"}
+        C2{"Camada 2: Consistência<br/>Individual: annual_inc > 0<br/>Joint App: annual_inc > 0 e joint > 0"}
         C3{"Camada 3: Alerta (Warning)<br/>installment * 12 > renda_efetiva?"}
     end
 
-    C1 -- "Violou (ex: -1000, null, 'Z')" --> ERR["Bloqueio Imediato (Fail-Fast)<br/>SchemaErrors | run_success = 0.0"]
+    C1 -- "Violou (ex: -1000, 0, null, 'Z')" --> ERR["Bloqueio Imediato (Fail-Fast)<br/>SchemaErrors | run_success = 0.0"]
     C1 -- "OK" --> C2
-    C2 -- "Renda Efetiva == 0" --> ERR
-    C2 -- "OK (inclui Joint App c/ inc=0 e joint=85k)" --> C3
+    C2 -- "Renda Inconsistente" --> ERR
+    C2 -- "OK" --> C3
     C3 -- "Sim" --> WARN["Log Warning (Suspeita)<br/>Segue p/ Inferência"]
     C3 -- "Não" --> SANIT
 
@@ -218,8 +218,8 @@ flowchart LR
 | **`id`** | `int` | `gt=0`, `unique=True`, `nullable=False` | Identificador unívoco do contrato de crédito, sem duplicatas. | `-1` / duplicata ❌ *(Reprovado)* |
 | **`loan_amnt`** | `float` | `gt=0`, `le=100_000`, `nullable=False` | Valor do empréstimo dentro do teto operacional de crédito pessoal ($100k). | `0.0` ou `> 100k` ❌ *(Reprovado)* |
 | **`term`** | `str` | `isin=[" 36 months", " 60 months", ...]`, `nullable=False` | Prazo de amortização padronizado pelo catálogo de produtos. | `"12 months"` ❌ *(Reprovado)* |
-| **`annual_inc` *(Camada 1 — Domínio)*** | `float` | `ge=0`, `le=10_000_000`, `nullable=False` | Bloqueia valores negativos, nulos ou erros grosseiros de escala/digitação (ex.: centavos ou $110M). | `-1000.0` ❌ *(Reprovado)* |
-| **`check_effective_income_positive` *(Camada 2 — Consistência)*** | *check* | `Individual`: `annual_inc > 0`<br/>`Joint App`: `max(annual_inc, annual_inc_joint) > 0` | Impede renda efetiva zero em propostas individuais, mas preserva propostas conjuntas legítimas (`Joint App`) onde o titular primário tem `annual_inc == 0` e a renda familiar está em `annual_inc_joint`. | `Individual` com `annual_inc <= 0` ❌ *(Reprovado)* |
+| **`annual_inc` *(Camada 1 — Domínio)*** | `float` | `gt=0`, `nullable=False` | Bloqueia valores negativos, nulos ou zerados (renda não nula e estritamente positiva, sem teto arbitrário). | `-1000.0` / `0.0` ❌ *(Reprovado)* |
+| **`check_effective_income_positive` *(Camada 2 — Consistência)*** | *check* | `Individual`: `annual_inc > 0`<br/>`Joint App`: `annual_inc > 0` e `joint > 0` | Garante consistência de renda positiva e não nula tanto em propostas individuais quanto conjuntas. | Renda `<= 0` ❌ *(Reprovado)* |
 | **Comprometimento Extremo *(Camada 3 — Warning)*** | *log warning* | `installment * 12 > renda_efetiva` | Emite `WARNING` operacional no log para auditoria quando a parcela anualizada supera 100% da renda efetiva, sem bloquear a inferência. | Registra `Contract Layer 3 Warning` ⚠️ |
 | **`purpose`** | `str` | `nullable=False` | Finalidade do empréstimo é obrigatória para enquadramento da operação (Art. 6º, I LGPD). | `null` ❌ *(Reprovado)* |
 | **`grade`** | `str` | `isin=["A", "B", "C", "D", "E", "F", "G"]`, `nullable=False` | Faixa de risco interna deve pertencer estritamente ao domínio oficial de *rating*. | `"Z"` ❌ *(Reprovado)* |

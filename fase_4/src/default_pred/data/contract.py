@@ -6,7 +6,6 @@ from pandera.typing import Series
 ALLOWED_TERMS = [" 36 months", " 60 months", "36 months", "60 months"]
 ALLOWED_GRADES = ["A", "B", "C", "D", "E", "F", "G"]
 MONTH_YEAR_PATTERN = r"^[A-Z][a-z]{2}-\d{4}$"
-MAX_PLAUSIBLE_INCOME = 10_000_000.0
 
 
 def compute_effective_income(df: pd.DataFrame) -> pd.Series:
@@ -52,10 +51,9 @@ class Contract(pa.DataFrameModel):
         nullable=False,
     )
 
-    # Layer 1: Physical/scale domain check (blocks negative, null, or >10M typos)
+    # Layer 1: Physical domain check (must not be null and must be positive > 0)
     annual_inc: Series[float] = pa.Field(
-        ge=0,
-        le=MAX_PLAUSIBLE_INCOME,
+        gt=0,
         nullable=False,
         coerce=True,
     )
@@ -80,9 +78,9 @@ class Contract(pa.DataFrameModel):
     )
 
     @pa.dataframe_check(
-        name="effective_income_positive_and_within_scale",
+        name="effective_income_positive",
         error=(
-            "effective annual income must be > 0 and <= 10,000,000 "
+            "effective annual income must be > 0 "
             "(annual_inc > 0 for Individual, or annual_inc_joint > 0 for Joint App)"
         ),
     )
@@ -94,14 +92,11 @@ class Contract(pa.DataFrameModel):
         joint_valid = pd.Series(True, index=df.index)
         if "annual_inc_joint" in df.columns:
             joint_raw = pd.to_numeric(df["annual_inc_joint"], errors="coerce")
-            joint_valid = joint_raw.isna() | (
-                (joint_raw >= 0) & (joint_raw <= MAX_PLAUSIBLE_INCOME)
-            )
+            joint_valid = joint_raw.isna() | (joint_raw > 0)
         return (
             primary.notna()
-            & (primary >= 0)
+            & (primary > 0)
             & (effective > 0)
-            & (effective <= MAX_PLAUSIBLE_INCOME)
             & joint_valid
         )
 

@@ -768,7 +768,7 @@
               </div>
               <div class="card-bullet-list">
                 <div class="card-bullet">
-                  <strong>Contrato em 3 Camadas:</strong> Validação em <span class="code-pill">Contract</span> separando anomalia de política: domínio <span class="code-pill">0 &le; annual_inc &le; 10M</span>, consistência condicional (<span class="code-pill">Individual</span> vs. <span class="code-pill">Joint App</span>) e alerta de comprometimento.
+                  <strong>Contrato em 3 Camadas:</strong> Validação em <span class="code-pill">Contract</span> separando anomalia de política: domínio <span class="code-pill">annual_inc &gt; 0 (não nula)</span>, consistência condicional (<span class="code-pill">Individual</span> vs. <span class="code-pill">Joint App</span>) e alerta de comprometimento.
                 </div>
                 <div class="card-bullet">
                   <strong>Bloqueio Imediato:</strong> Payloads corrompidos (<span class="code-pill">row_fail.json</span> com renda negativa <span class="code-pill">-1000</span>, finalidade nula e grade <span class="code-pill">Z</span>) são barrados antes da inferência.

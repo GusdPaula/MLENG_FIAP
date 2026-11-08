@@ -17,7 +17,7 @@ def test_load_one_entry_accepts_drifted_mapping():
     df = load_one_entry(row)
 
     assert len(df) == 1
-    assert 0 < df.loc[0, "annual_inc"] <= 10_000_000
+    assert df.loc[0, "annual_inc"] > 0
     assert df.loc[0, "purpose"] is not None
     assert df.loc[0, "grade"] in {"A", "B", "C", "D", "E", "F", "G"}
 
