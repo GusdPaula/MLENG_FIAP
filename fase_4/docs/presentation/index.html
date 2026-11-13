@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Apresentação Executiva STAR | MLOps, Sustentação e Governança de Crédito</title>
+  <title>Apresentação Executiva | MLOps, Sustentação e Governança de Crédito</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet" />
@@ -200,7 +200,7 @@
       margin: 0 auto;
       display: flex;
       flex-direction: column;
-      gap: clamp(0.9rem, 1.6vh, 1.25rem);
+      gap: clamp(0.75rem, 1.2vh, 1rem);
       padding-bottom: 1.5rem;
     }
 
@@ -218,7 +218,7 @@
       gap: 0.45rem;
       padding: 0.36rem 0.95rem;
       border-radius: 999px;
-      font-size: 0.82rem;
+      font-size: 0.9rem;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.08em;
@@ -242,27 +242,27 @@
     }
 
     h1.hero-title {
-      font-size: clamp(2rem, 3.2vw, 3rem);
+      font-size: clamp(3rem, 4.4vw, 4.8rem);
       font-weight: 800;
-      line-height: 1.16;
-      letter-spacing: -0.025em;
+      line-height: 1.08;
+      letter-spacing: -0.03em;
       background: linear-gradient(135deg, #ffffff 25%, #bae6fd 60%, #818cf8 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
     h2.slide-title {
-      font-size: clamp(1.65rem, 2.4vw, 2.3rem);
+      font-size: clamp(2.2rem, 3.2vw, 3.3rem);
       font-weight: 800;
-      line-height: 1.2;
+      line-height: 1.14;
       letter-spacing: -0.02em;
       color: var(--text-primary);
     }
 
     .slide-lead {
-      font-size: clamp(1.02rem, 1.3vw, 1.18rem);
+      font-size: clamp(1.32rem, 1.8vw, 1.65rem);
       color: var(--text-secondary);
-      line-height: 1.58;
+      line-height: 1.5;
       max-width: 1100px;
     }
 
@@ -313,7 +313,7 @@
     .card-accent-indigo { border-top: 4px solid var(--accent-indigo); }
 
     .card-title {
-      font-size: 1.18rem;
+      font-size: 1.45rem;
       font-weight: 700;
       color: var(--text-primary);
       display: flex;
@@ -325,7 +325,7 @@
     }
 
     .card-text {
-      font-size: 0.98rem;
+      font-size: 1.15rem;
       color: var(--text-secondary);
       line-height: 1.58;
     }
@@ -340,9 +340,9 @@
     .card-bullet {
       position: relative;
       padding-left: 1.25rem;
-      font-size: 0.98rem;
+      font-size: 1.12rem;
       color: var(--text-secondary);
-      line-height: 1.58;
+      line-height: 1.6;
       display: block; /* Normal block flow: spans and text wrap naturally without spilling! */
       word-break: normal;
       overflow-wrap: break-word;
@@ -367,14 +367,14 @@
     /* KPI Display Numbers */
     .kpi-value {
       font-family: 'JetBrains Mono', monospace;
-      font-size: clamp(2.1rem, 3vw, 2.85rem);
+      font-size: clamp(2.4rem, 3.5vw, 3.2rem);
       font-weight: 800;
       line-height: 1.1;
       letter-spacing: -0.02em;
     }
 
     .kpi-label {
-      font-size: 0.82rem;
+      font-size: 0.88rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--text-muted);
@@ -628,11 +628,11 @@
         <span>SISTEMA DE MLOPS &amp; GOVERNANÇA DE CRÉDITO</span>
       </div>
       <nav class="star-pills" id="starPills">
-        <button class="star-pill active" data-slide="0">1. Visão Executiva</button>
-        <button class="star-pill" data-slide="1">2. [S] Situação</button>
-        <button class="star-pill" data-slide="2">3. [T &amp; A] Arquitetura</button>
-        <button class="star-pill" data-slide="3">4. [A] Diagnóstico Drift</button>
-        <button class="star-pill" data-slide="4">5. [R] Decisão &amp; Ação</button>
+        <button class="star-pill active" data-slide="0">1. Visão Geral</button>
+        <button class="star-pill" data-slide="1">2. Situação</button>
+        <button class="star-pill" data-slide="2">3. Arquitetura</button>
+        <button class="star-pill" data-slide="3">4. Diagnóstico</button>
+        <button class="star-pill" data-slide="4">5. Decisão</button>
       </nav>
       <div class="slide-counter" id="slideCounter">01 / 05</div>
     </header>
@@ -640,55 +640,49 @@
     <!-- Slide Viewport (5 Executive Slides) -->
     <main class="slides-viewport" id="slidesViewport">
 
-      <!-- SLIDE 1: VISÃO EXECUTIVA & SCORECARD STAR -->
       <section class="slide active" data-index="0">
         <div class="slide-inner">
           <div class="tag-row">
-            <span class="star-badge badge-intro">Scorecard Executivo</span>
-            <span class="sub-badge">Método STAR (Situation • Task • Action • Result)</span>
-            <span class="sub-badge">Lending Club Credit Scoring</span>
+            <span class="star-badge badge-intro">Visão Executiva</span>
+            <span class="sub-badge">Lending Club</span>
           </div>
           <h1 class="hero-title">
-            Observabilidade Contínua, Detecção de Drift e<br />
-            Governança de Modelos de Crédito em Produção
+            MLOps para proteger crédito em cenário de drift
           </h1>
           <p class="slide-lead">
-            Arquitetura de <strong>Sustentação MLOps</strong> desenvolvida para blindar o modelo de concessão de crédito contra a 
-            <strong>degradação silenciosa</strong> induzida por choques macroeconômicos (inflação e juros altos), integrando 
-            <strong>qualidade de dados fail-fast</strong>, <strong>monitoramento estatístico de drift</strong>, 
-            <strong>rastreamento hexagonal no MLflow</strong> e <strong>conformidade estrita com a LGPD</strong>.
+            A solução combina <strong>qualidade de dados</strong>, <strong>monitoramento de drift</strong> e <strong>governança</strong> para reduzir risco financeiro antes que o prejuízo apareça na carteira.
           </p>
 
           <div class="grid-4">
             <div class="card card-accent-rose">
-              <span class="kpi-label">S — Situação</span>
-              <div class="card-title">Degradação Silenciosa</div>
+              <span class="kpi-label">Contexto</span>
+              <div class="card-title">Risco oculto</div>
               <p class="card-text">
-                A API responde com <span class="code-pill">HTTP 200 OK</span>, mas a inflação comprime a renda em <strong>-30%</strong> e a inadimplência real salta para <strong>69,8%</strong> sem emitir erros de infraestrutura.
+                O modelo continua operando, mas o cenário macro muda e a inadimplência real dispara sem falhar a API.
               </p>
             </div>
 
             <div class="card card-accent-amber">
-              <span class="kpi-label">T — Tarefa</span>
-              <div class="card-title">Sustentação 360°</div>
+              <span class="kpi-label">Objetivo</span>
+              <div class="card-title">Sustentação</div>
               <p class="card-text">
-                Construir três barreiras de proteção: barrar dados corrompidos na entrada, diagnosticar desvios estatísticos antes da perda financeira e assegurar conformidade com a LGPD.
+                Detectar mudanças antes do dano, bloquear dados inválidos e manter rastreabilidade e conformidade.
               </p>
             </div>
 
             <div class="card card-accent-cyan">
-              <span class="kpi-label">A — Ação</span>
-              <div class="card-title">Engenharia Limpa</div>
+              <span class="kpi-label">Execução</span>
+              <div class="card-title">Arquitetura</div>
               <p class="card-text">
-                Contratos Pandera na ingestão, monitoramento pré-rótulo via <strong>PSI</strong> e <strong>Evidently AI</strong>, arquitetura Ports &amp; Adapters no MLflow e Grafo Causal (DAG).
+                Contratos de dados, MLflow observável e alertas de drift em produção com análise causal.
               </p>
             </div>
 
             <div class="card card-accent-emerald">
-              <span class="kpi-label">R — Resultado</span>
-              <div class="card-title">Proteção &amp; Decisão</div>
+              <span class="kpi-label">Impacto</span>
+              <div class="card-title">Proteção</div>
               <p class="card-text">
-                <strong>100%</strong> de anomalias barradas, alerta preventivo com <strong>84,8%</strong> das features em drift (<span class="code-pill">PSI &gt; 0.44</span>), <strong>100%</strong> de testes e plano prescritivo.
+                Falhas barradas, drift identificado cedo e processo executivo pronto para decisão e retreino.
               </p>
             </div>
           </div>
@@ -699,48 +693,40 @@
       <section class="slide" data-index="1">
         <div class="slide-inner">
           <div class="tag-row">
-            <span class="star-badge badge-s">S — Situação</span>
-            <span class="sub-badge">Diagnóstico de Risco Financeiro &amp; Cenário Macroeconômico</span>
+            <span class="star-badge badge-s">Situação</span>
+            <span class="sub-badge">Risco macro e drift</span>
           </div>
-          <h2 class="slide-title">A Ilusão do "HTTP 200 OK": O Risco da Degradação Silenciosa</h2>
+          <h2 class="slide-title">O sistema continua online, mas a base real mudou</h2>
           <p class="slide-lead">
-            A fintech opera uma <strong>Regressão Logística</strong> para concessão de crédito. Sob choque macroeconômico, 
-            a distribuição real dos tomadores descola do histórico de treino (<span class="code-pill">X_train.pkl</span>). 
-            O sistema permanece operacional, mas passa a aprovar proponentes insolventes em massa.
+            Com inflação e juros altos, renda cai, montante solicitado sobe e a capacidade de pagamento do cliente piora. O modelo continua aprovando, mas a qualidade do portfólio se deteriora.
           </p>
 
           <div class="grid-3">
             <div class="card card-accent-rose">
-              <span class="kpi-label">Vetor 1: Corrosão Salarial</span>
-              <div class="kpi-value text-rose">-30% Renda</div>
-              <div class="card-title">Covariate Shift P(X)</div>
-              <p class="card-text">
-                A inflação comprime a renda disponível dos solicitantes (<span class="code-pill">annual_inc &times; 0.70</span>), deslocando a distribuição marginal de entrada sem violar regras básicas de sistema.
-              </p>
+              <span class="kpi-label">Renda</span>
+              <div class="kpi-value text-rose">-30%</div>
+              <div class="card-title">Shift de entrada</div>
+              <p class="card-text">A distribuição do perfil do cliente se desloca sem gerar erro operacional.</p>
             </div>
 
             <div class="card card-accent-amber">
-              <span class="kpi-label">Vetor 2: Pressão por Liquidez</span>
-              <div class="kpi-value text-amber">+30% Crédito</div>
-              <div class="card-title">Alavancagem Crítica</div>
-              <p class="card-text">
-                O valor solicitado sobe (<span class="code-pill">loan_amnt &times; 1.30</span>) e os juros sobem (+4,5 p.p.). A relação empréstimo/renda salta <strong>+85,7%</strong>, sobrecarregando a prestação mensal.
-              </p>
+              <span class="kpi-label">Empréstimo</span>
+              <div class="kpi-value text-amber">+30%</div>
+              <div class="card-title">Pressão de endividamento</div>
+              <p class="card-text">A relação crédito/renda cresce, elevando risco de default em carteira.</p>
             </div>
 
             <div class="card card-accent-indigo">
-              <span class="kpi-label">Consequência no Balanço</span>
-              <div class="kpi-value text-indigo">69,8% Default</div>
-              <div class="card-title">Quebra Causal P(Y | X)</div>
-              <p class="card-text">
-                Perfis historicamente adimplentes (<span class="code-pill">Fully Paid</span>) passam a inadimplir (<span class="code-pill">Charged Off</span>). A inadimplência salta de <strong>4,8% para 69,8%</strong>, gerando prejuízo oculto.
-              </p>
+              <span class="kpi-label">Default</span>
+              <div class="kpi-value text-indigo">69,8%</div>
+              <div class="card-title">Perda real</div>
+              <p class="card-text">A inadimplência salta e o prejuízo aparece apenas depois do atraso de pagamentos.</p>
             </div>
           </div>
 
           <div class="callout-banner warning">
             <div>
-              <strong>Diagnóstico Executivo:</strong> A ausência de contratos de dados fail-fast e testes de estabilidade populacional (PSI/KS) cria um ponto cego crítico: o modelo concede empréstimos podres com sucesso operacional e falha silenciosa de negócio.
+              <strong>Conclusão:</strong> o problema não é falha técnica, e sim ausência de monitoramento de mudança estrutural da população.
             </div>
           </div>
         </div>
@@ -750,77 +736,43 @@
       <section class="slide" data-index="2">
         <div class="slide-inner">
           <div class="tag-row">
-            <span class="star-badge badge-t">T &amp; A — Tarefa &amp; Arquitetura</span>
-            <span class="sub-badge">Defesa em Três Camadas MLOps • Clean Code &amp; Governança</span>
+            <span class="star-badge badge-t">Arquitetura</span>
+            <span class="sub-badge">Defesa em camadas</span>
           </div>
-          <h2 class="slide-title">Arquitetura de Defesa MLOps: Da Ingestão à Decisão</h2>
+          <h2 class="slide-title">A arquitetura foi desenhada para não deixar drift passar em branco</h2>
           <p class="slide-lead">
-            Implementação de três camadas modulares e testadas em <span class="code-pill">src/default_pred/</span>, 
-            garantindo que dados inválidos sejam bloqueados imediatamente e que o modelo mantenha auditabilidade contínua.
+            O sistema separa validação, observabilidade e governança para que dados ruins e mudança de distribuição sejam detectados antes da decisão.
           </p>
 
           <div class="grid-3">
-            <!-- Card 1: Pandera Data Contracts -->
             <div class="card card-accent-cyan">
-              <div class="card-title">
-                <span>1. Qualidade de Dados</span>
-                <span class="sub-badge">Pandera Fail-Fast</span>
-              </div>
+              <div class="card-title"><span>1. Dados</span><span class="sub-badge">Fail-fast</span></div>
               <div class="card-bullet-list">
-                <div class="card-bullet">
-                  <strong>Contrato em 3 Camadas:</strong> Validação em <span class="code-pill">Contract</span> separando anomalia de política: domínio <span class="code-pill">annual_inc &gt; 0 (não nula)</span>, consistência condicional (<span class="code-pill">Individual</span> vs. <span class="code-pill">Joint App</span>) e alerta de comprometimento.
-                </div>
-                <div class="card-bullet">
-                  <strong>Bloqueio Imediato:</strong> Payloads corrompidos (<span class="code-pill">row_fail.json</span> com renda negativa <span class="code-pill">-1000</span>, finalidade nula e grade <span class="code-pill">Z</span>) são barrados antes da inferência.
-                </div>
-                <div class="card-bullet">
-                  <strong>Rastreio de Falha:</strong> Registro instantâneo de <span class="code-pill">run_success = 0.0</span> no MLflow e gravação de alerta no log operacional.
-                </div>
+                <div class="card-bullet"><strong>Contratos:</strong> valida entradas e bloqueia registros inválidos antes da inferência.</div>
+                <div class="card-bullet"><strong>Rastreio:</strong> erros são registrados com run fail e alertas operacionais.</div>
               </div>
             </div>
 
-            <!-- Card 2: Hexagonal Observability -->
             <div class="card card-accent-indigo">
-              <div class="card-title">
-                <span>2. Observabilidade Hexagonal</span>
-                <span class="sub-badge">MLflow Ports &amp; Adapters</span>
-              </div>
+              <div class="card-title"><span>2. Observabilidade</span><span class="sub-badge">MLflow</span></div>
               <div class="card-bullet-list">
-                <div class="card-bullet">
-                  <strong>Arquitetura Desacoplada:</strong> Protocolo <span class="code-pill">ExperimentTracker</span> com implementação concreta <span class="code-pill">MlflowTracker</span> e fallback <span class="code-pill">NullTracker</span>.
-                </div>
-                <div class="card-bullet">
-                  <strong>3 Experimentos no SQLite:</strong> <span class="code-pill">credit_training</span> (pesos e acurácia), <span class="code-pill">credit_inference</span> (latência) e <span class="code-pill">credit_drift_monitoring</span>.
-                </div>
-                <div class="card-bullet">
-                  <strong>Logs Rotativos:</strong> Log centralizado em <span class="code-pill">loan_prediction.log</span> (1 MB &times; 3 backups) com rotação automática sem expor PII.
-                </div>
+                <div class="card-bullet"><strong>Arquitetura desacoplada:</strong> tracker concreto e fallback de segurança.</div>
+                <div class="card-bullet"><strong>Experimentos:</strong> treino, inferência e drift monitorados separadamente.</div>
               </div>
             </div>
 
-            <!-- Card 3: Governance & LGPD -->
             <div class="card card-accent-emerald">
-              <div class="card-title">
-                <span>3. Governança &amp; LGPD</span>
-                <span class="sub-badge">Privacy by Design</span>
-              </div>
+              <div class="card-title"><span>3. Governança</span><span class="sub-badge">LGPD</span></div>
               <div class="card-bullet-list">
-                <div class="card-bullet">
-                  <strong>Minimização de PII:</strong> Descarte automático de identificadores diretos e campos abertos (<span class="code-pill">id</span>, <span class="code-pill">member_id</span>, <span class="code-pill">url</span>, <span class="code-pill">emp_title</span>, <span class="code-pill">title</span>, <span class="code-pill">desc</span>).
-                </div>
-                <div class="card-bullet">
-                  <strong>Bases Legais LGPD:</strong> Conformidade com o Art. 7º X (Proteção do Crédito) e Art. 7º V (Execução de Contratos preliminares).
-                </div>
-                <div class="card-bullet">
-                  <strong>Explicabilidade &amp; Fairness:</strong> Modelo Glass-Box (pesos auditáveis &beta;<sub>j</sub> &middot; x<sub>j</sub> no Art. 20), exclusão de proxies geográficos (<span class="code-pill">zip_code</span> e <span class="code-pill">addr_state</span>) das features do modelo e retenção de <span class="code-pill">addr_state</span> só para auditoria de <em>Disparate Impact</em> (&ge; 0,80).
-                </div>
+                <div class="card-bullet"><strong>PII minimizada:</strong> campos sensíveis e identificadores são removidos.</div>
+                <div class="card-bullet"><strong>Explicabilidade:</strong> modelo auditável e regras de fairness reforçadas.</div>
               </div>
             </div>
           </div>
 
           <div class="callout-banner success">
             <div>
-              <strong>Qualidade de Engenharia Assegurada:</strong> Suíte completa com <strong>100% de cobertura de testes</strong> no core de observabilidade (50 testes) e <strong>66 testes automatizados</strong> no repositório (<span class="code-pill">pytest</span> + <span class="code-pill">ruff</span>).
+              <strong>Resultado:</strong> pipeline com cobertura relevante de testes e rastreabilidade operacional para decisão executiva.
             </div>
           </div>
         </div>
@@ -830,94 +782,51 @@
       <section class="slide" data-index="3">
         <div class="slide-inner">
           <div class="tag-row">
-            <span class="star-badge badge-a">A — Ação &amp; Diagnóstico</span>
-            <span class="sub-badge">Estatística Pré e Pós-Rótulo • Mitigação do Feedback Delay</span>
+            <span class="star-badge badge-a">Diagnóstico</span>
+            <span class="sub-badge">Drift em produção</span>
           </div>
-          <h2 class="slide-title">Diagnóstico Estatístico: Detecção Precoce de Drift &amp; Causalidade</h2>
+          <h2 class="slide-title">O alerta chega antes do prejuízo financeiro</h2>
           <p class="slide-lead">
-            Mitigação do <strong>Feedback Delay (t &rarr; t+k)</strong>: como os atrasos de 90 dias nos pagamentos demoram a virar inadimplência contábil, o sistema monitora 
-            <strong>Data Drift P(X)</strong> e <strong>Prediction Drift P&#770;(Y)</strong> em tempo real antes da ocorrência do prejuízo.
+            O monitoramento mede mudança de covariáveis e de previsão em tempo real, reduzindo o atraso entre a mudança do mercado e a percepção financeira da empresa.
           </p>
 
           <div class="grid-2">
-            <!-- Left: Statistical Metrics -->
             <div class="card card-accent-amber">
-              <div class="card-title">
-                <span>Alertas Estatísticos de Produção</span>
-                <span class="sub-badge">Evidently + PSI + DDM</span>
-              </div>
-              <p class="card-text">
-                Métricas reais medidas pelo pipeline sobre o lote sob estresse econômico:
-              </p>
-              
+              <div class="card-title"><span>Alertas reais</span><span class="sub-badge">PSI + Evidently</span></div>
               <div class="metric-row">
-                <div class="metric-header">
-                  <span>PSI Renda (`annual_inc` -30%)</span>
-                  <span class="text-rose font-mono">PSI = 0.4859 (&ge; 0.20 Severo)</span>
-                </div>
+                <div class="metric-header"><span>Renda</span><span class="text-rose">PSI 0,49</span></div>
                 <div class="metric-track"><div class="metric-fill" style="width: 95%; background: var(--accent-rose);"></div></div>
               </div>
-
               <div class="metric-row">
-                <div class="metric-header">
-                  <span>PSI Montante Solicitado (`loan_amnt` +30%)</span>
-                  <span class="text-rose font-mono">PSI = 0.4428 (&ge; 0.20 Severo)</span>
-                </div>
-                <div class="metric-track"><div class="metric-fill" style="width: 90%; background: var(--accent-rose);"></div></div>
+                <div class="metric-header"><span>Empréstimo</span><span class="text-amber">PSI 0,44</span></div>
+                <div class="metric-track"><div class="metric-fill" style="width: 90%; background: var(--accent-amber);"></div></div>
               </div>
-
               <div class="metric-row">
-                <div class="metric-header">
-                  <span>PSI Parcela Tabela Price (`installment`)</span>
-                  <span class="text-amber font-mono">PSI = 0.4604 (&ge; 0.20 Severo)</span>
-                </div>
-                <div class="metric-track"><div class="metric-fill" style="width: 92%; background: var(--accent-amber);"></div></div>
+                <div class="metric-header"><span>Parcela</span><span class="text-cyan">PSI 0,46</span></div>
+                <div class="metric-track"><div class="metric-fill" style="width: 92%; background: var(--accent-cyan);"></div></div>
               </div>
-
-              <div class="metric-row">
-                <div class="metric-header">
-                  <span>Evidently AI KS-Test / Z-Test (`share_drifted`)</span>
-                  <span class="text-cyan font-mono">72 / 84 features (85.7% &ge; 50%)</span>
-                </div>
-                <div class="metric-track"><div class="metric-fill" style="width: 86%; background: var(--accent-cyan);"></div></div>
-              </div>
-
-              <p class="card-text" style="font-size: 0.94rem; margin-top: 0.3rem;">
-                <strong>Detecção Pós-Rótulo:</strong> O detector <strong>DDM</strong> confirma o drift supervisionado no registro 713 quando a taxa de erro salta de <strong>11,9% para 39,2%</strong>.
-              </p>
+              <p class="card-text" style="margin-top: 0.3rem;">72 de 84 features ficaram fora do perfil esperado. O alerta foi disparado antes do impacto no caixa.</p>
             </div>
 
-            <!-- Right: Causal DAG -->
             <div class="card card-accent-indigo">
-              <div class="card-title">
-                <span>Grafo Causal (DAG) da Degradação</span>
-                <span class="sub-badge">README.md (Governança &amp; LGPD)</span>
-              </div>
+              <div class="card-title"><span>Causalidade</span><span class="sub-badge">DAG</span></div>
               <div class="causal-flow">
                 <div class="causal-node">
-                  <span class="kpi-label text-rose">Confundidor (Z)</span>
-                  <strong style="font-size: 1.02rem;">Choque Macroeconômico</strong>
-                  <span class="card-text" style="font-size: 0.88rem;">Inflação + Juros</span>
+                  <span class="kpi-label text-rose">Choque</span>
+                  <strong>Inflação + juros</strong>
                 </div>
                 <div class="causal-arrow">&rarr;</div>
                 <div class="causal-node">
-                  <span class="kpi-label text-amber">Covariáveis P(X)</span>
-                  <strong style="font-size: 1.02rem;">Renda &darr; | Crédito &uarr;</strong>
-                  <span class="card-text" style="font-size: 0.88rem;">Dívida/Renda +85,7%</span>
+                  <span class="kpi-label text-amber">P(X)</span>
+                  <strong>Renda &darr; e crédito &uarr;</strong>
                 </div>
                 <div class="causal-arrow">&rarr;</div>
                 <div class="causal-node">
-                  <span class="kpi-label text-indigo">Resposta P(Y|X)</span>
-                  <strong style="font-size: 1.02rem;">Inadimplência Real</strong>
-                  <span class="card-text" style="font-size: 0.88rem;">Fronteira obsoleta</span>
+                  <span class="kpi-label text-indigo">P(Y|X)</span>
+                  <strong>Default real</strong>
                 </div>
               </div>
-              <p class="card-text">
-                <strong>Análise de Causa Raiz:</strong> O choque Z é uma causa comum não observada que distorce simultaneamente a renda, o custo da dívida e a probabilidade real de calote.
-              </p>
-              <div class="callout-banner" style="padding: 0.85rem 1.15rem; font-size: 0.98rem;">
-                <span><strong>Conclusão Executiva:</strong> O alerta precoce de <em>Data Drift</em> no dia 0 antecipa a quebra estrutural do portfólio 90 dias antes que a inadimplência afete o caixa.</span>
-              </div>
+              <p class="card-text">A mudança macro afeta simultaneamente as covariáveis e o risco de inadimplência, e o modelo precisa ser revisado antes do prejuízo.</p>
             </div>
           </div>
         </div>
@@ -927,79 +836,67 @@
       <section class="slide" data-index="4">
         <div class="slide-inner">
           <div class="tag-row">
-            <span class="star-badge badge-r">R — Resultado &amp; Decisão</span>
-            <span class="sub-badge">Impacto no Negócio • Plano Prescritivo • Artefatos Auditáveis</span>
+            <span class="star-badge badge-r">Resultado</span>
+            <span class="sub-badge">Impacto e plano</span>
           </div>
-          <h2 class="slide-title">Resultados Consolidados &amp; Decisões Executivas Prescritivas</h2>
+          <h2 class="slide-title">A decisão agora é gerenciar risco antes do prejuízo</h2>
 
           <div class="grid-4">
             <div class="card card-accent-emerald">
-              <span class="kpi-label">Ingestão Fail-Fast</span>
+              <span class="kpi-label">Dados</span>
               <div class="kpi-value text-emerald">100%</div>
-              <div class="card-title">Anomalias Barradas</div>
-              <p class="card-text">Bloqueio preventivo na entrada via contrato Pandera. Zero dados inválidos na inferência.</p>
+              <div class="card-title">Bloqueio</div>
+              <p class="card-text">Entradas inválidas são barradas antes da inferência.</p>
             </div>
 
             <div class="card card-accent-amber">
-              <span class="kpi-label">Evidently AI Drift</span>
+              <span class="kpi-label">Drift</span>
               <div class="kpi-value text-amber">85,7%</div>
-              <div class="card-title">Alerta Disparado</div>
-              <p class="card-text">72 de 84 variáveis ativas acusadas no KS-test (<span class="code-pill">share=0.86 &ge; 0.50</span>), registrando alerta no MLflow.</p>
+              <div class="card-title">Features afetadas</div>
+              <p class="card-text">O monitoramento sinaliza risco estrutural antes da perda de caixa.</p>
             </div>
 
             <div class="card card-accent-rose">
-              <span class="kpi-label">Estabilidade Populacional</span>
-              <div class="kpi-value text-rose">PSI &gt; 0,44</div>
-              <div class="card-title">Desvio Crítico</div>
-              <p class="card-text">Renda (0,486), empréstimo (0,443) e parcela (0,460) violam com folga o teto de 0,20.</p>
+              <span class="kpi-label">PSI</span>
+              <div class="kpi-value text-rose">0,44+</div>
+              <div class="card-title">Desvio crítico</div>
+              <p class="card-text">Renda, crédito e parcela entram acima do limiar de alerta operacional.</p>
             </div>
 
             <div class="card card-accent-cyan">
-              <span class="kpi-label">Qualidade de Software</span>
+              <span class="kpi-label">Qualidade</span>
               <div class="kpi-value text-cyan">100%</div>
-              <div class="card-title">Cobertura de Testes</div>
-              <p class="card-text">50/50 testes no core de observabilidade (66 no projeto), garantindo engenharia confiável.</p>
+              <div class="card-title">Cobertura</div>
+              <p class="card-text">Core de observabilidade validado com testes automatizados.</p>
             </div>
           </div>
 
           <div class="card card-accent-indigo">
-            <div class="card-title">Protocolo de Resposta Imediata para o Comitê de Crédito e Risco</div>
+            <div class="card-title">Ação executiva recomendada</div>
             <div class="grid-3" style="gap: 1rem; margin-top: 0.2rem;">
               <div>
-                <strong style="color: var(--accent-amber); font-size: 1.02rem;">1. Threshold Tuning Imediato</strong>
-                <p class="card-text" style="font-size: 0.95rem; margin-top: 0.3rem;">
-                  Ajustar o limiar de corte de concessão para estancar imediatamente o vazamento de falsos negativos enquanto a carteira é estabilizada.
-                </p>
+                <strong style="color: var(--accent-amber); font-size: 1.08rem;">1. Ajuste de limite</strong>
+                <p class="card-text" style="margin-top: 0.3rem;">Revisar regras de concessão para reduzir aprovação em cenário de risco.</p>
               </div>
               <div>
-                <strong style="color: var(--accent-cyan); font-size: 1.02rem;">2. Retreino com Time-Decay</strong>
-                <p class="card-text" style="font-size: 0.95rem; margin-top: 0.3rem;">
-                  Retreinar o classificador com decaimento exponencial (w<sub>i</sub> = e<sup>-&lambda;&Delta;t</sup>) e incorporar a razão causal direta <span class="code-pill">loan_amnt / annual_inc</span>.
-                </p>
+                <strong style="color: var(--accent-cyan); font-size: 1.08rem;">2. Retreino</strong>
+                <p class="card-text" style="margin-top: 0.3rem;">Treinar com janela mais recente e incorporar razão crédito/renda.</p>
               </div>
               <div>
-                <strong style="color: var(--accent-emerald); font-size: 1.02rem;">3. Shadow &amp; Canary Rollout</strong>
-                <p class="card-text" style="font-size: 0.95rem; margin-top: 0.3rem;">
-                  Validar o novo modelo em modo sombra (Shadow) e promover via Canary Rollout (5% &rarr; 20% &rarr; 100%) auditando <em>Disparate Impact</em> (&ge; 0,80).
-                </p>
+                <strong style="color: var(--accent-emerald); font-size: 1.08rem;">3. Rollout</strong>
+                <p class="card-text" style="margin-top: 0.3rem;">Validar em shadow e canary antes de produção total.</p>
               </div>
             </div>
           </div>
 
           <div class="action-bar">
             <div>
-              <strong style="font-size: 1.05rem; color: var(--text-primary);">Evidências e Artefatos Auditáveis:</strong>
-              <p class="card-text" style="font-size: 0.95rem; margin-top: 0.2rem;">
-                Consulte o relatório estatístico completo gerado pelo Evidently AI e o documento normativo de conformidade legal.
-              </p>
+              <strong style="font-size: 1.08rem; color: var(--text-primary);">Artefatos</strong>
+              <p class="card-text" style="margin-top: 0.2rem;">Relatório estatístico e governança documental disponí­veis para revisão.</p>
             </div>
             <div style="display: flex; gap: 0.85rem; flex-wrap: wrap;">
-              <a class="btn-exec" href="../../data_drift_report.html" target="_blank" rel="noopener">
-                Abrir Relatório Evidently AI &nearr;
-              </a>
-              <a class="btn-exec secondary" href="../../README.md#governança-lgpd-mitigação-de-vieses-e-análise-causal" target="_blank" rel="noopener">
-                Governança &amp; LGPD (MD) &nearr;
-              </a>
+              <a class="btn-exec" href="../../data_drift_report.html" target="_blank" rel="noopener">Relatório &nearr;</a>
+              <a class="btn-exec secondary" href="../../README.md#governança-lgpd-mitigação-de-vieses-e-análise-causal" target="_blank" rel="noopener">LGPD &amp; governança &nearr;</a>
             </div>
           </div>
         </div>
