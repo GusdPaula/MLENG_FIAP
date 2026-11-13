@@ -29,3 +29,11 @@ Este projeto implementa um sistema de recomendação de e-commerce utilizando t�
 **Tech Challenge Fase 03 - Deploy de Modelo em Produção**
 
 Este projeto implementa uma solução completa de MLOps para triagem automática de laudos médicos. Cobre as etapas de ingestão, validação, treinamento, orquestração com Airflow e otimização de latência com ONNX Runtime, incluindo CI/CD e monitoramento.
+
+### Fase 4
+
+[![Acessar Documentação da Fase 4](https://img.shields.io/badge/Acessar_Documenta%C3%A7%C3%A3o-Fase_4-0052cc?style=for-the-badge)](./fase_4/README.md)
+
+**Tech Challenge Fase 04 - Observabilidade Contínua, Detecção de Drift, Qualidade de Dados e Governança em Produção**
+
+Este projeto constrói a camada de sustentação, confiabilidade e governança para um modelo de *Credit Scoring* em produção. Inclui contratos de qualidade de dados com Pandera, simulação e detecção estatística de *Data Drift* e *Concept Drift* (Evidently AI + PSI), observabilidade hexagonal com MLflow e logging centralizado, além de documentação de conformidade LGPD (*Privacy by Design*), mitigação de vieses e análise causal.

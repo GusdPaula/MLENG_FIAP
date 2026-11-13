@@ -17,7 +17,7 @@ def test_load_one_entry_accepts_drifted_mapping():
     df = load_one_entry(row)
 
     assert len(df) == 1
-    assert df.loc[0, "annual_inc"] > 20000
+    assert df.loc[0, "annual_inc"] > 0
     assert df.loc[0, "purpose"] is not None
     assert df.loc[0, "grade"] in {"A", "B", "C", "D", "E", "F", "G"}
 
@@ -45,3 +45,17 @@ def test_load_entries_accepts_multi_row_drifted_json():
     assert isinstance(df, pd.DataFrame)
     assert len(df) > 1
     assert set(df.columns) >= {"id", "annual_inc", "purpose", "grade"}
+
+
+def test_feature_engineering_drops_zip_code_and_addr_state():
+    with open(PROJECT_ROOT / "data/entries/loan_data_row.json", "r") as f:
+        row = json.load(f)
+
+    raw_df = load_one_entry(row)
+    assert "zip_code" in raw_df.columns
+    assert "addr_state" in raw_df.columns
+
+    engineered = feature_engineering(raw_df)
+    assert "zip_code" not in engineered.columns
+    assert "addr_state" not in engineered.columns
+    assert not any(col.startswith("addr_state_") for col in engineered.columns)

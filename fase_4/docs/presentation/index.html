@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Apresentação Executiva STAR | MLOps, Sustentação e Governança de Crédito</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-primary: #060913;
+      --bg-secondary: #0c1224;
+      --bg-card: rgba(15, 23, 42, 0.82);
+      --bg-card-hover: rgba(22, 33, 62, 0.94);
+      --bg-card-strong: rgba(18, 28, 54, 0.94);
+      --border-subtle: rgba(148, 163, 184, 0.18);
+      --border-highlight: rgba(56, 189, 248, 0.45);
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --accent-cyan: #38bdf8;
+      --accent-indigo: #818cf8;
+      --accent-emerald: #34d399;
+      --accent-amber: #fbbf24;
+      --accent-rose: #fb7185;
+      --accent-purple: #c084fc;
+      --shadow-elevation: 0 20px 50px rgba(0, 0, 0, 0.65), 0 0 30px rgba(56, 189, 248, 0.08);
+      --radius-xl: 20px;
+      --radius-lg: 14px;
+      --radius-md: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      font-size: 16px;
+    }
+
+    /* Ambient Background Glow */
+    .ambient-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 10% 15%, rgba(56, 189, 248, 0.14), transparent 40%),
+        radial-gradient(circle at 88% 20%, rgba(129, 140, 248, 0.15), transparent 42%),
+        radial-gradient(circle at 50% 90%, rgba(52, 211, 153, 0.10), transparent 45%),
+        linear-gradient(180deg, #060913 0%, #0a1020 100%);
+    }
+
+    .grid-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(to right, rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(circle at center, black 65%, transparent 100%);
+    }
+
+    /* App Layout Wrapper */
+    .deck-wrapper {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* Top Navigation Bar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem clamp(1rem, 2.5vw, 2.4rem);
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(6, 9, 19, 0.95);
+      backdrop-filter: blur(18px);
+      gap: 1rem;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 50;
+      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.45);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 800;
+      font-size: 0.96rem;
+      letter-spacing: 0.03em;
+      color: var(--text-primary);
+    }
+
+    .brand-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-indigo));
+      box-shadow: 0 0 14px var(--accent-cyan);
+    }
+
+    .star-pills {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .star-pill {
+      border: 1px solid var(--border-subtle);
+      background: rgba(15, 23, 42, 0.75);
+      color: var(--text-secondary);
+      padding: 0.45rem 1rem;
+      border-radius: 999px;
+      font-size: 0.86rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: all 0.22s ease;
+    }
+
+    .star-pill:hover {
+      color: var(--text-primary);
+      border-color: rgba(56, 189, 248, 0.45);
+      background: rgba(30, 41, 59, 0.9);
+    }
+
+    .star-pill.active {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(129, 140, 248, 0.25));
+      color: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.25);
+    }
+
+    .slide-counter {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.96rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      min-width: 80px;
+      text-align: right;
+    }
+
+    /* Slides Viewport */
+    .slides-viewport {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    /* CRITICAL: justify-content: flex-start ensures headers and tag rows are NEVER pushed behind topbar */
+    .slide {
+      position: absolute;
+      inset: 0;
+      padding: clamp(1.2rem, 2.2vh, 1.8rem) clamp(1.4rem, 3.5vw, 3.8rem) 2.2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: stretch;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(18px) scale(0.99);
+      transition: opacity 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+                  visibility 0.38s;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(56, 189, 248, 0.35) transparent;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0) scale(1);
+    }
+
+    .slide-inner {
+      width: 100%;
+      max-width: 1380px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: clamp(0.9rem, 1.6vh, 1.25rem);
+      padding-bottom: 1.5rem;
+    }
+
+    /* Typography & Badges */
+    .tag-row {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+    }
+
+    .star-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.36rem 0.95rem;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .badge-intro { background: rgba(129, 140, 248, 0.18); color: var(--accent-indigo); border: 1px solid rgba(129, 140, 248, 0.45); }
+    .badge-s { background: rgba(251, 113, 133, 0.18); color: var(--accent-rose); border: 1px solid rgba(251, 113, 133, 0.45); }
+    .badge-t { background: rgba(251, 191, 36, 0.18); color: var(--accent-amber); border: 1px solid rgba(251, 191, 36, 0.45); }
+    .badge-a { background: rgba(56, 189, 248, 0.18); color: var(--accent-cyan); border: 1px solid rgba(56, 189, 248, 0.45); }
+    .badge-r { background: rgba(52, 211, 153, 0.18); color: var(--accent-emerald); border: 1px solid rgba(52, 211, 153, 0.45); }
+
+    .sub-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid var(--border-subtle);
+      padding: 0.32rem 0.8rem;
+      border-radius: 999px;
+    }
+
+    h1.hero-title {
+      font-size: clamp(2rem, 3.2vw, 3rem);
+      font-weight: 800;
+      line-height: 1.16;
+      letter-spacing: -0.025em;
+      background: linear-gradient(135deg, #ffffff 25%, #bae6fd 60%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    h2.slide-title {
+      font-size: clamp(1.65rem, 2.4vw, 2.3rem);
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+
+    .slide-lead {
+      font-size: clamp(1.02rem, 1.3vw, 1.18rem);
+      color: var(--text-secondary);
+      line-height: 1.58;
+      max-width: 1100px;
+    }
+
+    /* Grids */
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1.15rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1.2rem;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.25rem;
+    }
+
+    /* Executive Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: clamp(1.15rem, 1.5vw, 1.5rem);
+      box-shadow: var(--shadow-elevation);
+      backdrop-filter: blur(16px);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease;
+      min-width: 0;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(56, 189, 248, 0.42);
+      background: var(--bg-card-hover);
+    }
+
+    .card-accent-rose { border-top: 4px solid var(--accent-rose); }
+    .card-accent-amber { border-top: 4px solid var(--accent-amber); }
+    .card-accent-cyan { border-top: 4px solid var(--accent-cyan); }
+    .card-accent-emerald { border-top: 4px solid var(--accent-emerald); }
+    .card-accent-indigo { border-top: 4px solid var(--accent-indigo); }
+
+    .card-title {
+      font-size: 1.18rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      line-height: 1.3;
+      flex-wrap: wrap;
+    }
+
+    .card-text {
+      font-size: 0.98rem;
+      color: var(--text-secondary);
+      line-height: 1.58;
+    }
+
+    /* Clean Card Bullet Items (Block Flow guarantees natural text wrapping) */
+    .card-bullet-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .card-bullet {
+      position: relative;
+      padding-left: 1.25rem;
+      font-size: 0.98rem;
+      color: var(--text-secondary);
+      line-height: 1.58;
+      display: block; /* Normal block flow: spans and text wrap naturally without spilling! */
+      word-break: normal;
+      overflow-wrap: break-word;
+    }
+
+    .card-bullet::before {
+      content: '▸';
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: var(--accent-cyan);
+      font-weight: 800;
+      font-size: 1.1rem;
+      line-height: 1.55;
+    }
+
+    .card-bullet strong {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    /* KPI Display Numbers */
+    .kpi-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(2.1rem, 3vw, 2.85rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .kpi-label {
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    .text-rose { color: var(--accent-rose); }
+    .text-amber { color: var(--accent-amber); }
+    .text-cyan { color: var(--accent-cyan); }
+    .text-emerald { color: var(--accent-emerald); }
+    .text-indigo { color: var(--accent-indigo); }
+
+    /* Callouts & Banners */
+    .callout-banner {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.88));
+      border: 1px solid var(--border-subtle);
+      border-left: 5px solid var(--accent-cyan);
+      border-radius: var(--radius-lg);
+      padding: 0.95rem 1.4rem;
+      font-size: 1.02rem;
+      color: #e2e8f0;
+      line-height: 1.55;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .callout-banner.warning {
+      border-left-color: var(--accent-rose);
+      background: linear-gradient(135deg, rgba(251, 113, 133, 0.12), rgba(15, 23, 42, 0.92));
+    }
+
+    .callout-banner.success {
+      border-left-color: var(--accent-emerald);
+      background: linear-gradient(135deg, rgba(52, 211, 153, 0.12), rgba(15, 23, 42, 0.92));
+    }
+
+    /* Inline Code Pill: inline-block with normal wrapping */
+    .code-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.84em;
+      padding: 0.12rem 0.42rem;
+      border-radius: 6px;
+      background: rgba(56, 189, 248, 0.14);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      font-weight: 600;
+      display: inline-block;
+      white-space: nowrap;
+      vertical-align: baseline;
+      margin: 0.1rem 0.15rem;
+    }
+
+    /* Metric Progress Bar */
+    .metric-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      margin-top: 0.3rem;
+    }
+
+    .metric-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.92rem;
+      font-weight: 600;
+    }
+
+    .metric-track {
+      height: 10px;
+      width: 100%;
+      background: rgba(30, 41, 59, 0.9);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .metric-fill {
+      height: 100%;
+      border-radius: 999px;
+    }
+
+    /* Causal Flow DAG */
+    .causal-flow {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: center;
+      gap: 0.8rem;
+      background: rgba(8, 12, 26, 0.85);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.15rem;
+    }
+
+    .causal-node {
+      background: var(--bg-card-strong);
+      border: 1px solid rgba(129, 140, 248, 0.35);
+      border-radius: var(--radius-md);
+      padding: 0.8rem 0.9rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .causal-arrow {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent-cyan);
+      font-weight: 800;
+      font-size: 1.4rem;
+      text-align: center;
+    }
+
+    /* Action Links Bar */
+    .action-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      padding: 1rem 1.6rem;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(52, 211, 153, 0.12));
+      border: 1px solid rgba(56, 189, 248, 0.38);
+      border-radius: var(--radius-xl);
+    }
+
+    .btn-exec {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.3rem;
+      border-radius: 999px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      text-decoration: none;
+      background: var(--accent-cyan);
+      color: #060913;
+      transition: all 0.22s ease;
+      cursor: pointer;
+    }
+
+    .btn-exec:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 22px rgba(56, 189, 248, 0.5);
+      background: #7dd3fc;
+    }
+
+    .btn-exec.secondary {
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text-primary);
+      border: 1px solid var(--border-highlight);
+    }
+
+    .btn-exec.secondary:hover {
+      border-color: var(--accent-cyan);
+      background: rgba(30, 41, 59, 0.95);
+    }
+
+    /* Bottom Control Bar */
+    .bottombar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem clamp(1rem, 2.5vw, 2.4rem);
+      border-top: 1px solid var(--border-subtle);
+      background: rgba(6, 9, 19, 0.95);
+      backdrop-filter: blur(16px);
+      flex-shrink: 0;
+      position: relative;
+      z-index: 50;
+    }
+
+    .progress-track {
+      flex: 1;
+      max-width: 440px;
+      height: 7px;
+      background: rgba(30, 41, 59, 0.9);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 0 1.5rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 20%;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-indigo), var(--accent-emerald));
+      transition: width 0.35s ease;
+    }
+
+    .nav-btns {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+    }
+
+    .nav-btn {
+      background: rgba(30, 41, 59, 0.85);
+      color: var(--text-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 0.48rem 1.05rem;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      background: rgba(45, 62, 90, 0.9);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .kbd-hint {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    /* Responsive */
+    @media (max-width: 1180px) {
+      .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-3 { grid-template-columns: 1fr; }
+      .causal-flow { grid-template-columns: 1fr; text-align: center; }
+      .causal-arrow { transform: rotate(90deg); }
+    }
+
+    @media (max-width: 768px) {
+      html, body { overflow: auto; font-size: 15px; }
+      .topbar { padding: 0.75rem 1rem; flex-wrap: wrap; }
+      .star-pills { display: none; }
+      .slide { padding: 1.2rem 1rem 2.2rem; }
+      .grid-2, .grid-4 { grid-template-columns: 1fr; }
+      .bottombar { padding: 0.65rem 1rem; }
+      .kbd-hint { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-bg"></div>
+  <div class="grid-overlay"></div>
+
+  <div class="deck-wrapper">
+    <!-- Executive Topbar -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <span>SISTEMA DE MLOPS &amp; GOVERNANÇA DE CRÉDITO</span>
+      </div>
+      <nav class="star-pills" id="starPills">
+        <button class="star-pill active" data-slide="0">1. Visão Executiva</button>
+        <button class="star-pill" data-slide="1">2. [S] Situação</button>
+        <button class="star-pill" data-slide="2">3. [T &amp; A] Arquitetura</button>
+        <button class="star-pill" data-slide="3">4. [A] Diagnóstico Drift</button>
+        <button class="star-pill" data-slide="4">5. [R] Decisão &amp; Ação</button>
+      </nav>
+      <div class="slide-counter" id="slideCounter">01 / 05</div>
+    </header>
+
+    <!-- Slide Viewport (5 Executive Slides) -->
+    <main class="slides-viewport" id="slidesViewport">
+
+      <!-- SLIDE 1: VISÃO EXECUTIVA & SCORECARD STAR -->
+      <section class="slide active" data-index="0">
+        <div class="slide-inner">
+          <div class="tag-row">
+            <span class="star-badge badge-intro">Scorecard Executivo</span>
+            <span class="sub-badge">Método STAR (Situation • Task • Action • Result)</span>
+            <span class="sub-badge">Lending Club Credit Scoring</span>
+          </div>
+          <h1 class="hero-title">
+            Observabilidade Contínua, Detecção de Drift e<br />
+            Governança de Modelos de Crédito em Produção
+          </h1>
+          <p class="slide-lead">
+            Arquitetura de <strong>Sustentação MLOps</strong> desenvolvida para blindar o modelo de concessão de crédito contra a 
+            <strong>degradação silenciosa</strong> induzida por choques macroeconômicos (inflação e juros altos), integrando 
+            <strong>qualidade de dados fail-fast</strong>, <strong>monitoramento estatístico de drift</strong>, 
+            <strong>rastreamento hexagonal no MLflow</strong> e <strong>conformidade estrita com a LGPD</strong>.
+          </p>
+
+          <div class="grid-4">
+            <div class="card card-accent-rose">
+              <span class="kpi-label">S — Situação</span>
+              <div class="card-title">Degradação Silenciosa</div>
+              <p class="card-text">
+                A API responde com <span class="code-pill">HTTP 200 OK</span>, mas a inflação comprime a renda em <strong>-30%</strong> e a inadimplência real salta para <strong>69,8%</strong> sem emitir erros de infraestrutura.
+              </p>
+            </div>
+
+            <div class="card card-accent-amber">
+              <span class="kpi-label">T — Tarefa</span>
+              <div class="card-title">Sustentação 360°</div>
+              <p class="card-text">
+                Construir três barreiras de proteção: barrar dados corrompidos na entrada, diagnosticar desvios estatísticos antes da perda financeira e assegurar conformidade com a LGPD.
+              </p>
+            </div>
+
+            <div class="card card-accent-cyan">
+              <span class="kpi-label">A — Ação</span>
+              <div class="card-title">Engenharia Limpa</div>
+              <p class="card-text">
+                Contratos Pandera na ingestão, monitoramento pré-rótulo via <strong>PSI</strong> e <strong>Evidently AI</strong>, arquitetura Ports &amp; Adapters no MLflow e Grafo Causal (DAG).
+              </p>
+            </div>
+
+            <div class="card card-accent-emerald">
+              <span class="kpi-label">R — Resultado</span>
+              <div class="card-title">Proteção &amp; Decisão</div>
+              <p class="card-text">
+                <strong>100%</strong> de anomalias barradas, alerta preventivo com <strong>84,8%</strong> das features em drift (<span class="code-pill">PSI &gt; 0.44</span>), <strong>100%</strong> de testes e plano prescritivo.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 2: SITUATION -->
+      <section class="slide" data-index="1">
+        <div class="slide-inner">
+          <div class="tag-row">
+            <span class="star-badge badge-s">S — Situação</span>
+            <span class="sub-badge">Diagnóstico de Risco Financeiro &amp; Cenário Macroeconômico</span>
+          </div>
+          <h2 class="slide-title">A Ilusão do "HTTP 200 OK": O Risco da Degradação Silenciosa</h2>
+          <p class="slide-lead">
+            A fintech opera uma <strong>Regressão Logística</strong> para concessão de crédito. Sob choque macroeconômico, 
+            a distribuição real dos tomadores descola do histórico de treino (<span class="code-pill">X_train.pkl</span>). 
+            O sistema permanece operacional, mas passa a aprovar proponentes insolventes em massa.
+          </p>
+
+          <div class="grid-3">
+            <div class="card card-accent-rose">
+              <span class="kpi-label">Vetor 1: Corrosão Salarial</span>
+              <div class="kpi-value text-rose">-30% Renda</div>
+              <div class="card-title">Covariate Shift P(X)</div>
+              <p class="card-text">
+                A inflação comprime a renda disponível dos solicitantes (<span class="code-pill">annual_inc &times; 0.70</span>), deslocando a distribuição marginal de entrada sem violar regras básicas de sistema.
+              </p>
+            </div>
+
+            <div class="card card-accent-amber">
+              <span class="kpi-label">Vetor 2: Pressão por Liquidez</span>
+              <div class="kpi-value text-amber">+30% Crédito</div>
+              <div class="card-title">Alavancagem Crítica</div>
+              <p class="card-text">
+                O valor solicitado sobe (<span class="code-pill">loan_amnt &times; 1.30</span>) e os juros sobem (+4,5 p.p.). A relação empréstimo/renda salta <strong>+85,7%</strong>, sobrecarregando a prestação mensal.
+              </p>
+            </div>
+
+            <div class="card card-accent-indigo">
+              <span class="kpi-label">Consequência no Balanço</span>
+              <div class="kpi-value text-indigo">69,8% Default</div>
+              <div class="card-title">Quebra Causal P(Y | X)</div>
+              <p class="card-text">
+                Perfis historicamente adimplentes (<span class="code-pill">Fully Paid</span>) passam a inadimplir (<span class="code-pill">Charged Off</span>). A inadimplência salta de <strong>4,8% para 69,8%</strong>, gerando prejuízo oculto.
+              </p>
+            </div>
+          </div>
+
+          <div class="callout-banner warning">
+            <div>
+              <strong>Diagnóstico Executivo:</strong> A ausência de contratos de dados fail-fast e testes de estabilidade populacional (PSI/KS) cria um ponto cego crítico: o modelo concede empréstimos podres com sucesso operacional e falha silenciosa de negócio.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 3: TASK & ARQUITETURA (CORRIGIDO: Textos estruturados, quebra inline natural, sem colunas e sem corte superior) -->
+      <section class="slide" data-index="2">
+        <div class="slide-inner">
+          <div class="tag-row">
+            <span class="star-badge badge-t">T &amp; A — Tarefa &amp; Arquitetura</span>
+            <span class="sub-badge">Defesa em Três Camadas MLOps • Clean Code &amp; Governança</span>
+          </div>
+          <h2 class="slide-title">Arquitetura de Defesa MLOps: Da Ingestão à Decisão</h2>
+          <p class="slide-lead">
+            Implementação de três camadas modulares e testadas em <span class="code-pill">src/default_pred/</span>, 
+            garantindo que dados inválidos sejam bloqueados imediatamente e que o modelo mantenha auditabilidade contínua.
+          </p>
+
+          <div class="grid-3">
+            <!-- Card 1: Pandera Data Contracts -->
+            <div class="card card-accent-cyan">
+              <div class="card-title">
+                <span>1. Qualidade de Dados</span>
+                <span class="sub-badge">Pandera Fail-Fast</span>
+              </div>
+              <div class="card-bullet-list">
+                <div class="card-bullet">
+                  <strong>Contrato em 3 Camadas:</strong> Validação em <span class="code-pill">Contract</span> separando anomalia de política: domínio <span class="code-pill">annual_inc &gt; 0 (não nula)</span>, consistência condicional (<span class="code-pill">Individual</span> vs. <span class="code-pill">Joint App</span>) e alerta de comprometimento.
+                </div>
+                <div class="card-bullet">
+                  <strong>Bloqueio Imediato:</strong> Payloads corrompidos (<span class="code-pill">row_fail.json</span> com renda negativa <span class="code-pill">-1000</span>, finalidade nula e grade <span class="code-pill">Z</span>) são barrados antes da inferência.
+                </div>
+                <div class="card-bullet">
+                  <strong>Rastreio de Falha:</strong> Registro instantâneo de <span class="code-pill">run_success = 0.0</span> no MLflow e gravação de alerta no log operacional.
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 2: Hexagonal Observability -->
+            <div class="card card-accent-indigo">
+              <div class="card-title">
+                <span>2. Observabilidade Hexagonal</span>
+                <span class="sub-badge">MLflow Ports &amp; Adapters</span>
+              </div>
+              <div class="card-bullet-list">
+                <div class="card-bullet">
+                  <strong>Arquitetura Desacoplada:</strong> Protocolo <span class="code-pill">ExperimentTracker</span> com implementação concreta <span class="code-pill">MlflowTracker</span> e fallback <span class="code-pill">NullTracker</span>.
+                </div>
+                <div class="card-bullet">
+                  <strong>3 Experimentos no SQLite:</strong> <span class="code-pill">credit_training</span> (pesos e acurácia), <span class="code-pill">credit_inference</span> (latência) e <span class="code-pill">credit_drift_monitoring</span>.
+                </div>
+                <div class="card-bullet">
+                  <strong>Logs Rotativos:</strong> Log centralizado em <span class="code-pill">loan_prediction.log</span> (1 MB &times; 3 backups) com rotação automática sem expor PII.
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 3: Governance & LGPD -->
+            <div class="card card-accent-emerald">
+              <div class="card-title">
+                <span>3. Governança &amp; LGPD</span>
+                <span class="sub-badge">Privacy by Design</span>
+              </div>
+              <div class="card-bullet-list">
+                <div class="card-bullet">
+                  <strong>Minimização de PII:</strong> Descarte automático de identificadores diretos e campos abertos (<span class="code-pill">id</span>, <span class="code-pill">member_id</span>, <span class="code-pill">url</span>, <span class="code-pill">emp_title</span>, <span class="code-pill">title</span>, <span class="code-pill">desc</span>).
+                </div>
+                <div class="card-bullet">
+                  <strong>Bases Legais LGPD:</strong> Conformidade com o Art. 7º X (Proteção do Crédito) e Art. 7º V (Execução de Contratos preliminares).
+                </div>
+                <div class="card-bullet">
+                  <strong>Explicabilidade &amp; Fairness:</strong> Modelo Glass-Box (pesos auditáveis &beta;<sub>j</sub> &middot; x<sub>j</sub> no Art. 20), exclusão de proxies geográficos (<span class="code-pill">zip_code</span> e <span class="code-pill">addr_state</span>) das features do modelo e retenção de <span class="code-pill">addr_state</span> só para auditoria de <em>Disparate Impact</em> (&ge; 0,80).
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="callout-banner success">
+            <div>
+              <strong>Qualidade de Engenharia Assegurada:</strong> Suíte completa com <strong>100% de cobertura de testes</strong> no core de observabilidade (50 testes) e <strong>66 testes automatizados</strong> no repositório (<span class="code-pill">pytest</span> + <span class="code-pill">ruff</span>).
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 4: ACTION & DRIFT DIAGNOSTIC -->
+      <section class="slide" data-index="3">
+        <div class="slide-inner">
+          <div class="tag-row">
+            <span class="star-badge badge-a">A — Ação &amp; Diagnóstico</span>
+            <span class="sub-badge">Estatística Pré e Pós-Rótulo • Mitigação do Feedback Delay</span>
+          </div>
+          <h2 class="slide-title">Diagnóstico Estatístico: Detecção Precoce de Drift &amp; Causalidade</h2>
+          <p class="slide-lead">
+            Mitigação do <strong>Feedback Delay (t &rarr; t+k)</strong>: como os atrasos de 90 dias nos pagamentos demoram a virar inadimplência contábil, o sistema monitora 
+            <strong>Data Drift P(X)</strong> e <strong>Prediction Drift P&#770;(Y)</strong> em tempo real antes da ocorrência do prejuízo.
+          </p>
+
+          <div class="grid-2">
+            <!-- Left: Statistical Metrics -->
+            <div class="card card-accent-amber">
+              <div class="card-title">
+                <span>Alertas Estatísticos de Produção</span>
+                <span class="sub-badge">Evidently + PSI + DDM</span>
+              </div>
+              <p class="card-text">
+                Métricas reais medidas pelo pipeline sobre o lote sob estresse econômico:
+              </p>
+              
+              <div class="metric-row">
+                <div class="metric-header">
+                  <span>PSI Renda (`annual_inc` -30%)</span>
+                  <span class="text-rose font-mono">PSI = 0.4859 (&ge; 0.20 Severo)</span>
+                </div>
+                <div class="metric-track"><div class="metric-fill" style="width: 95%; background: var(--accent-rose);"></div></div>
+              </div>
+
+              <div class="metric-row">
+                <div class="metric-header">
+                  <span>PSI Montante Solicitado (`loan_amnt` +30%)</span>
+                  <span class="text-rose font-mono">PSI = 0.4428 (&ge; 0.20 Severo)</span>
+                </div>
+                <div class="metric-track"><div class="metric-fill" style="width: 90%; background: var(--accent-rose);"></div></div>
+              </div>
+
+              <div class="metric-row">
+                <div class="metric-header">
+                  <span>PSI Parcela Tabela Price (`installment`)</span>
+                  <span class="text-amber font-mono">PSI = 0.4604 (&ge; 0.20 Severo)</span>
+                </div>
+                <div class="metric-track"><div class="metric-fill" style="width: 92%; background: var(--accent-amber);"></div></div>
+              </div>
+
+              <div class="metric-row">
+                <div class="metric-header">
+                  <span>Evidently AI KS-Test / Z-Test (`share_drifted`)</span>
+                  <span class="text-cyan font-mono">72 / 84 features (85.7% &ge; 50%)</span>
+                </div>
+                <div class="metric-track"><div class="metric-fill" style="width: 86%; background: var(--accent-cyan);"></div></div>
+              </div>
+
+              <p class="card-text" style="font-size: 0.94rem; margin-top: 0.3rem;">
+                <strong>Detecção Pós-Rótulo:</strong> O detector <strong>DDM</strong> confirma o drift supervisionado no registro 713 quando a taxa de erro salta de <strong>11,9% para 39,2%</strong>.
+              </p>
+            </div>
+
+            <!-- Right: Causal DAG -->
+            <div class="card card-accent-indigo">
+              <div class="card-title">
+                <span>Grafo Causal (DAG) da Degradação</span>
+                <span class="sub-badge">README.md (Governança &amp; LGPD)</span>
+              </div>
+              <div class="causal-flow">
+                <div class="causal-node">
+                  <span class="kpi-label text-rose">Confundidor (Z)</span>
+                  <strong style="font-size: 1.02rem;">Choque Macroeconômico</strong>
+                  <span class="card-text" style="font-size: 0.88rem;">Inflação + Juros</span>
+                </div>
+                <div class="causal-arrow">&rarr;</div>
+                <div class="causal-node">
+                  <span class="kpi-label text-amber">Covariáveis P(X)</span>
+                  <strong style="font-size: 1.02rem;">Renda &darr; | Crédito &uarr;</strong>
+                  <span class="card-text" style="font-size: 0.88rem;">Dívida/Renda +85,7%</span>
+                </div>
+                <div class="causal-arrow">&rarr;</div>
+                <div class="causal-node">
+                  <span class="kpi-label text-indigo">Resposta P(Y|X)</span>
+                  <strong style="font-size: 1.02rem;">Inadimplência Real</strong>
+                  <span class="card-text" style="font-size: 0.88rem;">Fronteira obsoleta</span>
+                </div>
+              </div>
+              <p class="card-text">
+                <strong>Análise de Causa Raiz:</strong> O choque Z é uma causa comum não observada que distorce simultaneamente a renda, o custo da dívida e a probabilidade real de calote.
+              </p>
+              <div class="callout-banner" style="padding: 0.85rem 1.15rem; font-size: 0.98rem;">
+                <span><strong>Conclusão Executiva:</strong> O alerta precoce de <em>Data Drift</em> no dia 0 antecipa a quebra estrutural do portfólio 90 dias antes que a inadimplência afete o caixa.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 5: RESULTS & PRESCRIPTIVE DECISIONS -->
+      <section class="slide" data-index="4">
+        <div class="slide-inner">
+          <div class="tag-row">
+            <span class="star-badge badge-r">R — Resultado &amp; Decisão</span>
+            <span class="sub-badge">Impacto no Negócio • Plano Prescritivo • Artefatos Auditáveis</span>
+          </div>
+          <h2 class="slide-title">Resultados Consolidados &amp; Decisões Executivas Prescritivas</h2>
+
+          <div class="grid-4">
+            <div class="card card-accent-emerald">
+              <span class="kpi-label">Ingestão Fail-Fast</span>
+              <div class="kpi-value text-emerald">100%</div>
+              <div class="card-title">Anomalias Barradas</div>
+              <p class="card-text">Bloqueio preventivo na entrada via contrato Pandera. Zero dados inválidos na inferência.</p>
+            </div>
+
+            <div class="card card-accent-amber">
+              <span class="kpi-label">Evidently AI Drift</span>
+              <div class="kpi-value text-amber">85,7%</div>
+              <div class="card-title">Alerta Disparado</div>
+              <p class="card-text">72 de 84 variáveis ativas acusadas no KS-test (<span class="code-pill">share=0.86 &ge; 0.50</span>), registrando alerta no MLflow.</p>
+            </div>
+
+            <div class="card card-accent-rose">
+              <span class="kpi-label">Estabilidade Populacional</span>
+              <div class="kpi-value text-rose">PSI &gt; 0,44</div>
+              <div class="card-title">Desvio Crítico</div>
+              <p class="card-text">Renda (0,486), empréstimo (0,443) e parcela (0,460) violam com folga o teto de 0,20.</p>
+            </div>
+
+            <div class="card card-accent-cyan">
+              <span class="kpi-label">Qualidade de Software</span>
+              <div class="kpi-value text-cyan">100%</div>
+              <div class="card-title">Cobertura de Testes</div>
+              <p class="card-text">50/50 testes no core de observabilidade (66 no projeto), garantindo engenharia confiável.</p>
+            </div>
+          </div>
+
+          <div class="card card-accent-indigo">
+            <div class="card-title">Protocolo de Resposta Imediata para o Comitê de Crédito e Risco</div>
+            <div class="grid-3" style="gap: 1rem; margin-top: 0.2rem;">
+              <div>
+                <strong style="color: var(--accent-amber); font-size: 1.02rem;">1. Threshold Tuning Imediato</strong>
+                <p class="card-text" style="font-size: 0.95rem; margin-top: 0.3rem;">
+                  Ajustar o limiar de corte de concessão para estancar imediatamente o vazamento de falsos negativos enquanto a carteira é estabilizada.
+                </p>
+              </div>
+              <div>
+                <strong style="color: var(--accent-cyan); font-size: 1.02rem;">2. Retreino com Time-Decay</strong>
+                <p class="card-text" style="font-size: 0.95rem; margin-top: 0.3rem;">
+                  Retreinar o classificador com decaimento exponencial (w<sub>i</sub> = e<sup>-&lambda;&Delta;t</sup>) e incorporar a razão causal direta <span class="code-pill">loan_amnt / annual_inc</span>.
+                </p>
+              </div>
+              <div>
+                <strong style="color: var(--accent-emerald); font-size: 1.02rem;">3. Shadow &amp; Canary Rollout</strong>
+                <p class="card-text" style="font-size: 0.95rem; margin-top: 0.3rem;">
+                  Validar o novo modelo em modo sombra (Shadow) e promover via Canary Rollout (5% &rarr; 20% &rarr; 100%) auditando <em>Disparate Impact</em> (&ge; 0,80).
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="action-bar">
+            <div>
+              <strong style="font-size: 1.05rem; color: var(--text-primary);">Evidências e Artefatos Auditáveis:</strong>
+              <p class="card-text" style="font-size: 0.95rem; margin-top: 0.2rem;">
+                Consulte o relatório estatístico completo gerado pelo Evidently AI e o documento normativo de conformidade legal.
+              </p>
+            </div>
+            <div style="display: flex; gap: 0.85rem; flex-wrap: wrap;">
+              <a class="btn-exec" href="../../data_drift_report.html" target="_blank" rel="noopener">
+                Abrir Relatório Evidently AI &nearr;
+              </a>
+              <a class="btn-exec secondary" href="../../README.md#governança-lgpd-mitigação-de-vieses-e-análise-causal" target="_blank" rel="noopener">
+                Governança &amp; LGPD (MD) &nearr;
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Controls -->
+    <footer class="bottombar">
+      <div class="kbd-hint">Navegação: <strong>&larr; / &rarr;</strong>, <strong>Espaço</strong> ou <strong>F</strong> (Tela Cheia)</div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="nav-btns">
+        <button class="nav-btn" id="prevBtn" aria-label="Slide anterior">&larr; Anterior</button>
+        <button class="nav-btn" id="nextBtn" aria-label="Próximo slide">Próximo &rarr;</button>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      const slides = Array.from(document.querySelectorAll('.slide'));
+      const pills = Array.from(document.querySelectorAll('.star-pill'));
+      const counter = document.getElementById('slideCounter');
+      const progressFill = document.getElementById('progressFill');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      let current = 0;
+
+      function goToSlide(index) {
+        if (index < 0 || index >= slides.length) return;
+        current = index;
+        slides.forEach((slide, idx) => {
+          slide.classList.toggle('active', idx === current);
+          if (idx === current) {
+            slide.scrollTop = 0; // Reset scroll position when entering slide
+          }
+        });
+        pills.forEach((pill, idx) => {
+          pill.classList.toggle('active', idx === current);
+        });
+        const formattedCurrent = String(current + 1).padStart(2, '0');
+        const formattedTotal = String(slides.length).padStart(2, '0');
+        counter.textContent = `${formattedCurrent} / ${formattedTotal}`;
+        progressFill.style.width = `${((current + 1) / slides.length) * 100}%`;
+        prevBtn.disabled = current === 0;
+        nextBtn.disabled = current === slides.length - 1;
+      }
+
+      prevBtn.addEventListener('click', () => goToSlide(current - 1));
+      nextBtn.addEventListener('click', () => goToSlide(current + 1));
+
+      pills.forEach((pill) => {
+        pill.addEventListener('click', () => {
+          const target = Number(pill.getAttribute('data-slide'));
+          goToSlide(target);
+        });
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowRight' || event.key === ' ' || event.key === 'PageDown') {
+          event.preventDefault();
+          goToSlide(current + 1);
+        } else if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
+          event.preventDefault();
+          goToSlide(current - 1);
+        } else if (event.key === 'Home') {
+          event.preventDefault();
+          goToSlide(0);
+        } else if (event.key === 'End') {
+          event.preventDefault();
+          goToSlide(slides.length - 1);
+        } else if (event.key.toLowerCase() === 'f') {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+          } else {
+            document.exitFullscreen().catch(() => {});
+          }
+        }
+      });
+
+      let touchStartX = 0;
+      document.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+      }, { passive: true });
+
+      document.addEventListener('touchend', (e) => {
+        const deltaX = e.changedTouches[0].screenX - touchStartX;
+        if (Math.abs(deltaX) > 50) {
+          if (deltaX < 0) goToSlide(current + 1);
+          else goToSlide(current - 1);
+        }
+      }, { passive: true });
+
+      goToSlide(0);
+    })();
+  </script>
+</body>
+</html>
