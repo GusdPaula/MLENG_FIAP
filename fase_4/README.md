@@ -6,7 +6,7 @@
 [![MLflow](https://img.shields.io/badge/Observability-MLflow-0194E2?style=for-the-badge&logo=mlflow&logoColor=white)](./src/default_pred/observability/)
 [![LGPD & Causalidade](https://img.shields.io/badge/Governan%C3%A7a-LGPD_%26_Causal_DAG-6366F1?style=for-the-badge)](#governança-de-dados-conformidade-lgpd-equidade-algorítmica-e-análise-causal)
 [![Apresentação STAR](https://img.shields.io/badge/Apresenta%C3%A7%C3%A3o_HTML-M%C3%A9todo_STAR-F59E0B?style=for-the-badge)](./docs/presentation/index.html)
-[![Vídeo STAR](https://img.shields.io/badge/Apresenta%C3%A7%C3%A3o_HTML-M%C3%A9todo_STAR-F59E0B?style=for-the-badge)]([./docs/presentation/index.html](https://www.youtube.com/watch?v=xZMcd20UtNk)
+[![Vídeo STAR](https://img.shields.io/badge/Assistir_V%C3%ADdeo-M%C3%A9todo_STAR-F59E0B?style=for-the-badge)](https://youtu.be/xZMcd20UtNk)
 
 ---
 
@@ -464,6 +464,6 @@ A camada de observabilidade ([`pipeline_drift.py`](./src/default_pred/pipelines/
 Para apoiar a demonstração executiva estruturada no método **STAR** (*Situation, Task, Action, Result*), o projeto disponibiliza uma apresentação web interativa, estilizada e responsiva:
 
 * **Apresentação HTML (Slides STAR):** [`docs/presentation/index.html`](./docs/presentation/index.html)
-* ** Vídeo STAR: ** [`https://www.youtube.com/watch?v=xZMcd20UtNk`](https://www.youtube.com/watch?v=xZMcd20UtNk)
+* **Vídeo STAR:** [`https://www.youtube.com/watch?v=xZMcd20UtNk`](https://www.youtube.com/watch?v=xZMcd20UtNk)
 * **Relatório Estatístico do Evidently AI:** [`data_drift_report.html`](./data_drift_report.html)
 * **Capítulo de Governança e LGPD no README:** [Seção de Governança, LGPD e Análise Causal](#governança-de-dados-conformidade-lgpd-equidade-algorítmica-e-análise-causal)
